@@ -55,7 +55,8 @@ def main():
  print(f'✓ Video {w}x{h}, {dur:.1f}s, {time.time()-t:.0f}s; phụ đề: {srt.splitlines()[2] if srt.strip() else "(không)"}',flush=True)
  if vlm:
   t=time.time();print('AI xem ảnh + ảnh bìa…',flush=True)
-  run([sys.executable,'-u',str(HERE/'analyzer.py'),'analyze',str(media),'--no-rename'],env=dict(os.environ,PYTHONUTF8='1'))
+  a=subprocess.run([sys.executable,'-u',str(HERE/'analyzer.py'),'analyze',str(media),'--no-rename'],capture_output=True,text=True,encoding='utf-8',errors='replace',env=dict(os.environ,PYTHONUTF8='1'),**NOWIN)
+  if a.returncode:raise SystemExit('FAILED: analyzer\n'+a.stdout[-1500:]+a.stderr[-1500:])
   index=json.loads((media/'_phan-tich.json').read_text(encoding='utf-8'))['files']
   assert len(index)==3,f'analysed {len(index)} of 3 files'
   empty=[n for n,e in index.items() if not (e.get('mo_ta') or '').strip()]
@@ -63,7 +64,7 @@ def main():
    # Show exactly what the model answered, to see why no description came out.
    from platform_tools import vlm_ask
    raw=vlm_ask('Mô tả hình này bằng tiếng Việt, trả về đúng một JSON: {"mo_ta":"1 câu"}',[media/'ảnh 3.jpg'])
-   raise SystemExit(f'FAILED: empty description for {empty}\nraw model answer: {raw[:600]!r}')
+   raise SystemExit(f'FAILED: empty description for {empty}\nraw model answer: {raw[:600]!r}\nanalyzer log:\n{a.stderr[-2500:]}')
   for n,e in index.items():print(f'✓ {n}: {e["mo_ta"][:90]}',flush=True)
   print(f'  ({time.time()-t:.0f}s)',flush=True)
   import thumbnail

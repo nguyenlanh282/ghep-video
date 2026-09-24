@@ -118,7 +118,7 @@ def vlm_ready():
  try:urllib.request.urlopen(OLLAMA_URL+'/api/tags',timeout=5).read()
  except Exception:raise RuntimeError('Chưa mở Ollama. Hãy cài và chạy Ollama (ollama.com), rồi chạy lại bước cài đặt.')
 
-def vlm_ask(question,images=()):
+def vlm_ask(question,images=(),schema=None):
  vlm_ready()
  if APPLE_SILICON:
   from mlx_vlm import generate
@@ -130,13 +130,20 @@ def vlm_ask(question,images=()):
  import base64, urllib.request, urllib.error
  # Every prompt asks for a JSON object: format='json' makes Ollama return exactly that. Qwen3-VL may "think" first;
  # thinking is switched off and, if the answer still comes back empty, taken from the thinking text instead.
+ # A JSON schema (when the caller knows the fields) constrains the answer far better than plain format='json',
+ # which can loop on whitespace for long prompts. An empty/unreadable answer is retried once without any format.
  message=dict(role='user',content=question,images=[base64.b64encode(Path(i).read_bytes()).decode() for i in images])
- def call(extra):
-  body=dict(model=OLLAMA_MODEL,messages=[message],stream=False,format='json',options=dict(temperature=0,num_predict=1200),**extra)
+ def call(fmt,think=True):
+  body=dict(model=OLLAMA_MODEL,messages=[message],stream=False,options=dict(temperature=0,num_predict=1200))
+  if fmt is not None:body['format']=fmt
+  if not think:body['think']=False
   req=urllib.request.Request(OLLAMA_URL+'/api/chat',data=json.dumps(body).encode(),headers={'Content-Type':'application/json'})
-  with urllib.request.urlopen(req,timeout=900) as r:return json.loads(r.read()).get('message',{})
- try:msg=call(dict(think=False))
- except urllib.error.HTTPError as e:
-  if e.code!=400:raise
-  msg=call({})  # a model without the thinking switch rejects think=False
- return (msg.get('content') or '').strip() or (msg.get('thinking') or '')
+  try:
+   with urllib.request.urlopen(req,timeout=900) as r:msg=json.loads(r.read()).get('message',{})
+  except urllib.error.HTTPError as e:
+   if e.code==400 and not think:return call(fmt,True)  # a model without the thinking switch rejects think=False
+   raise
+  return (msg.get('content') or '').strip() or (msg.get('thinking') or '').strip()
+ text=call(schema or 'json',think=False)
+ if '{' not in text:text=call(None,think=False)
+ return text

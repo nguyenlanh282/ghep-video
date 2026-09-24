@@ -30,14 +30,19 @@ def nfc(s):return unicodedata.normalize('NFC',s)
 def model():
  vlm_ready()
 
-def ask(question,images=()):
- return vlm_ask(question,images)
+def ask(question,images=(),schema=None):
+ return vlm_ask(question,images,schema)
+
+def obj(props,required=None):
+ """JSON schema for an object of string fields (and string lists for keys ending in _list-like 'tu_khoa')."""
+ return {'type':'object','properties':{k:({'type':'array','items':{'type':'string'}} if k=='tu_khoa' else {'type':'boolean'} if k=='hop' else {'type':'string'}) for k in props},'required':required or list(props)}
 
 def parse_json(text,fallback):
  m=re.search(r'\{.*\}',text,re.S)
- if not m:return fallback
- try:return json.loads(m.group(0))
+ try:return json.loads(m.group(0)) if m else fallback
  except json.JSONDecodeError:return fallback
+ finally:
+  if not m:print('Câu trả lời AI không đọc được:',repr(text[:300]),file=sys.stderr,flush=True)
 
 def duration(path):
  out=run([FFPROBE,'-v','error','-show_entries','format=duration','-of','csv=p=0',str(path)]).stdout.decode().strip()
@@ -73,11 +78,11 @@ def describe_video(path,tmp):
  total=duration(path);parts=segments(total,scene_cuts(path));scenes=[]
  for i,(a,b) in enumerate(parts):
   frame=still(path,(a+b)/2,tmp/f'{path.stem[:40]}-{i}.jpg')
-  d=parse_json(ask(SCENE_Q,[frame]),{})
+  d=parse_json(ask(SCENE_Q,[frame],obj(['mo_ta','cam_xuc','tu_khoa'])),{})
   scenes.append(dict(start=a,end=b,mo_ta=d.get('mo_ta',''),cam_xuc=d.get('cam_xuc',''),tu_khoa=d.get('tu_khoa',[])))
   yield i+1,len(parts),None
  listing='\n'.join(f'- {s["start"]:.0f}-{s["end"]:.0f}s: {s["mo_ta"]}' for s in scenes)
- d=parse_json(ask('Video gồm các cảnh sau:\n'+listing+'\nTrả về đúng một JSON tiếng Việt có dấu: {"ten":"tên file ngắn 3-7 chữ nói rõ nội dung chính","mo_ta":"1-2 câu tóm tắt cả video","tu_khoa":["6-10 từ khoá"]}'),{})
+ d=parse_json(ask('Video gồm các cảnh sau:\n'+listing+'\nTrả về đúng một JSON tiếng Việt có dấu: {"ten":"tên file ngắn 3-7 chữ nói rõ nội dung chính","mo_ta":"1-2 câu tóm tắt cả video","tu_khoa":["6-10 từ khoá"]}',(),obj(['ten','mo_ta','tu_khoa'])),{})
  yield len(parts),len(parts),dict(kind='video',duration=round(total,2),ten=d.get('ten',''),mo_ta=d.get('mo_ta',''),tu_khoa=d.get('tu_khoa',[]),scenes=scenes)
 
 def safe_name(text,ext,taken):
@@ -123,7 +128,7 @@ def analyze(folder,rename=True):
    emit(base,f'Đang xem {p.name} ({i+1}/{len(todo)})…')
    try:
     if p.suffix.lower() in PHOTO:
-     d=parse_json(ask(PHOTO_Q,[still(p,None,tmp/'photo.jpg')]),{})
+     d=parse_json(ask(PHOTO_Q,[still(p,None,tmp/'photo.jpg')],obj(['ten','mo_ta','nguoi','boi_canh','cam_xuc','tu_khoa'])),{})
      entry=dict(kind='photo',ten=d.get('ten',''),mo_ta=d.get('mo_ta',''),nguoi=d.get('nguoi',''),boi_canh=d.get('boi_canh',''),cam_xuc=d.get('cam_xuc',''),tu_khoa=d.get('tu_khoa',[]))
     else:
      for k,n,entry in describe_video(p,tmp):emit(base+step*k/(n+1),f'Đang xem {p.name}: đoạn {k}/{n}')
@@ -174,7 +179,7 @@ def plan(job_path,out_path):
   for n,s in enumerate(sentences):
    emit(100*n/len(sentences),f'Đang kiểm tra cảnh có hợp câu {n+1}/{len(sentences)}…')
    best=choices.get(s['id'])
-   verdict=parse_json(ask(FIT_Q.format(text=s['text'],scene=texts[best[0]])),{}) if best else {}
+   verdict=parse_json(ask(FIT_Q.format(text=s['text'],scene=texts[best[0]]),(),obj(['hop'])),{}) if best else {}
    if not best or verdict.get('hop') is not True:missing.append(s)
   stock=find_stock(missing,sentences,job['stock'])
  Path(out_path).write_text(json.dumps(dict(choices=choices,stock=stock),ensure_ascii=False),encoding='utf-8')
@@ -277,7 +282,7 @@ def find_stock(missing,sentences,cfg):
     try:
      path=download(c['url'],folder,c['ext'])
      frame=still(path,(duration(path)/2 if c['kind']=='video' else None),folder/(path.stem+'-check.jpg'))
-     verdict=parse_json(ask(CHECK_Q.format(text=s['text']),[frame]),{})
+     verdict=parse_json(ask(CHECK_Q.format(text=s['text']),[frame],obj(['hop','mo_ta'])),{})
     except Exception:continue
     if verdict.get('hop') is True:
      found[s['id']]=dict(c,path=str(path),mo_ta=verdict.get('mo_ta',''),provider=provider);break
