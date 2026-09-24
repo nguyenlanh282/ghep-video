@@ -1,13 +1,13 @@
 #!/bin/zsh
-# Opens the cross-platform UI (studio/app/main.py) with the Python environment made by studio/setup-mac.command.
+# Opens the cross-platform UI (studio/app/main.py). Not installed yet? Runs the installer in Terminal, which opens the app when done.
 ROOT="${0:A:h:h:h:h}"
 DATA="$HOME/Library/Application Support/GhepVideo"
 PY=""
 for c in "$DATA/venv/bin/python" "$DATA/ai-venv/bin/python"; do [ -x "$c" ] && { PY="$c"; break; }; done
 if [ -z "$PY" ]; then
-  osascript -e 'display alert "Ghép Video chưa được cài đặt" message "Bấm đúp studio/setup-mac.command trong thư mục dự án để cài một lần."'
-  exit 1
+  open -a Terminal "$ROOT/studio/setup-mac.command"
+  exit 0
 fi
-export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH" PYTHONUTF8=1
+export PATH="$DATA/bin:/opt/homebrew/bin:/usr/local/bin:$PATH" PYTHONUTF8=1
 mkdir -p "$DATA"
 exec "$PY" "$ROOT/studio/app/main.py" >> "$DATA/app.log" 2>&1

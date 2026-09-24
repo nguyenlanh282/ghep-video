@@ -338,13 +338,15 @@ def voice_gain_db(audio,job,cache):
  measured=loudness(audio,cache)
  return user+(max(-20,min(36,TARGET_LUFS-measured)) if measured is not None else 0)
 
-def caption_layout(group,font,W,H):
+CAPTION_Y=.73  # caption baseline, as a fraction of the frame height (above TikTok/Reels bottom text)
+
+def caption_layout(group,font,W,H,y=CAPTION_Y):
  # A fixed baseline avoids Vietnamese diacritics moving individual words up/down.
  space=font.getlength(' ');positions={}
  width=sum(font.getlength(w['text']) for w in group)+space*max(0,len(group)-1)
  x=(W-width)/2
  for j,w in enumerate(group):
-  positions[j]=(x,H*.84);x+=font.getlength(w['text'])+space
+  positions[j]=(x,H*y);x+=font.getlength(w['text'])+space
  return positions
 
 def make_title(job,W,H):
@@ -367,9 +369,9 @@ def make_title(job,W,H):
 
 HIGHLIGHT={'active':'#9cfa68','sweep':'#ffd54a','pill':'#f37aa5'}
 
-def caption_band(font,H):
+def caption_band(font,H,y=CAPTION_Y):
  """Fixed strip around the caption baseline; tall enough for stacked Vietnamese diacritics."""
- top=round(H*.84-font.size*1.5);return top,round(font.size*2.1)
+ top=round(H*y-font.size*1.5);return top,round(font.size*2.1)
 
 def caption_image(group,positions,font,style,active,W,top,height):
  """Words never move: same position and size every frame, only the spoken word changes colour."""
@@ -472,7 +474,7 @@ def render(job):
    cmd+=['-t',str(duration),'-c:v','libx264','-preset','fast','-crf','20','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','-movflags','+faststart',str(movie)]
    enc=subprocess.Popen(cmd,stdin=subprocess.PIPE,stderr=enc_log,**NOWIN);CHILDREN.append(enc)
    style=job.get('subStyle','active');title_style=job.get('titleStyle','pop')
-   font=ImageFont.truetype(FONT,round(40*W/720));positions=[caption_layout(g,font,W,H) for g in groups];band_top,band_h=caption_band(font,H)
+   font=ImageFont.truetype(FONT,round(40*W/720));cap_y=max(.5,min(.9,float(job.get('captionY',CAPTION_Y))));positions=[caption_layout(g,font,W,H,cap_y) for g in groups];band_top,band_h=caption_band(font,H,cap_y)
    title=make_title(job,W,H);title_y=round(H*.21875);gi=0;nframes=round(duration*fps);cached_key=None;cached=None
    for n in range(nframes):
     data=dec.stdout.read(W*H*3)

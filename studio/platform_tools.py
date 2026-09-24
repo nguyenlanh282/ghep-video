@@ -79,10 +79,23 @@ def detect_faces(image):
  H,W=img.shape[:2];scale=min(1,1280/max(W,H));small=cv2.resize(img,(round(W*scale),round(H*scale))) if scale<1 else img
  det=cv2.FaceDetectorYN.create(str(YUNET),'',(small.shape[1],small.shape[0]),0.75)
  _,faces=det.detect(small)
- boxes=[[float(f[0])/small.shape[1],float(f[1])/small.shape[0],float(f[2])/small.shape[1],float(f[3])/small.shape[0]] for f in (faces if faces is not None else [])]
+ import math
+ rows=[f for f in (faces if faces is not None else [])]
  # Tiny faces (a photo on the wall, a poster) must not decide the crop: keep those at least 20% of the largest.
- if boxes:biggest=max(b[2] for b in boxes);boxes=[b for b in boxes if b[2]>=biggest*.2]
- return {'width':W,'height':H,'faces':boxes}
+ if rows:biggest=max(float(f[2]) for f in rows);rows=[f for f in rows if float(f[2])>=biggest*.2]
+ boxes=[[float(f[0])/small.shape[1],float(f[1])/small.shape[0],float(f[2])/small.shape[1],float(f[3])/small.shape[0]] for f in rows]
+ # Head tilt from the two eye landmarks (YuNet: right eye x,y = f[4],f[5]; left eye = f[6],f[7]).
+ rolls=[math.degrees(math.atan2(float(f[7])-float(f[5]),float(f[6])-float(f[4]))) for f in rows]
+ return {'width':W,'height':H,'faces':boxes,'rolls':rolls}
+
+def detect_faces_many(images):
+ """{path: result} for many images; one helper process on macOS instead of one per image."""
+ helper=next((p for p in (HERE/'face-detect',) if p.exists()),None)
+ if MAC and helper and images:
+  out=subprocess.run([str(helper),*map(str,images)],capture_output=True,**NOWIN)
+  if out.returncode:raise RuntimeError(out.stderr.decode(errors='replace')[-800:])
+  return json.loads(out.stdout)
+ return {str(i):detect_faces(i) for i in images}
 
 # ---------- Vision-language model ----------
 

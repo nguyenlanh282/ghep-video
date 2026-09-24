@@ -1,49 +1,74 @@
-﻿# Cài đặt Ghép Video trên Windows 10/11. Chạy bằng "Cai dat (Windows).bat" ở thư mục dự án; chạy lại bao nhiêu lần cũng được.
+﻿# Cài đặt Ghép Video trên Windows 10/11 (64-bit). Không cần cài Python hay FFmpeg trước.
+# Tự cài: Python 3.12 (qua uv), FFmpeg, Ollama, thư viện, mô hình AI; tạo biểu tượng Desktop; mở app.
+# Chạy lại bao nhiêu lần cũng được. Tham số: -NoOpen (không mở app khi xong).
+param([switch]$NoOpen)
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'   # Invoke-WebRequest is many times faster without the progress bar
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Root = Split-Path -Parent $Here
 $Data = Join-Path $env:APPDATA 'GhepVideo'
+$Bin = Join-Path $Data 'bin'
 $Venv = Join-Path $Data 'venv'
-New-Item -ItemType Directory -Force -Path $Data, (Join-Path $Data 'models') | Out-Null
+$env:UV_PYTHON_INSTALL_DIR = Join-Path $Data 'python'
+New-Item -ItemType Directory -Force -Path $Data, $Bin, (Join-Path $Data 'models') | Out-Null
 
-function Refresh-Path {
-  $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+function Step($t) { Write-Host "`n>> $t" -ForegroundColor Cyan }
+function Fail($t) { Write-Host "`nLOI: $t" -ForegroundColor Red; Write-Host 'Chup man hinh cua so nay gui nguoi ho tro.'; exit 1 }
+function Download($url, $dest) { try { Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $dest } catch { Fail "Không tải được $url. Kiểm tra mạng rồi chạy lại." } }
+
+Write-Host '== Ghép Video · cài đặt cho Windows ==' -ForegroundColor Green
+if (-not [Environment]::Is64BitOperatingSystem) { Fail 'Cần Windows 64-bit.' }
+
+Step '1/6 FFmpeg (xử lý video)'
+if ((Get-Command ffmpeg -ErrorAction SilentlyContinue) -and (Get-Command ffprobe -ErrorAction SilentlyContinue)) { Write-Host 'Đã có sẵn.' }
+elseif ((Test-Path "$Bin\ffmpeg.exe") -and (Test-Path "$Bin\ffprobe.exe")) { Write-Host 'Đã có sẵn trong thư mục cài đặt.' }
+else {
+  $zip = Join-Path $env:TEMP 'ghepvideo-ffmpeg.zip'
+  Write-Host 'Đang tải FFmpeg (~190 MB)…'
+  Download 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip' $zip
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  $z = [IO.Compression.ZipFile]::OpenRead($zip)
+  foreach ($e in $z.Entries) { if ($e.Name -in 'ffmpeg.exe', 'ffprobe.exe') { [IO.Compression.ZipFileExtensions]::ExtractToFile($e, (Join-Path $Bin $e.Name), $true) } }
+  $z.Dispose(); Remove-Item $zip
 }
-function Need($cmd, $wingetId, $label) {
-  if (Get-Command $cmd -ErrorAction SilentlyContinue) { return }
-  if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-    throw "Cần cài $label. Máy chưa có winget: cài 'App Installer' từ Microsoft Store rồi chạy lại."
-  }
-  Write-Host "Cài $label…"
-  winget install --id $wingetId -e --accept-source-agreements --accept-package-agreements --silent
-  Refresh-Path
+
+Step '2/6 Python 3.12'
+$Uv = Join-Path $Bin 'uv.exe'
+if (-not (Test-Path $Uv)) {
+  $zip = Join-Path $env:TEMP 'ghepvideo-uv.zip'
+  Download 'https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-pc-windows-msvc.zip' $zip
+  Expand-Archive -Force $zip (Join-Path $env:TEMP 'ghepvideo-uv'); Copy-Item (Join-Path $env:TEMP 'ghepvideo-uv\uv.exe') $Uv; Remove-Item $zip
 }
-
-Write-Host '== Ghép Video · cài đặt cho Windows =='
-Need 'py' 'Python.Python.3.12' 'Python 3.12'
-Need 'ffmpeg' 'Gyan.FFmpeg' 'FFmpeg'
-Need 'ollama' 'Ollama.Ollama' 'Ollama (chạy AI xem ảnh)'
-
-if (-not (Test-Path (Join-Path $Venv 'Scripts\python.exe'))) { py -3.12 -m venv $Venv }
 $Py = Join-Path $Venv 'Scripts\python.exe'
-& $Py -m pip install -q --upgrade pip
-Write-Host 'Cài thư viện (lần đầu mất vài phút)…'
-& $Py -m pip install -q -r (Join-Path $Here 'requirements-windows.txt')
+if (-not (Test-Path $Py)) { & $Uv venv --seed --python 3.12 $Venv; if ($LASTEXITCODE) { Fail 'Không tạo được môi trường Python.' } }
 
-Write-Host 'Tải mô hình nhận diện khuôn mặt…'
+Step '3/6 Thư viện (lần đầu mất vài phút)'
+& $Uv pip install --python $Py -q -r (Join-Path $Here 'requirements-windows.txt')
+if ($LASTEXITCODE) { Fail 'Cài thư viện chưa được.' }
+
+Step '4/6 Nhận diện khuôn mặt + nghe lời đọc (~1,5 GB)'
 $Yunet = Join-Path $Data 'models\face_detection_yunet_2023mar.onnx'
-if (-not (Test-Path $Yunet)) {
-  Invoke-WebRequest 'https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx' -OutFile $Yunet
-}
-
-Write-Host 'Tải mô hình nghe lời đọc (khoảng 1,5 GB)…'
+if (-not (Test-Path $Yunet)) { Download 'https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx' $Yunet }
 & $Py -c "from faster_whisper import WhisperModel; WhisperModel('medium', device='cpu', compute_type='int8')"
+if ($LASTEXITCODE) { Fail 'Tải mô hình nghe lời đọc chưa xong. Chạy lại để tải tiếp.' }
 
-Write-Host 'Tải mô hình AI xem ảnh qua Ollama (khoảng 3,3 GB)…'
-if (-not (Get-Process ollama -ErrorAction SilentlyContinue)) { Start-Process ollama -ArgumentList 'serve' -WindowStyle Hidden; Start-Sleep 4 }
-ollama pull qwen3-vl:4b
+Step '5/6 AI xem ảnh (Ollama + qwen3-vl, ~3,3 GB)'
+$Ollama = (Get-Command ollama -ErrorAction SilentlyContinue).Source
+if (-not $Ollama) { $Ollama = Join-Path $env:LOCALAPPDATA 'Programs\Ollama\ollama.exe' }
+if (-not (Test-Path $Ollama)) {
+  $setup = Join-Path $env:TEMP 'OllamaSetup.exe'
+  Write-Host 'Đang tải Ollama (~1,5 GB)…'
+  Download 'https://ollama.com/download/OllamaSetup.exe' $setup
+  Start-Process $setup -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait
+  Remove-Item $setup -ErrorAction SilentlyContinue
+}
+if (-not (Test-Path $Ollama)) { Fail 'Chưa cài được Ollama. Cài tay tại ollama.com rồi chạy lại.' }
+if (-not (Get-Process ollama -ErrorAction SilentlyContinue)) { Start-Process $Ollama -ArgumentList 'serve' -WindowStyle Hidden; Start-Sleep 5 }
+& $Ollama pull qwen3-vl:4b
+if ($LASTEXITCODE) { Fail 'Tải mô hình xem ảnh chưa xong. Chạy lại để tải tiếp.' }
 
-Write-Host 'Tạo biểu tượng trên Desktop…'
+Step '6/6 Biểu tượng trên Desktop'
 $Shell = New-Object -ComObject WScript.Shell
 $Link = $Shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Desktop')) 'Ghép Video.lnk'))
 $Link.TargetPath = Join-Path $Venv 'Scripts\pythonw.exe'
@@ -51,5 +76,9 @@ $Link.Arguments = '"' + (Join-Path $Here 'app\main.py') + '"'
 $Link.WorkingDirectory = $Here
 $Link.Save()
 
-Write-Host ''
-Write-Host 'Xong. Mở app bằng biểu tượng "Ghép Video" trên Desktop hoặc file "Ghep Video (Windows).bat".'
+Write-Host "`nCài đặt xong." -ForegroundColor Green
+if (-not $NoOpen) {
+  Write-Host 'Đang mở Ghép Video…'
+  $env:PYTHONUTF8 = '1'
+  Start-Process (Join-Path $Venv 'Scripts\pythonw.exe') -ArgumentList ('"' + (Join-Path $Here 'app\main.py') + '"') -WorkingDirectory $Here
+}

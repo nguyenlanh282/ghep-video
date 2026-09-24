@@ -15,7 +15,7 @@ from urllib.parse import unquote, urlparse, parse_qs
 APP=Path(__file__).resolve().parent;ENGINE=APP.parent;UI=APP/'ui'
 sys.path.insert(0,str(ENGINE))
 from platform_tools import DATA, WINDOWS, MAC, NOWIN, utf8_stdio
-import updater
+import updater, thumbnail
 
 ROOT=Path(os.environ.get('GHEPVIDEO_ROOT',ENGINE.parent))  # project folder: media, recordings, output
 MEDIA_EXT={'.mp4','.mov','.m4v','.mkv','.webm','.jpg','.jpeg','.png','.webp','.heic'}
@@ -36,7 +36,7 @@ def first_audio():
 DEFAULTS=dict(mediaFolder=str(find_child(ROOT,'Video - ảnh')),audio=first_audio(),music='',outputFolder=str(ROOT/'output'),
  title='VỢ CHỒNG',subtitle='Ai làm việc nhà?',titleStyle='pop',subStyle='sweep',musicVolume=.15,voiceVolume=1.0,normalizeVoice=True,
  shotSeconds=2.5,removeSilence=True,faceAwareFill=True,resolution='1080',fixesText='xòng => sòng\nđận => đần',
- matchScenes=True,stockEnabled=False,stockSource='auto',pexelsKey='',pixabayKey='',updateManifest='')
+ matchScenes=True,stockEnabled=False,stockSource='auto',pexelsKey='',pixabayKey='',updateManifest='',captionY=.73)
 SECRET_KEYS={'pexelsKey','pixabayKey'}
 
 def check_key(source,key):
@@ -62,7 +62,7 @@ class Studio:
   # A fresh copy on a new computer: create the project's media and output folders.
   for k in ('mediaFolder','outputFolder'):
    if self.settings[k]==DEFAULTS[k]:Path(self.settings[k]).mkdir(parents=True,exist_ok=True)
-  self.update_info=None
+  self.update_info=None;self.thumbs=[];self.thumb_saved=None
   self.window=None;self.proc=None;self.lock=threading.Lock();self.media={}
   self.job=dict(running=False,task='',progress=0,status='Sẵn sàng dựng video',error=None,result=None,cancelled=False)
 
@@ -101,7 +101,8 @@ class Studio:
   notes=self.analysis()
   return dict(settings=s,mediaCount=len(self.media_names()),notes=notes,analyzedCount=len(notes),sceneCount=sum(n['scenes'] for n in notes),
    job=dict(self.job),platform='windows' if WINDOWS else 'mac' if MAC else 'linux',version=updater.current_version(),
-   update=self.update_info,backups=[p.stem for p in updater.backups(DATA)][:3],updateConfigured=bool(updater.manifest_url(self.settings)),
+   update=self.update_info,thumbs=[dict(id=c['id'],preview=self.url(c['preview']),fits=c.get('fits',True),tilt=c.get('tilt',0),
+    source=c['source'],time=c.get('time'),upload=c.get('upload',False)) for c in self.thumbs],thumbSaved=self.thumb_saved,backups=[p.stem for p in updater.backups(DATA)][:3],updateConfigured=bool(updater.manifest_url(self.settings)),
    audioUrl=self.url(self.settings['audio']),musicUrl=self.url(self.settings['music']),resultUrl=self.url(self.job['result']))
 
  def url(self,path):
@@ -157,7 +158,7 @@ class Studio:
    if not Path(s['audio']).is_file():return self.fail('Hãy chọn file ghi âm.')
    if not Path(s['outputFolder']).is_dir():return self.fail('Hãy chọn thư mục lưu video.')
    analysed=len(self.analysis())>0
-   job={k:s[k] for k in ('mediaFolder','audio','music','outputFolder','title','subtitle','titleStyle','subStyle','musicVolume','shotSeconds','resolution','removeSilence','faceAwareFill','fixesText','voiceVolume','normalizeVoice','stockSource')}
+   job={k:s[k] for k in ('mediaFolder','audio','music','outputFolder','title','subtitle','titleStyle','subStyle','musicVolume','shotSeconds','resolution','removeSilence','faceAwareFill','fixesText','voiceVolume','normalizeVoice','stockSource','captionY')}
    job.update(preview=bool(preview),cacheFolder=str(self.cache()),matchScenes=s['matchScenes'] and analysed,stockEnabled=s['stockEnabled'] and s['matchScenes'] and analysed,aiPython=sys.executable)
    job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
    args=[str(ENGINE/'renderer.py'),str(job_file)];log='render.log';cleanup=lambda:job_file.unlink(missing_ok=True)
@@ -236,6 +237,60 @@ class Studio:
   if p.returncode:return dict(error='Không tạo được bản nghe thử: '+p.stderr.decode(errors='replace')[-300:])
   return dict(url=self.url(str(out))+f'?v={time.time():.0f}')
 
+ # ---- thumbnails ----
+ def thumb_job(self):
+  """The render whose footage to search: the last exported video, else the newest one in the output folder."""
+  out=Path(self.job['result']).with_suffix('.json') if self.job.get('result') else None
+  if not (out and out.exists()):
+   found=sorted(Path(self.settings['outputFolder']).glob('*.json'),key=lambda p:p.stat().st_mtime,reverse=True)
+   out=found[0] if found else None
+  try:return json.loads(out.read_text(encoding='utf-8')),out
+  except Exception:return {},None
+
+ def thumb_find(self):
+  if self.job['running']:return dict(error='Đang có tác vụ chạy.')
+  self.job=dict(running=True,task='thumbs',progress=0,status='Đang tìm hình rõ mặt…',error=None,result=self.job.get('result'),cancelled=False,log='')
+  def work():
+   try:
+    job,_=self.thumb_job()
+    uploads=[c for c in self.thumbs if c.get('upload')]
+    found=thumbnail.find_candidates(job,job.get('mediaFolder') or self.settings['mediaFolder'],self.cache()/'thumbs',
+                                    progress=lambda p,m:self.job.update(progress=p/100,status=m))
+    self.thumbs=uploads+found
+    if not found:self.job['status']='Không tìm thấy khung hình có mặt người rõ. Hãy tải ảnh lên.'
+   except Exception as exc:self.job.update(error=f'Chưa tìm được hình: {exc}')
+   finally:self.job['running']=False
+  threading.Thread(target=work,daemon=True).start()
+  return self.state()
+
+ def thumb_upload(self,name,data):
+  if len(data)>60*1024*1024:return dict(error='Ảnh quá lớn (tối đa 60 MB).')
+  folder=self.cache()/'thumbs'/'uploads';folder.mkdir(parents=True,exist_ok=True)
+  src=folder/(uuid.uuid4().hex+Path(name).suffix.lower()[:6]);src.write_bytes(data)
+  c=thumbnail.add_upload(src,self.cache()/'thumbs');src.unlink(missing_ok=True)
+  c['id']='u'+uuid.uuid4().hex[:6];self.thumbs=[c]+self.thumbs
+  return dict(self.state(),added=c['id'])
+
+ def thumb_pick(self,ids):
+  chosen=[next((c for c in self.thumbs if c['id']==i),None) for i in ids]
+  if not chosen or None in chosen or not 1<=len(chosen)<=3:raise ValueError('Hãy chọn từ 1 đến 3 hình.')
+  return chosen
+
+ def thumb_compose(self,ids,text):
+  s=self.settings;chosen=self.thumb_pick(ids)
+  full=thumbnail.compose(chosen,self.cache()/'thumbs'/'bia-xem-truoc.jpg',s['title'],s['subtitle'],s['titleStyle'],text)
+  from PIL import Image
+  small=self.cache()/'thumbs'/'bia-xem-truoc-nho.jpg';Image.open(full).resize((540,960)).save(small,quality=88)
+  return dict(url=self.url(str(small))+f'?v={time.time():.3f}')
+
+ def thumb_save(self,ids,text):
+  s=self.settings;chosen=self.thumb_pick(ids);_,src=self.thumb_job()
+  folder=Path(s['outputFolder']);name=(src.stem if src else 'Video-'+time.strftime('%Y%m%d-%H%M%S'))+'-anh-bia'
+  dest=folder/(name+'.jpg');n=2
+  while dest.exists():dest=folder/f'{name}-{n}.jpg';n+=1
+  thumbnail.compose(chosen,dest,s['title'],s['subtitle'],s['titleStyle'],text)
+  self.thumb_saved=str(dest);return dict(self.state(),saved=str(dest))
+
  # ---- updates ----
  def check_update(self):
   try:
@@ -279,7 +334,9 @@ API={'state':lambda b:studio.state(),'set':lambda b:studio.set(b.get('values',{}
  'openNotes':lambda b:studio.open_notes(),'openLink':lambda b:studio.open_link(b.get('url','')),'clearError':lambda b:studio.clear_error(),
  'saveKey':lambda b:studio.save_key(b.get('source',''),b.get('value','')),'listen':lambda b:studio.listen(b.get('mode','mix')),
  'checkUpdate':lambda b:studio.check_update(),'applyUpdate':lambda b:studio.run_update('update'),'rollback':lambda b:studio.run_update('rollback'),
- 'restart':lambda b:studio.restart()}
+ 'restart':lambda b:studio.restart(),
+ 'thumbFind':lambda b:studio.thumb_find(),'thumbCompose':lambda b:studio.thumb_compose(b.get('ids',[]),b.get('text',True)),
+ 'thumbSave':lambda b:studio.thumb_save(b.get('ids',[]),b.get('text',True)),'thumbReveal':lambda b:studio.reveal(studio.thumb_saved)}
 
 class Handler(BaseHTTPRequestHandler):
  def log_message(self,*a):pass
@@ -292,7 +349,14 @@ class Handler(BaseHTTPRequestHandler):
 
  def do_POST(self):
   path=urlparse(self.path).path
-  if self.headers.get('X-Token')!=TOKEN or not path.startswith('/api/'):return self.send(403,b'{}')
+  if self.headers.get('X-Token')!=TOKEN:return self.send(403,b'{}')
+  if path=='/upload':
+   # Raw image bytes from the page's file picker (works in the app window and in a browser).
+   from urllib.parse import unquote as uq
+   try:out=studio.thumb_upload(uq(self.headers.get('X-Filename','anh.jpg')),self.rfile.read(int(self.headers.get('Content-Length') or 0)))
+   except Exception as exc:out=dict(error=str(exc))
+   return self.send(200,json.dumps(out,ensure_ascii=False).encode())
+  if not path.startswith('/api/'):return self.send(403,b'{}')
   body=json.loads(self.rfile.read(int(self.headers.get('Content-Length') or 0)) or b'{}')
   fn=API.get(path[5:])
   if not fn:return self.send(404,b'{}')

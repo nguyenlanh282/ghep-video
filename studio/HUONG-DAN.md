@@ -1,30 +1,27 @@
 # Ghép Video — chạy trên Mac và Windows
 
-## Cài đặt (một lần)
+## Cài đặt: 1 lần bấm
 
-**macOS** (chip Apple M1 trở lên, macOS 12+):
-1. Bấm đúp `studio/setup-mac.command`. Script cài FFmpeg/Python nếu thiếu (qua Homebrew), thư viện, và tải mô hình AI (~4,5 GB lần đầu).
-2. Mở **Ghép Video.app** ở thư mục gốc.
+Vào **github.com/nguyenlanh282/ghep-video/releases**, tải **1 file** hợp với máy rồi bấm đúp:
 
-**Windows** (10/11 64-bit, RAM ≥16 GB; nên có card NVIDIA ≥8 GB VRAM, không có vẫn chạy nhưng chậm hơn):
-1. Chép cả thư mục dự án sang máy Windows.
-2. Bấm đúp `Cai dat (Windows).bat`. Script dùng winget cài Python 3.12, FFmpeg, Ollama; cài thư viện; tải mô hình nghe lời đọc (~1,5 GB), mô hình xem ảnh `qwen3-vl:4b` qua Ollama (~3,3 GB) và bộ nhận diện khuôn mặt; tạo biểu tượng **Ghép Video** trên Desktop.
-3. Mở app bằng biểu tượng trên Desktop hoặc `Ghep Video (Windows).bat`. Ollama phải đang chạy (nó tự chạy nền sau khi cài).
+- **Mac** (chip Apple M1 trở lên): `Cai-dat-Ghep-Video-Mac.command`
+  - Lần đầu macOS có thể báo không mở được file tải từ mạng: vào **Cài đặt hệ thống → Quyền riêng tư & Bảo mật → Vẫn mở**, hoặc chuột phải file → **Mở**.
+  - Hoặc dán 1 lệnh vào Terminal (không bị chặn): `curl -fsSL https://raw.githubusercontent.com/nguyenlanh282/ghep-video/main/studio/installers/install-mac.sh | zsh`
+- **Windows 10/11**: `Cai-dat-Ghep-Video-Windows.bat`. Nếu hiện “Windows protected your PC”: **More info → Run anyway**.
 
-Cài đặt lưu ở `~/Library/Application Support/GhepVideo/` (Mac) hoặc `%APPDATA%\GhepVideo\` (Windows): môi trường Python, mô hình, `settings.json` (lựa chọn lần trước, key Pexels/Pixabay) và `app.log`.
+File cài tự làm hết: tải bản mới nhất, kiểm tra mã SHA-256, đặt app vào thư mục **Ghép Video** trong thư mục người dùng, cài Python, FFmpeg (và Ollama trên Windows), thư viện, mô hình AI (~5 GB lần đầu, mất 10–30 phút tuỳ mạng), tạo biểu tượng, rồi **tự mở app**. Không cần cài Homebrew, Python hay gì trước.
+
+Sau đó mở app bằng **Ghép Video** trong thư mục *Ứng dụng* của bạn (Mac) hoặc biểu tượng trên Desktop (Windows). Tư liệu để trong `Ghép Video/Video - ảnh`, video xuất ở `Ghép Video/output`.
+
+Cài đặt lưu ở `~/Library/Application Support/GhepVideo/` (Mac) hoặc `%APPDATA%\GhepVideo\` (Windows): Python, FFmpeg, `settings.json` (lựa chọn, key Pexels/Pixabay), `app.log`, bản sao lưu.
 
 ## Mang sang máy khác
 
-1. Lấy file `GhepVideo-<phiên bản>.zip` (xem “Phát hành bản mới” bên dưới) rồi chép sang máy mới, hoặc gửi qua Zalo/Drive/USB. File zip chỉ chứa app (~5 MB): không có tư liệu, video, cài đặt hay API key của máy cũ.
-2. Giải nén vào nơi bạn muốn (vd `Tài liệu/Ghép Video`).
-3. Chạy cài đặt một lần:
-   - **Mac:** bấm chuột phải vào `studio/setup-mac.command` → **Mở** → **Mở** (lần đầu macOS cảnh báo file tải từ mạng; script tự gỡ cảnh báo cho cả thư mục app).
-   - **Windows:** bấm đúp `Cai dat (Windows).bat`. Nếu hiện “Windows protected your PC”, bấm **More info → Run anyway**.
-4. Mở app. Thư mục `Video - ảnh` và `output` tự được tạo trong thư mục app. Dán lại API key Pixabay/Pexels trên máy mới (key không đi theo file zip).
+Trên máy mới chỉ cần làm như mục **Cài đặt: 1 lần bấm**. Tư liệu, video và key của máy cũ không đi theo; chép tư liệu sang thư mục `Ghép Video/Video - ảnh` của máy mới, rồi dán lại key Pexels/Pixabay trong app.
 
 ## Cập nhật
 
-- Bấm nút **Phiên bản …** ở góc trên bên phải. Lần đầu, mở “Địa chỉ cập nhật” và dán link `latest.json` được cung cấp, rồi bấm **Lưu địa chỉ**. App tự kiểm tra mỗi lần mở; khi có bản mới, nút chuyển màu xanh và ghi “có bản mới”.
+- Nút **Phiên bản …** ở **góc trên bên phải** app. App tự kiểm tra mỗi lần mở (nguồn cập nhật có sẵn, không cần điền gì); khi có bản mới, nút chuyển **màu xanh** và ghi “có bản mới”.
 - **Cập nhật lên …**: app tải gói, kiểm tra mã SHA-256, sao lưu bản đang dùng, chỉ thay file của app (tư liệu, video đã xuất, cài đặt, key giữ nguyên), cài thêm thư viện nếu bản mới cần, rồi mời **Khởi động lại app**.
 - Gói tải về bị lỗi hoặc chứa file ngoài phạm vi app thì bị từ chối và app giữ nguyên bản cũ.
 - **↩ Quay lại bản trước**: dùng bản sao lưu gần nhất (giữ 3 bản gần nhất trong thư mục cài đặt, mục `backups/`).
@@ -34,7 +31,7 @@ Cài đặt lưu ở `~/Library/Application Support/GhepVideo/` (Mac) hoặc `%A
 1. Sửa code trong `studio/`, chạy kiểm thử: `python -m unittest test_renderer test_updater`.
 2. Tạo gói: `python studio/updater.py 2.2.0 --notes "• Điều thay đổi 1\n• Điều thay đổi 2" --base-url https://<nơi-để-file>/`
    → tạo `dist/GhepVideo-2.2.0.zip` và `dist/latest.json` (có số phiên bản, link, mã SHA-256, ghi chú).
-3. Tải **cả hai file** lên nơi lưu trữ (link phải tải trực tiếp được qua https). Máy nào đã dán link `latest.json` sẽ thấy bản mới.
+3. Đăng lên GitHub kèm 2 file cài 1 lần bấm (lệnh trong `README.md`). Mọi máy đang dùng app sẽ thấy nút cập nhật chuyển xanh.
 4. Số phiên bản dạng `2.2.0`: sửa nhỏ tăng số cuối, thêm tính năng tăng số giữa.
 
 ## Sử dụng
@@ -46,6 +43,8 @@ Cài đặt lưu ở `~/Library/Application Support/GhepVideo/` (Mac) hoặc `%A
 5. Chỉnh hai dòng tiêu đề, chọn mẫu tiêu đề và kiểu phụ đề độc lập. Nếu máy nghe sai chữ nào, ghi vào ô **Sửa chữ nhận dạng sai** (mỗi dòng `chữ sai => chữ đúng`); lần xuất sau sẽ dùng chữ đúng.
 6. Chọn thư mục lưu, độ phân giải (mặc định **1080p**) và nhịp đổi cảnh 1,5–5 giây (kéo thanh trượt hoặc bấm − / +).
 7. Bấm **Dựng thử 20 giây** để kiểm tra lựa chọn, hoặc **Xuất toàn bộ video**.
+
+8. **Ảnh bìa** (mục 06, dưới khung xem trước): bấm **Tìm hình rõ mặt**. App lấy khung hình từ chính các cảnh video vừa xuất (hình gốc, không dính phụ đề) và chấm điểm: có mặt, mặt to, nét, đủ sáng, không nghiêng, vừa khung 9:16 (hình có mặt sát mép được ghi “Mặt sát mép”). Bấm để chọn 1–3 hình (số trên hình là thứ tự; 1 hình tràn khung, 2 hình trên/dưới, 3 hình 1 trên 2 dưới). Bấm hình đã chọn để bỏ; đã đủ 3 mà bấm hình khác thì hình số 3 được thay. **Tải ảnh lên** để dùng ảnh riêng. Bật/tắt chữ tiêu đề, rồi **Lưu ảnh bìa**: file `…-anh-bia.jpg` (1080×1920) lưu cạnh video.
 
 Kết quả gồm MP4, phụ đề SRT và JSON lưu lựa chọn của lần dựng. Tên file có thời gian và mã riêng, không ghi đè tư liệu gốc. Có nút dừng khi đang xuất.
 
@@ -77,8 +76,9 @@ Kết quả gồm MP4, phụ đề SRT và JSON lưu lựa chọn của lần d�
 - `analyzer.py`: phân tích ảnh/video, đổi tên, ghi chú, chọn cảnh cho từng câu, tìm ảnh miễn phí.
 - `FaceDetect.swift` → `face-detect`: bộ nhận diện mặt Apple Vision (Mac).
 - `setup-mac.command`, `setup-windows.ps1`, `requirements-*.txt`: cài đặt.
+- `thumbnail.py`: tìm khung hình làm ảnh bìa và ghép 1–3 hình kèm tiêu đề.
 - `updater.py`: tạo gói phát hành, kiểm tra và cài bản mới, sao lưu / quay lại bản trước. `VERSION`: số phiên bản; `update.json`: link `latest.json` mặc định cho các máy mới.
-- `test_renderer.py`, `test_updater.py`: kiểm thử (`python -m unittest test_renderer test_updater`).
+- `test_renderer.py`, `test_updater.py`, `test_thumbnail.py`: kiểm thử (`python -m unittest test_renderer test_updater test_thumbnail`).
 - Bản cũ chỉ chạy trên Mac: `Ghép Video (bản cũ).app`, mã `VideoStudio.swift`, biên dịch bằng `build.command`. Giữ lại để dự phòng; bản mới đã có đủ chức năng.
 
 ## Cắt khoảng im lặng

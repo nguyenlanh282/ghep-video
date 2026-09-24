@@ -9,11 +9,14 @@ for path in paths {
   let request=VNDetectFaceRectanglesRequest()
   request.usesCPUOnly=true
   try VNImageRequestHandler(cgImage:image,options:[:]).perform([request])
-  let boxes=(request.results ?? []).map { o -> [Double] in
+  let faces=request.results ?? []
+  let boxes=faces.map { o -> [Double] in
    let b=o.boundingBox
    return [Double(b.minX),Double(1-b.maxY),Double(b.width),Double(b.height)]
   }
-  result[path]=["width":image.width,"height":image.height,"faces":boxes]
+  // Head tilt in degrees (0 = upright); used to skip sideways faces for thumbnails.
+  let rolls=faces.map { o -> Double in (o.roll?.doubleValue ?? 0)*180/Double.pi }
+  result[path]=["width":image.width,"height":image.height,"faces":boxes,"rolls":rolls]
  } catch {result[path]=["error":error.localizedDescription]}
 }
 let data=try JSONSerialization.data(withJSONObject:result,options:[.sortedKeys])

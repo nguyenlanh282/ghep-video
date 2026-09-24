@@ -21,6 +21,7 @@ const base = (p) => p ? p.split(/[\\/]/).pop() : '';
 /* ---------- controls wired once; render() only updates values ---------- */
 function formatValue(fmt, v) {
   if (fmt === 'percent') return Math.round(v * 100) + '%';
+  if (fmt === 'height') return Math.round(v * 100) + '% chiều cao';
   if (fmt === 'seconds') return v.toFixed(1).replace('.', ',') + ' giây';
   return String(v);
 }
@@ -39,6 +40,7 @@ function buildValueControls() {
       v = Math.min(max, Math.max(min, Math.round(v / step) * step));
       v = +v.toFixed(3); range.value = v; out.textContent = formatValue(fmt, v);
       $$('.step', el).forEach(b => b.disabled = (+b.dataset.d < 0 ? v <= min : v >= max));
+      if (key === 'captionY') $('#frame').style.setProperty('--cap-y', (v * 100) + '%');
       return v;
     };
     range.addEventListener('input', () => commit(apply(+range.value)));
@@ -80,6 +82,7 @@ function wire() {
 
   $$('.keyrow').forEach(wireKeyRow);
   wireUpdates();
+  wireThumbs();
 
   const player = $('#player');
   $('#playBtn').addEventListener('click', () => { stopListening(); player.paused ? player.play() : player.pause(); });
@@ -117,12 +120,64 @@ function wireKeyRow(row) {
   sync();
 }
 
+/* ---------- thumbnails: pick 1–3 candidates, a 4th click replaces the last pick ---------- */
+let thumbSel = [];
+function wireThumbs() {
+  $('#thumbFind').addEventListener('click', () => { thumbSel = []; api('thumbFind').then(poll); });
+  $('#thumbUploadBtn').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('#thumbFile').click(); } });
+  $('#thumbFile').addEventListener('change', async e => {
+    const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+    $('#thumbHint').hidden = false; $('#thumbHint').textContent = 'Đang tải ảnh lên…';
+    const r = await fetch('/upload', {method: 'POST', headers: {'X-Token': TOKEN, 'X-Filename': encodeURIComponent(file.name)}, body: file});
+    const out = await r.json();
+    if (out.error) { $('#thumbHint').textContent = out.error; return; }
+    render(out); $('#thumbHint').hidden = true;
+    // An uploaded picture joins the selection (replacing the last one when 3 are already chosen).
+    toggleThumb(out.added, true);
+  });
+  $('#thumbGrid').addEventListener('click', e => { const b = e.target.closest('button[data-id]'); if (b) toggleThumb(b.dataset.id); });
+  $('#thumbText').addEventListener('change', composeThumb);
+  $('#thumbSave').addEventListener('click', async () => {
+    const out = await api('thumbSave', {ids: thumbSel, text: $('#thumbText').checked});
+    $('#thumbSaved').textContent = out.saved ? 'Đã lưu: ' + base(out.saved) : (out.error || '');
+    $('#thumbReveal').hidden = !out.saved;
+  });
+  $('#thumbReveal').addEventListener('click', () => api('thumbReveal'));
+}
+function toggleThumb(id, add) {
+  const i = thumbSel.indexOf(id);
+  if (i >= 0 && !add) thumbSel.splice(i, 1);
+  else if (i < 0) { if (thumbSel.length >= 3) thumbSel[2] = id; else thumbSel.push(id); }
+  paintThumbs(); composeThumb();
+}
+const composeThumb = debounce(async () => {
+  if (!thumbSel.length) return;
+  const out = await api('thumbCompose', {ids: thumbSel, text: $('#thumbText').checked});
+  if (out.url) $('#thumbPreview').src = out.url;
+}, 150);
+function paintThumbs() {
+  if (!S) return;
+  const list = S.thumbs || [];
+  thumbSel = thumbSel.filter(id => list.some(c => c.id === id));
+  const key = list.map(c => c.id).join() + '|' + thumbSel.join();
+  if ($('#thumbGrid').dataset.key !== key) {
+    $('#thumbGrid').dataset.key = key;
+    $('#thumbGrid').innerHTML = list.map(c => {
+      const n = thumbSel.indexOf(c.id) + 1;
+      const tag = c.upload ? 'Ảnh tải lên' : !c.fits ? 'Mặt sát mép' : '';
+      const label = `${c.upload ? 'Ảnh tải lên' : esc(c.source) + (c.time != null ? ' giây ' + c.time : '')}${n ? ', đã chọn thứ ' + n : ''}`;
+      return `<button data-id="${c.id}" class="${n ? 'on' : ''}" aria-pressed="${!!n}" aria-label="${label}"><img src="${c.preview}" alt="">${n ? `<span class="badge">${n}</span>` : ''}${tag ? `<span class="tag">${tag}</span>` : ''}</button>`;
+    }).join('');
+  }
+  $('#thumbResult').hidden = !thumbSel.length;
+  if (S.job.task === 'thumbs' && !S.job.running && S.job.status && !list.length) { $('#thumbHint').hidden = false; $('#thumbHint').textContent = S.job.status; }
+}
+
 /* ---------- updates ---------- */
 function wireUpdates() {
   const dlg = $('#updateDialog');
   $('#updateBtn').addEventListener('click', () => { paintUpdate(); dlg.showModal(); if (S.updateConfigured && !S.update) api('checkUpdate').then(paintUpdate); });
   $('#updCheck').addEventListener('click', () => { $('#updBody').innerHTML = '<p>Đang kiểm tra…</p>'; api('checkUpdate').then(paintUpdate); });
-  $('#updUrlSave').addEventListener('click', () => set({updateManifest: $('#updUrl').value.trim()}).then(() => api('checkUpdate')).then(paintUpdate));
   $('#rollbackBtn').addEventListener('click', () => {
     if (confirm(`Quay lại ${S.backups[0]}? Bản hiện tại sẽ được thay bằng bản sao lưu.`)) { dlg.close(); api('rollback').then(poll); }
   });
@@ -135,12 +190,12 @@ function paintUpdate() {
   if (!S) return;
   const u = S.update, b = $('#updBody'), job = S.job;
   $('#updCurrent').textContent = S.version;
-  if (document.activeElement !== $('#updUrl')) $('#updUrl').value = S.settings.updateManifest || '';
   $('#rollbackBtn').hidden = !S.backups.length;
   if (job.task === 'update' && job.restartNeeded && !job.running) {
     b.innerHTML = `<p class="ok">${esc(job.status)}</p><button class="btn primary" id="updRestart" type="button">Khởi động lại app</button>`; return;
   }
-  if (!S.updateConfigured) { b.innerHTML = '<p class="hint">Chưa có địa chỉ cập nhật. Mở mục “Địa chỉ cập nhật” bên dưới và dán link được cung cấp.</p>'; $('#updAdvanced').open = true; return; }
+  // The update address ships inside the app (studio/update.json), so there is nothing to type.
+  if (!S.updateConfigured) { b.innerHTML = '<p class="hint">Bản cài này không có nguồn cập nhật. Hãy cài lại bằng file cài đặt mới nhất.</p>'; return; }
   if (!u) { b.innerHTML = '<p class="hint">Bấm “Kiểm tra” để xem có bản mới không.</p>'; return; }
   if (u.error) { b.innerHTML = `<p class="bad">${esc(u.error)}</p>`; return; }
   if (!u.available) { b.innerHTML = `<p class="ok">✓ Đang dùng bản mới nhất (${esc(u.latest)}).</p>`; return; }
@@ -224,7 +279,8 @@ function render(state) {
   $('#substatus').textContent = job.running ? `${Math.round(job.progress * 100)}% · Bạn có thể dừng bất cứ lúc nào` : `Video dọc 9:16 · ${s.resolution}p · Giữ nguyên file gốc`;
   $('#actions').hidden = job.running; $('#cancelBtn').hidden = !job.running;
   $('#cancelBtn').textContent = job.task === 'render' ? 'Dừng xuất' : 'Dừng phân tích';
-  if (job.task === 'update') $('#cancelBtn').hidden = true;  // an update must finish (or fail and leave the old version)
+  if (job.task === 'update' || job.task === 'thumbs') $('#cancelBtn').hidden = true;  // short in-app tasks: they finish on their own
+  paintThumbs();
   $('#error').hidden = !job.error; $('#errorText').textContent = job.error || '';
   if (state.resultUrl && (!prevJob || prevJob.result !== job.result || !showingResult) && prevJob && prevJob.running && !job.running) showResult(state.resultUrl);
   $('#resultRow').hidden = !job.result;
