@@ -1,0 +1,6 @@
+# macOS, Apple Silicon (M1 trở lên)
+pywebview>=5
+pillow
+numpy
+mlx-whisper
+mlx-vlm

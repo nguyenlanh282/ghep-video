@@ -1,0 +1,6 @@
+# Windows 10/11 64-bit
+pywebview>=5
+pillow
+numpy
+faster-whisper
+opencv-python>=4.8

@@ -1,0 +1,15 @@
+# Allowlist: only the app is tracked. Media, recordings, music, output and the old app never enter git.
+/*
+!/.gitignore
+!/README.md
+!/studio/
+!/Ghép Video.app/
+!/Ghep Video (Windows).bat
+!/Cai dat (Windows).bat
+__pycache__/
+.DS_Store
+/dist/
+# Machine-only sample (family video) and the legacy Swift app sources
+/studio/app/ui/assets/local/
+/studio/VideoStudio.swift
+/studio/build.command

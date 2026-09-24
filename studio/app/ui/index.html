@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ghép Video</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h11a2 2 0 0 1 2 2v1.5l3.4-2.3a1 1 0 0 1 1.6.8v10a1 1 0 0 1-1.6.8L17 15.5V17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg>
+    <div><h1>GHÉP VIDEO</h1><p>Từ câu chuyện đến thước phim</p></div>
+  </div>
+  <div class="row gap">
+    <span class="local" id="platformLabel">Xử lý trên máy</span>
+    <button class="btn small" id="updateBtn">Phiên bản <span id="versionLabel">–</span></button>
+  </div>
+</header>
+
+<dialog id="updateDialog" aria-labelledby="updTitle">
+  <form method="dialog" class="dlg">
+    <h2 id="updTitle">Cập nhật app</h2>
+    <p>Đang dùng phiên bản <b id="updCurrent">–</b>.</p>
+    <div id="updBody" class="updbody"></div>
+    <details id="updAdvanced"><summary>Địa chỉ cập nhật</summary>
+      <p class="hint">Link tới file <code>latest.json</code> của các bản phát hành (người quản lý app cung cấp).</p>
+      <input type="text" id="updUrl" spellcheck="false" placeholder="https://…/latest.json">
+      <button class="btn small" id="updUrlSave" type="button">Lưu địa chỉ</button>
+    </details>
+    <div class="row between">
+      <button class="btn small" id="rollbackBtn" type="button" hidden>↩ Quay lại bản trước</button>
+      <div class="row gap"><button class="btn" id="updCheck" type="button">Kiểm tra</button><button class="btn" value="close">Đóng</button></div>
+    </div>
+  </form>
+</dialog>
+
+<main id="main">
+  <section class="panel" aria-labelledby="s1">
+    <h2 id="s1"><span class="num">01</span>Tư liệu của bạn</h2>
+    <button class="filebox" data-choose="media"><span class="ico">🖼</span><span class="fb-text"><b>Video &amp; hình ảnh</b><small data-path="mediaFolder">Chọn thư mục tư liệu</small></span><span class="fb-go">＋</span></button>
+    <p class="hint tight"><span id="mediaCount">0</span> ảnh/video trong thư mục</p>
+
+    <div class="analysis">
+      <div class="row gap">
+        <button class="btn primary" id="analyzeBtn">✨ Phân tích &amp; đặt tên</button>
+        <button class="btn" id="notesBtn" hidden>Xem ghi chú</button>
+      </div>
+      <p class="hint" id="analysisInfo">AI trên máy xem từng ảnh/video, đặt tên theo nội dung và ghi chú từng đoạn cảnh.</p>
+      <label class="switch"><input type="checkbox" data-key="matchScenes"><span></span>Ghép cảnh khớp lời đọc</label>
+      <label class="switch"><input type="checkbox" data-key="stockEnabled"><span></span>Tìm ảnh miễn phí cho câu chưa có cảnh hợp</label>
+      <div id="stockBox" class="sub" hidden>
+        <div class="seg" data-seg="stockSource">
+          <button data-value="auto">Tự động</button><button data-value="pexels">Pexels</button><button data-value="pixabay">Pixabay</button><button data-value="openverse">Openverse</button>
+        </div>
+        <div class="keys">
+          <div class="keyrow" data-source="pixabay">
+            <div class="row between"><b>Key Pixabay</b><span class="keystate" aria-live="polite"></span></div>
+            <div class="keyinput">
+              <input type="password" autocomplete="off" spellcheck="false" aria-label="API key Pixabay">
+              <button class="eye" type="button" aria-label="Hiện key">👁</button>
+            </div>
+            <div class="row gap">
+              <button class="btn small primary save">Lưu</button>
+              <button class="btn small clear">Xoá key</button>
+              <button class="link getkey" data-url="https://pixabay.com/api/docs/">Lấy key miễn phí</button>
+            </div>
+          </div>
+          <div class="keyrow" data-source="pexels">
+            <div class="row between"><b>Key Pexels</b><span class="keystate" aria-live="polite"></span></div>
+            <div class="keyinput">
+              <input type="password" autocomplete="off" spellcheck="false" aria-label="API key Pexels">
+              <button class="eye" type="button" aria-label="Hiện key">👁</button>
+            </div>
+            <div class="row gap">
+              <button class="btn small primary save">Lưu</button>
+              <button class="btn small clear">Xoá key</button>
+              <button class="link getkey" data-url="https://www.pexels.com/api/">Lấy key miễn phí</button>
+            </div>
+          </div>
+        </div>
+        <p class="hint" id="stockHint"></p>
+      </div>
+      <details id="noteList" hidden><summary>Danh sách tư liệu</summary><div id="notes"></div>
+        <button class="btn small" id="undoBtn">↩ Trả lại tên gốc</button></details>
+    </div>
+
+    <hr>
+    <button class="filebox" data-choose="audio"><span class="ico">〰</span><span class="fb-text"><b>File ghi âm</b><small data-path="audio">M4A, MP3, WAV…</small></span><span class="fb-go">＋</span></button>
+    <button class="btn small" data-listen="voice">▶ Nghe giọng đọc</button>
+    <div class="value" data-value-key="voiceVolume" data-min="0.5" data-max="3" data-step="0.1" data-format="percent">Âm lượng giọng đọc</div>
+    <label class="switch"><input type="checkbox" data-key="normalizeVoice"><span></span>Tự cân bằng giọng đọc (chuẩn mạng xã hội)</label>
+    <p class="hint">Giọng được đưa về độ to chuẩn −14 LUFS rồi nhân với mức trên; có bộ chặn để không bị rè.</p>
+    <div class="value" data-value-key="shotSeconds" data-min="1.5" data-max="5" data-step="0.5" data-format="seconds">Đổi cảnh sau</div>
+    <label class="switch"><input type="checkbox" data-key="removeSilence"><span></span>Tự cắt khoảng im lặng</label>
+    <label class="switch"><input type="checkbox" data-key="faceAwareFill"><span></span>Ảnh đầy khung, giữ trọn mặt</label>
+    <p class="hint">Tự bỏ qua ảnh quá ngang nếu cắt dọc sẽ mất mặt.</p>
+
+    <hr>
+    <h2><span class="num">02</span>Nhạc nền</h2>
+    <button class="filebox" data-choose="music"><span class="ico">♪</span><span class="fb-text"><b id="musicLabel">Thêm nhạc nền</b><small data-path="music">Không bắt buộc</small></span><span class="fb-go">＋</span></button>
+    <div class="value" data-value-key="musicVolume" data-min="0" data-max="1" data-step="0.05" data-format="percent">Âm lượng nhạc</div>
+    <div class="row gap">
+      <button class="btn" data-listen="music">▶ Nghe nhạc</button>
+      <button class="btn" data-listen="mix">▶ Nghe cùng lời đọc</button>
+    </div>
+    <p class="hint" id="musicHint">Chọn nhạc nền để nghe thử.</p>
+    <button class="btn small" id="clearMusic" hidden>✕ Bỏ nhạc nền</button>
+
+    <hr>
+    <h2><span class="num">03</span>Lưu video</h2>
+    <button class="filebox" data-choose="output"><span class="ico">📁</span><span class="fb-text"><b>Thư mục xuất video</b><small data-path="outputFolder">Chọn nơi lưu</small></span><span class="fb-go">＋</span></button>
+    <div class="row between"><span>Độ phân giải</span>
+      <div class="seg" data-seg="resolution"><button data-value="720">720p</button><button data-value="1080">1080p</button></div></div>
+  </section>
+
+  <section class="panel" aria-labelledby="s4">
+    <h2 id="s4"><span class="num">04</span>Tiêu đề mở đầu</h2>
+    <input type="text" data-key="title" placeholder="Tiêu đề chính">
+    <input type="text" data-key="subtitle" placeholder="Dòng thứ hai">
+    <div class="styles" data-choice="titleStyle">
+      <button data-value="pop" style="--c:var(--accent)"><i>Aa</i><span><b>Nổi bật</b><small>Chữ đậm • phóng nhẹ</small></span></button>
+      <button data-value="card" style="--c:#ffd54a"><i>Aa</i><span><b>Khung tối</b><small>Nền tối • trượt vào</small></span></button>
+      <button data-value="ribbon" style="--c:#f37aa5"><i>Aa</i><span><b>Dải màu</b><small>Nhấn dòng thứ hai</small></span></button>
+    </div>
+    <label class="switch"><input type="checkbox" id="showTitle"><span></span>Hiện tiêu đề</label>
+
+    <hr>
+    <h2><span class="num">05</span>Phụ đề theo lời đọc</h2>
+    <p class="hint">Một hàng cố định, chỉ đổi màu chữ đang đọc.</p>
+    <div class="styles" data-choice="subStyle">
+      <button data-value="sweep" style="--c:#ffd54a"><i>Aa</i><span><b>Karaoke vàng</b><small>Chữ cố định • đổi màu từng từ</small></span></button>
+      <button data-value="active" style="--c:var(--accent)"><i>Aa</i><span><b>Karaoke xanh</b><small>Chữ cố định • đổi màu từng từ</small></span></button>
+      <button data-value="pill" style="--c:#f37aa5"><i>Aa</i><span><b>Karaoke hồng</b><small>Chữ cố định • đổi màu từng từ</small></span></button>
+    </div>
+    <div class="seg wide" data-seg="subStyle"><button data-value="plain">Chữ trắng</button><button data-value="none">Không phụ đề</button></div>
+
+    <hr>
+    <h3>Sửa chữ nhận dạng sai</h3>
+    <p class="hint">Mỗi dòng một cặp: chữ sai =&gt; chữ đúng. Áp dụng cho phụ đề và SRT của lần xuất tiếp theo.</p>
+    <textarea data-key="fixesText" rows="4" spellcheck="false"></textarea>
+  </section>
+
+  <section class="panel preview" aria-labelledby="pv">
+    <div class="row between"><span class="eyebrow" id="pv">XEM MẪU KIỂU CHỮ</span><span class="ratio">9:16</span></div>
+    <div class="frame" id="frame">
+      <video id="player" playsinline preload="auto"></video>
+      <div class="title-ov" id="titleOv"><div class="t1" id="t1"></div><div class="t2" id="t2"></div></div>
+      <div class="cap" id="cap"></div>
+    </div>
+    <div class="row between">
+      <div class="row gap"><button class="round" id="playBtn" aria-label="Phát xem thử">▶</button><span class="time" id="time">00:00</span></div>
+      <button class="btn small" id="restartBtn">Xem từ đầu</button>
+    </div>
+    <p class="hint" id="previewHint">Mẫu minh họa dùng tư liệu có sẵn. Bấm “Dựng thử 20 giây” để xem chính xác các file bạn chọn.</p>
+    <div class="row gap" id="resultRow" hidden>
+      <button class="btn primary" id="revealBtn">📁 Mở nơi lưu video</button>
+      <button class="btn" id="backToSample">Xem mẫu chữ</button>
+    </div>
+  </section>
+</main>
+
+<footer class="bar">
+  <div class="error" id="error" hidden><span id="errorText"></span><button class="btn small" id="errorClose">Đóng</button></div>
+  <progress id="progress" max="1" value="0" hidden></progress>
+  <div class="row between">
+    <div><b id="status">Sẵn sàng dựng video</b><small id="substatus">Video dọc 9:16 · Giữ nguyên file gốc</small></div>
+    <div class="row gap" id="actions">
+      <button class="btn large" id="previewBtn">Dựng thử 20 giây</button>
+      <button class="btn large primary" id="exportBtn">Xuất toàn bộ video ↗</button>
+    </div>
+    <button class="btn large" id="cancelBtn" hidden>Dừng</button>
+  </div>
+</footer>
+
+<audio id="listenAudio"></audio>
+<script src="app.js"></script>
+</body>
+</html>
