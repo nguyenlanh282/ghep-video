@@ -127,8 +127,16 @@ def vlm_ask(question,images=()):
   prompt=apply_chat_template(proc,m.config,question,num_images=len(images))
   r=generate(m,proc,prompt,[str(i) for i in images] or None,max_tokens=400,temperature=0,verbose=False)
   return getattr(r,'text',r)
- import base64, urllib.request
- body=dict(model=OLLAMA_MODEL,prompt=question,stream=False,think=False,options=dict(temperature=0,num_predict=400),
-           images=[base64.b64encode(Path(i).read_bytes()).decode() for i in images])
- req=urllib.request.Request(OLLAMA_URL+'/api/generate',data=json.dumps(body).encode(),headers={'Content-Type':'application/json'})
- with urllib.request.urlopen(req,timeout=600) as r:return json.loads(r.read())['response']
+ import base64, urllib.request, urllib.error
+ # Every prompt asks for a JSON object: format='json' makes Ollama return exactly that. Qwen3-VL may "think" first;
+ # thinking is switched off and, if the answer still comes back empty, taken from the thinking text instead.
+ message=dict(role='user',content=question,images=[base64.b64encode(Path(i).read_bytes()).decode() for i in images])
+ def call(extra):
+  body=dict(model=OLLAMA_MODEL,messages=[message],stream=False,format='json',options=dict(temperature=0,num_predict=1200),**extra)
+  req=urllib.request.Request(OLLAMA_URL+'/api/chat',data=json.dumps(body).encode(),headers={'Content-Type':'application/json'})
+  with urllib.request.urlopen(req,timeout=900) as r:return json.loads(r.read()).get('message',{})
+ try:msg=call(dict(think=False))
+ except urllib.error.HTTPError as e:
+  if e.code!=400:raise
+  msg=call({})  # a model without the thinking switch rejects think=False
+ return (msg.get('content') or '').strip() or (msg.get('thinking') or '')

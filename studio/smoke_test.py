@@ -58,7 +58,14 @@ def main():
   run([sys.executable,'-u',str(HERE/'analyzer.py'),'analyze',str(media),'--no-rename'],env=dict(os.environ,PYTHONUTF8='1'))
   index=json.loads((media/'_phan-tich.json').read_text(encoding='utf-8'))['files']
   assert len(index)==3,f'analysed {len(index)} of 3 files'
-  print('✓ Mô tả:',next(iter(index.values())).get('mo_ta','')[:80],f'({time.time()-t:.0f}s)',flush=True)
+  empty=[n for n,e in index.items() if not (e.get('mo_ta') or '').strip()]
+  if empty:
+   # Show exactly what the model answered, to see why no description came out.
+   from platform_tools import vlm_ask
+   raw=vlm_ask('Mô tả hình này bằng tiếng Việt, trả về đúng một JSON: {"mo_ta":"1 câu"}',[media/'ảnh 3.jpg'])
+   raise SystemExit(f'FAILED: empty description for {empty}\nraw model answer: {raw[:600]!r}')
+  for n,e in index.items():print(f'✓ {n}: {e["mo_ta"][:90]}',flush=True)
+  print(f'  ({time.time()-t:.0f}s)',flush=True)
   import thumbnail
   thumbnail.find_candidates(json.loads(Path(result['output']).with_suffix('.json').read_text(encoding='utf-8')),str(media),out/'thumbs')
   print('✓ Tìm ảnh bìa chạy được',flush=True)
