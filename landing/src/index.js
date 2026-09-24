@@ -92,18 +92,21 @@ async function download(request, env, ctx, kind) {
   return Response.redirect(asset.url, 302);
 }
 
-async function latestAsset(ctx, pattern) {
-  // Cached for 10 minutes so every download does not hit the GitHub API.
-  const cacheKey = new Request(`https://cache.ghepvideo/latest-release`);
-  let res = await caches.default.match(cacheKey);
+async function latestAsset(ctx, pattern, fresh = false) {
+  // Cached for 5 minutes so every download does not hit the GitHub API. A file missing from the cached list
+  // (e.g. an installer attached after the list was cached) triggers one fresh lookup.
+  const cacheKey = new Request('https://cache.ghepvideo/latest-release');
+  let res = fresh ? null : await caches.default.match(cacheKey);
   if (!res) {
     const gh = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { 'User-Agent': 'ghepvideo-landing', Accept: 'application/vnd.github+json' } });
     if (!gh.ok) return null;
-    res = new Response(await gh.text(), { headers: { 'Cache-Control': 'max-age=600', 'Content-Type': 'application/json' } });
+    res = new Response(await gh.text(), { headers: { 'Cache-Control': 'max-age=300', 'Content-Type': 'application/json' } });
     ctx.waitUntil(caches.default.put(cacheKey, res.clone()));
+    fresh = true;
   }
   const release = await res.json();
   const a = (release.assets || []).find(x => pattern.test(x.name));
+  if (!a && !fresh) return latestAsset(ctx, pattern, true);
   return a ? { name: a.name, url: a.browser_download_url } : null;
 }
 
