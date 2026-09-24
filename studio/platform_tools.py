@@ -3,7 +3,7 @@
 macOS (Apple Silicon): mlx-whisper, Apple Vision face detector (face-detect helper), mlx-vlm.
 Windows / other:       faster-whisper, OpenCV YuNet face detector, Ollama (qwen3-vl).
 """
-import json, os, platform, shutil, subprocess, sys
+import json, os, platform, re, shutil, subprocess, sys
 from pathlib import Path
 
 WINDOWS=os.name=='nt'
@@ -100,7 +100,9 @@ def detect_faces_many(images):
 # ---------- Vision-language model ----------
 
 MLX_MODEL='mlx-community/Qwen3-VL-4B-Instruct-4bit'
-OLLAMA_MODEL=os.environ.get('GHEPVIDEO_OLLAMA_MODEL','qwen3-vl:4b')
+# The Instruct build answers directly; the default qwen3-vl:4b tag is the Thinking build, whose long <think> text
+# ran out of tokens before any JSON appeared.
+OLLAMA_MODEL=os.environ.get('GHEPVIDEO_OLLAMA_MODEL','qwen3-vl:4b-instruct')
 OLLAMA_URL=os.environ.get('OLLAMA_HOST','http://127.0.0.1:11434').rstrip('/')
 _mlx=None
 
@@ -134,7 +136,7 @@ def vlm_ask(question,images=(),schema=None):
  # which can loop on whitespace for long prompts. An empty/unreadable answer is retried once without any format.
  message=dict(role='user',content=question,images=[base64.b64encode(Path(i).read_bytes()).decode() for i in images])
  def call(fmt,think=True):
-  body=dict(model=OLLAMA_MODEL,messages=[message],stream=False,options=dict(temperature=0,num_predict=1200))
+  body=dict(model=OLLAMA_MODEL,messages=[message],stream=False,options=dict(temperature=0,num_predict=2048))
   if fmt is not None:body['format']=fmt
   if not think:body['think']=False
   req=urllib.request.Request(OLLAMA_URL+'/api/chat',data=json.dumps(body).encode(),headers={'Content-Type':'application/json'})
@@ -143,7 +145,8 @@ def vlm_ask(question,images=(),schema=None):
   except urllib.error.HTTPError as e:
    if e.code==400 and not think:return call(fmt,True)  # a model without the thinking switch rejects think=False
    raise
-  return (msg.get('content') or '').strip() or (msg.get('thinking') or '').strip()
+  text=(msg.get('content') or '').strip() or (msg.get('thinking') or '').strip()
+  return re.sub(r'<think>.*?(</think>|$)','',text,flags=re.S).strip()
  text=call(schema or 'json',think=False)
  if '{' not in text:text=call(None,think=False)
  return text

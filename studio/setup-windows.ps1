@@ -58,7 +58,7 @@ if (-not (Test-Path $Yunet)) { Download 'https://github.com/opencv/opencv_zoo/ra
 & $Py -c "from faster_whisper import WhisperModel; WhisperModel('medium', device='cpu', compute_type='int8')"
 if ($LASTEXITCODE) { Fail 'Tải mô hình nghe lời đọc chưa xong. Chạy lại để tải tiếp.' }
 
-Step '5/6 AI xem ảnh (Ollama + qwen3-vl, ~3,3 GB)'
+Step '5/6 AI xem ảnh (Ollama + qwen3-vl instruct, ~3,3 GB)'
 $Ollama = (Get-Command ollama -ErrorAction SilentlyContinue).Source
 if (-not $Ollama) { $Ollama = Join-Path $env:LOCALAPPDATA 'Programs\Ollama\ollama.exe' }
 if (-not (Test-Path $Ollama)) {
@@ -75,7 +75,7 @@ if (-not (Test-Path $Ollama)) { Fail 'Chưa cài được Ollama. Cài tay tại
 function OllamaUp { try { Invoke-WebRequest -UseBasicParsing -TimeoutSec 3 'http://127.0.0.1:11434/api/tags' | Out-Null; $true } catch { $false } }
 if (-not (OllamaUp)) { Start-Process $Ollama -ArgumentList 'serve' -WindowStyle Hidden; foreach ($i in 1..30) { if (OllamaUp) { break }; Start-Sleep 1 } }
 if (-not (OllamaUp)) { Fail 'Không khởi động được Ollama.' }
-& $Ollama pull qwen3-vl:4b
+& $Ollama pull qwen3-vl:4b-instruct
 if ($LASTEXITCODE) { Fail 'Tải mô hình xem ảnh chưa xong. Chạy lại để tải tiếp.' }
 
 Step '6/6 Biểu tượng trên Desktop'
