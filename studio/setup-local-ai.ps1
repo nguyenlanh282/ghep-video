@@ -1,5 +1,5 @@
 ﻿# Cài AI xem ảnh chạy ngay trên máy (Ollama + Qwen3-VL Instruct, ~5 GB) cho Ghép Video trên Windows.
-# Không bắt buộc: có thể dùng gói Claude / ChatGPT qua Claude Code / Codex thay thế. Mở từ nút “Cài AI trên máy” trong app.
+# Không bắt buộc: có thể dùng gói Claude / ChatGPT qua Claude Code / Codex thay thế. Mở từ nút "Cài AI trên máy" trong app.
 # Tự cài: Python 3.12 (qua uv), FFmpeg, Ollama, thư viện, mô hình AI; tạo biểu tượng Desktop; mở app.
 # Chạy lại bao nhiêu lần cũng được. Tham số: -NoOpen (không mở app khi xong).
 param([switch]$NoOpen)
@@ -45,5 +45,5 @@ if (-not (OllamaUp)) { Fail 'Không khởi động được Ollama.' }
 & $Ollama pull qwen3-vl:4b-instruct
 if ($LASTEXITCODE) { Fail 'Tải mô hình xem ảnh chưa xong. Chạy lại để tải tiếp.' }
 
-Write-Host "`nĐã cài AI trên máy. Quay lại app Ghép Video và chọn “Trên máy”." -ForegroundColor Green
+Write-Host "`nĐã cài AI trên máy. Quay lại app Ghép Video và chọn Trên máy." -ForegroundColor Green
 if (-not $env:GHEPVIDEO_CI) { Read-Host 'Bấm Enter để đóng' | Out-Null }
