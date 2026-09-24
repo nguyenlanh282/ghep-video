@@ -42,6 +42,14 @@
         <button class="btn" id="notesBtn" hidden>Xem ghi chú</button>
       </div>
       <p class="hint" id="analysisInfo">AI trên máy xem từng ảnh/video, đặt tên theo nội dung và ghi chú từng đoạn cảnh.</p>
+      <div class="aibox">
+        <div class="row between"><span class="ailabel">AI xem ảnh</span><span class="hint" id="aiUsed"></span></div>
+        <div class="seg wide" data-seg="aiProvider">
+          <button data-value="auto">Tự động</button><button data-value="local">Trên máy</button><button data-value="claude">Claude</button><button data-value="codex">ChatGPT</button>
+        </div>
+        <p class="hint" id="aiHint"></p>
+        <div class="row gap" id="aiActions"></div>
+      </div>
       <label class="switch"><input type="checkbox" data-key="matchScenes"><span></span>Ghép cảnh khớp lời đọc</label>
       <label class="switch"><input type="checkbox" data-key="stockEnabled"><span></span>Tìm ảnh miễn phí cho câu chưa có cảnh hợp</label>
       <div id="stockBox" class="sub" hidden>

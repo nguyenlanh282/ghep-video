@@ -15,6 +15,7 @@ from urllib.parse import unquote, urlparse, parse_qs
 APP=Path(__file__).resolve().parent;ENGINE=APP.parent;UI=APP/'ui'
 sys.path.insert(0,str(ENGINE))
 from platform_tools import DATA, WINDOWS, MAC, NOWIN, utf8_stdio
+import platform_tools
 import updater, thumbnail
 
 ROOT=Path(os.environ.get('GHEPVIDEO_ROOT',ENGINE.parent))  # project folder: media, recordings, output
@@ -36,7 +37,7 @@ def first_audio():
 DEFAULTS=dict(mediaFolder=str(find_child(ROOT,'Video - ảnh')),audio=first_audio(),music='',outputFolder=str(ROOT/'output'),
  title='VỢ CHỒNG',subtitle='Ai làm việc nhà?',titleStyle='pop',subStyle='sweep',musicVolume=.15,voiceVolume=1.0,normalizeVoice=True,
  shotSeconds=2.5,removeSilence=True,faceAwareFill=True,resolution='1080',fixesText='xòng => sòng\nđận => đần',
- matchScenes=True,stockEnabled=False,stockSource='auto',pexelsKey='',pixabayKey='',updateManifest='',captionY=.73)
+ matchScenes=True,stockEnabled=False,stockSource='auto',pexelsKey='',pixabayKey='',updateManifest='',captionY=.73,aiProvider='auto')
 SECRET_KEYS={'pexelsKey','pixabayKey'}
 
 def check_key(source,key):
@@ -100,7 +101,7 @@ class Studio:
   s.update({k+'Hint':('••••'+self.settings[k][-4:]) if self.settings[k] else '' for k in SECRET_KEYS})
   notes=self.analysis()
   return dict(settings=s,mediaCount=len(self.media_names()),notes=notes,analyzedCount=len(notes),sceneCount=sum(n['scenes'] for n in notes),
-   job=dict(self.job),platform='windows' if WINDOWS else 'mac' if MAC else 'linux',version=updater.current_version(),
+   job=dict(self.job),platform='windows' if WINDOWS else 'mac' if MAC else 'linux',version=updater.current_version(),ai=self.ai_state(),
    update=self.update_info,thumbs=[dict(id=c['id'],preview=self.url(c['preview']),fits=c.get('fits',True),tilt=c.get('tilt',0),
     source=c['source'],time=c.get('time'),upload=c.get('upload',False)) for c in self.thumbs],thumbSaved=self.thumb_saved,backups=[p.stem for p in updater.backups(DATA)][:3],updateConfigured=bool(updater.manifest_url(self.settings)),
    audioUrl=self.url(self.settings['audio']),musicUrl=self.url(self.settings['music']),resultUrl=self.url(self.job['result']))
@@ -141,8 +142,23 @@ class Studio:
 
  def open_notes(self):return self.open_path(str(Path(self.settings['mediaFolder'])/'_ghi-chu-tu-lieu.md'))
 
+ # ---- picture AI: on this computer, or the customer's own Claude / ChatGPT subscription ----
+ def ai_state(self):
+  now=time.time()
+  if not getattr(self,'_ai',None) or now-self._ai[0]>10:self._ai=(now,platform_tools.ai_status())  # cheap, but state is polled
+  status=self._ai[1];choice=self.settings['aiProvider']
+  used=choice if choice!='auto' else next((p for p in ('local','claude','codex') if status[p]),None)
+  return dict(status=status,used=used,ready=bool(used and status.get(used)))
+
+ def install_local_ai(self):
+  """Windows: Ollama + Qwen3-VL (~5 GB) in a visible PowerShell window with its own progress."""
+  if not WINDOWS:return dict(error='Trên Mac, AI trên máy đã được cài cùng app.')
+  script=ENGINE/'setup-local-ai.ps1'
+  subprocess.Popen(['powershell','-NoProfile','-ExecutionPolicy','Bypass','-File',str(script)],creationflags=0x00000010)  # CREATE_NEW_CONSOLE
+  self._ai=None;return self.state()
+
  def open_link(self,url):
-  if url in ('https://pixabay.com/api/docs/','https://www.pexels.com/api/'):webbrowser.open(url)
+  if url in ('https://pixabay.com/api/docs/','https://www.pexels.com/api/','https://code.claude.com/docs/en/setup','https://developers.openai.com/codex/cli'):webbrowser.open(url)
   return {}
 
  # ---- background tasks ----
@@ -165,7 +181,7 @@ class Studio:
   elif task in ('analyze','undo'):
    args=[str(ENGINE/'analyzer.py'),task,s['mediaFolder']];log='analyze.log';cleanup=lambda:None
   else:return dict(error='Tác vụ không hợp lệ.')
-  env=dict(os.environ,PYTHONUNBUFFERED='1',PYTHONUTF8='1',PYTHONIOENCODING='utf-8')
+  env=dict(os.environ,PYTHONUNBUFFERED='1',PYTHONUTF8='1',PYTHONIOENCODING='utf-8',GHEPVIDEO_AI=s['aiProvider'])
   if MAC:env['HF_HUB_OFFLINE']='1';env['PATH']='/opt/homebrew/bin:/usr/local/bin:'+env.get('PATH','')
   # API keys travel only through the environment, never into job or result files.
   if s['pexelsKey']:env['PEXELS_API_KEY']=s['pexelsKey']
@@ -334,7 +350,7 @@ API={'state':lambda b:studio.state(),'set':lambda b:studio.set(b.get('values',{}
  'openNotes':lambda b:studio.open_notes(),'openLink':lambda b:studio.open_link(b.get('url','')),'clearError':lambda b:studio.clear_error(),
  'saveKey':lambda b:studio.save_key(b.get('source',''),b.get('value','')),'listen':lambda b:studio.listen(b.get('mode','mix')),
  'checkUpdate':lambda b:studio.check_update(),'applyUpdate':lambda b:studio.run_update('update'),'rollback':lambda b:studio.run_update('rollback'),
- 'restart':lambda b:studio.restart(),
+ 'restart':lambda b:studio.restart(),'installLocalAI':lambda b:studio.install_local_ai(),
  'thumbFind':lambda b:studio.thumb_find(),'thumbCompose':lambda b:studio.thumb_compose(b.get('ids',[]),b.get('text',True)),
  'thumbSave':lambda b:studio.thumb_save(b.get('ids',[]),b.get('text',True)),'thumbReveal':lambda b:studio.reveal(studio.thumb_saved)}
 

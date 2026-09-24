@@ -70,7 +70,7 @@ def segments(total,cuts,min_len=2.5,max_len=8):
  return [(round(a,2),round(b,2)) for a,b in out if b-a>.3]
 
 PHOTO_Q='''Bạn là trợ lý dựng video. Mô tả hình này bằng tiếng Việt có dấu, trả về đúng một JSON:
-{"ten":"tên file ngắn 3-7 chữ, nói rõ ai đang làm gì","mo_ta":"1-2 câu mô tả cụ thể","nguoi":"ai xuất hiện, đang làm gì","boi_canh":"địa điểm, thời điểm","cam_xuc":"cảm xúc của cảnh","tu_khoa":["6-10 từ khoá tiếng Việt, gồm cả những từ người ta hay nói khi kể về cảnh này"]}'''
+{"ten":"tên ngắn 3-7 chữ tiếng Việt có dấu, cách nhau bằng khoảng trắng (không dùng _ hay -), nói rõ ai đang làm gì","mo_ta":"1-2 câu mô tả cụ thể","nguoi":"ai xuất hiện, đang làm gì","boi_canh":"địa điểm, thời điểm","cam_xuc":"cảm xúc của cảnh","tu_khoa":["6-10 từ khoá tiếng Việt, gồm cả những từ người ta hay nói khi kể về cảnh này"]}'''
 SCENE_Q='''Đây là một khung hình trong video. Mô tả cảnh bằng tiếng Việt có dấu, trả về đúng một JSON:
 {"mo_ta":"1 câu mô tả cụ thể ai đang làm gì, ở đâu","cam_xuc":"cảm xúc","tu_khoa":["5-8 từ khoá tiếng Việt"]}'''
 
@@ -82,11 +82,12 @@ def describe_video(path,tmp):
   scenes.append(dict(start=a,end=b,mo_ta=d.get('mo_ta',''),cam_xuc=d.get('cam_xuc',''),tu_khoa=d.get('tu_khoa',[])))
   yield i+1,len(parts),None
  listing='\n'.join(f'- {s["start"]:.0f}-{s["end"]:.0f}s: {s["mo_ta"]}' for s in scenes)
- d=parse_json(ask('Video gồm các cảnh sau:\n'+listing+'\nTrả về đúng một JSON tiếng Việt có dấu: {"ten":"tên file ngắn 3-7 chữ nói rõ nội dung chính","mo_ta":"1-2 câu tóm tắt cả video","tu_khoa":["6-10 từ khoá"]}',(),obj(['ten','mo_ta','tu_khoa'])),{})
+ d=parse_json(ask('Video gồm các cảnh sau:\n'+listing+'\nTrả về đúng một JSON tiếng Việt có dấu: {"ten":"tên ngắn 3-7 chữ tiếng Việt có dấu, cách nhau bằng khoảng trắng (không dùng _ hay -) nói rõ nội dung chính","mo_ta":"1-2 câu tóm tắt cả video","tu_khoa":["6-10 từ khoá"]}',(),obj(['ten','mo_ta','tu_khoa'])),{})
  yield len(parts),len(parts),dict(kind='video',duration=round(total,2),ten=d.get('ten',''),mo_ta=d.get('mo_ta',''),tu_khoa=d.get('tu_khoa',[]),scenes=scenes)
 
 def safe_name(text,ext,taken):
- base=re.sub(r'[\\/:*?"<>|\n\r\t]+',' ',nfc(text)).strip(' .')
+ # Some models answer in file-name style (bo_chup_anh): turn separators back into spaces.
+ base=re.sub(r'[\\/:*?"<>|\n\r\t_]+',' ',nfc(text)).strip(' .-')
  base=re.sub(r'\s+',' ',base)[:60].strip() or 'Tư liệu'
  base=base[:1].upper()+base[1:];name=base+ext;n=2
  while name.lower() in taken:name=f'{base} {n}{ext}';n+=1

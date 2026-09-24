@@ -1,7 +1,8 @@
 """Everything that differs between macOS and Windows, in one place.
 
 macOS (Apple Silicon): mlx-whisper, Apple Vision face detector (face-detect helper), mlx-vlm.
-Windows / other:       faster-whisper, OpenCV YuNet face detector, Ollama (qwen3-vl).
+Windows / other:       faster-whisper, OpenCV YuNet face detector, Ollama (qwen3-vl, optional).
+Picture descriptions can also come from the customer's own Claude / ChatGPT subscription (see vlm_ask).
 """
 import json, os, platform, re, shutil, subprocess, sys
 from pathlib import Path
@@ -98,30 +99,115 @@ def detect_faces_many(images):
  return {str(i):detect_faces(i) for i in images}
 
 # ---------- Vision-language model ----------
+# Four ways to have pictures described, chosen by GHEPVIDEO_AI (set by the app from its settings):
+#   local   on this computer: MLX + Qwen3-VL on Apple Silicon, Ollama + Qwen3-VL on Windows (optional, ~5 GB)
+#   claude  the customer's Claude Pro/Max subscription, through the official Claude Code CLI they installed and signed in to
+#   codex   the customer's ChatGPT subscription, through the official Codex CLI
+#   auto    local if installed, else Claude, else Codex
+# With claude/codex, the small (768 px) stills are sent to Anthropic / OpenAI; the app says so next to the choice.
 
 MLX_MODEL='mlx-community/Qwen3-VL-4B-Instruct-4bit'
 # The Instruct build answers directly; the default qwen3-vl:4b tag is the Thinking build, whose long <think> text
 # ran out of tokens before any JSON appeared.
 OLLAMA_MODEL=os.environ.get('GHEPVIDEO_OLLAMA_MODEL','qwen3-vl:4b-instruct')
 OLLAMA_URL=os.environ.get('OLLAMA_HOST','http://127.0.0.1:11434').rstrip('/')
+CLAUDE_MODEL=os.environ.get('GHEPVIDEO_CLAUDE_MODEL','sonnet')  # good Vietnamese at a moderate share of the plan's limits
+AI_CHOICES=('auto','local','claude','codex')
+AI_NAMES={'local':'AI trên máy','claude':'Claude','codex':'ChatGPT (Codex)'}
 _mlx=None
 
+def cli_path(name):
+ """The official CLI if installed: on PATH, or in the places its installers use."""
+ home=Path.home()
+ extra=[home/'.local'/'bin'/(name+'.exe'),Path(os.environ.get('APPDATA',''))/'npm'/(name+'.cmd'),home/'.local'/'bin'/name] if WINDOWS \
+       else [home/'.local'/'bin'/name,home/'.claude'/'local'/name,Path('/opt/homebrew/bin')/name,Path('/usr/local/bin')/name,home/'.npm-global'/'bin'/name]
+ for c in [shutil.which(name),*extra]:
+  if c and Path(c).is_file():return str(c)
+ return None
+
+def ollama_exe():
+ exe=shutil.which('ollama') or (str(Path(os.environ.get('LOCALAPPDATA',''))/'Programs'/'Ollama'/'ollama.exe') if WINDOWS else None)
+ return exe if exe and Path(exe).exists() else None
+
+def local_ai_available():
+ if APPLE_SILICON:
+  import importlib.util
+  return importlib.util.find_spec('mlx_vlm') is not None
+ return ollama_exe() is not None
+
+def ai_status():
+ return {'local':local_ai_available(),'claude':cli_path('claude') is not None,'codex':cli_path('codex') is not None}
+
+def ai_provider():
+ choice=os.environ.get('GHEPVIDEO_AI','auto')
+ if choice in ('local','claude','codex'):return choice
+ status=ai_status()
+ return next((p for p in ('local','claude','codex') if status[p]),None)
+
 def vlm_name():
- return MLX_MODEL if APPLE_SILICON else 'ollama:'+OLLAMA_MODEL
+ p=ai_provider()
+ return {'local':MLX_MODEL if APPLE_SILICON else 'ollama:'+OLLAMA_MODEL,'claude':'claude:'+CLAUDE_MODEL,'codex':'codex'}.get(p,'none')
 
 def vlm_ready():
+ p=ai_provider()
+ if p is None:raise RuntimeError('Chưa có AI xem ảnh. Cài Claude Code hoặc Codex rồi đăng nhập bằng gói Claude/ChatGPT, hoặc bấm “Cài AI trên máy” trong app.')
+ if p in ('claude','codex'):
+  if not cli_path(p):raise RuntimeError(f'Chưa cài {AI_NAMES[p]} trên máy này.')
+  return
  if APPLE_SILICON:
   global _mlx
   if _mlx is None:
    from mlx_vlm import load
    _mlx=load(MLX_MODEL)
   return
- import urllib.request
- try:urllib.request.urlopen(OLLAMA_URL+'/api/tags',timeout=5).read()
- except Exception:raise RuntimeError('Chưa mở Ollama. Hãy cài và chạy Ollama (ollama.com), rồi chạy lại bước cài đặt.')
+ import urllib.request, time
+ def up():
+  try:urllib.request.urlopen(OLLAMA_URL+'/api/tags',timeout=3).read();return True
+  except Exception:return False
+ if not up() and ollama_exe():
+  subprocess.Popen([ollama_exe(),'serve'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,**NOWIN)
+  for _ in range(30):
+   if up():break
+   time.sleep(1)
+ if not up():raise RuntimeError('Chưa có AI trên máy (Ollama). Bấm “Cài AI trên máy” trong app, hoặc chọn Claude / ChatGPT.')
+
+JSON_ONLY='\n\nChỉ in đúng một đối tượng JSON, không giải thích, không bọc trong ```.'
+
+def run_cli(args,prompt,timeout=300,cwd=None):
+ # The prompt goes through stdin: quotes, newlines and Vietnamese survive intact (Windows .cmd shims included).
+ p=subprocess.run(args,input=prompt,capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=timeout,cwd=cwd,**NOWIN)
+ if p.returncode:
+  hint=(p.stderr or p.stdout).strip()[-400:]
+  if re.search(r'log ?in|auth|credential|unauthori[sz]ed|not signed',hint,re.I):hint='chưa đăng nhập. Mở Terminal/Command Prompt, gõ lệnh đăng nhập rồi thử lại. '+hint[-160:]
+  raise RuntimeError(hint or f'lỗi {p.returncode}')
+ return p.stdout
+
+def ask_claude(question,images):
+ files=[str(Path(i).resolve()) for i in images]
+ lead=('Đọc các ảnh sau bằng công cụ Read: '+', '.join(files)+'\n\n') if files else ''
+ args=[cli_path('claude'),'-p','--model',CLAUDE_MODEL,'--output-format','json','--allowedTools','Read']
+ for d in sorted({str(Path(f).parent) for f in files}):args+=['--add-dir',d]
+ try:out=run_cli(args,lead+question+JSON_ONLY,cwd=str(Path(files[0]).parent) if files else None)
+ except RuntimeError as e:raise RuntimeError('Claude: '+str(e))
+ data=json.loads(out)
+ if data.get('is_error'):raise RuntimeError('Claude: '+str(data.get('result',''))[:300])
+ return str(data.get('result',''))
+
+def ask_codex(question,images):
+ import tempfile
+ with tempfile.TemporaryDirectory(prefix='ghepvideo-codex-') as tmp:
+  out=Path(tmp)/'answer.txt'
+  args=[cli_path('codex'),'exec','--skip-git-repo-check','--ephemeral','--sandbox','read-only','-o',str(out),'-']
+  if images:args+=['--image',*[str(Path(i).resolve()) for i in images]]
+  try:run_cli(args,question+JSON_ONLY,cwd=tmp)
+  except RuntimeError as e:raise RuntimeError('ChatGPT (Codex): '+str(e))
+  return out.read_text(encoding='utf-8',errors='replace') if out.exists() else ''
 
 def vlm_ask(question,images=(),schema=None):
  vlm_ready()
+ p=ai_provider()
+ if p=='claude':return ask_claude(question,images)
+ if p=='codex':return ask_codex(question,images)
  if APPLE_SILICON:
   from mlx_vlm import generate
   from mlx_vlm.prompt_utils import apply_chat_template
@@ -130,9 +216,7 @@ def vlm_ask(question,images=(),schema=None):
   r=generate(m,proc,prompt,[str(i) for i in images] or None,max_tokens=400,temperature=0,verbose=False)
   return getattr(r,'text',r)
  import base64, urllib.request, urllib.error
- # Every prompt asks for a JSON object: format='json' makes Ollama return exactly that. Qwen3-VL may "think" first;
- # thinking is switched off and, if the answer still comes back empty, taken from the thinking text instead.
- # A JSON schema (when the caller knows the fields) constrains the answer far better than plain format='json',
+ # A JSON schema (when the caller knows the fields) constrains Ollama far better than plain format='json',
  # which can loop on whitespace for long prompts. An empty/unreadable answer is retried once without any format.
  message=dict(role='user',content=question,images=[base64.b64encode(Path(i).read_bytes()).decode() for i in images])
  def call(fmt,think=True):

@@ -83,6 +83,7 @@ function wire() {
   $$('.keyrow').forEach(wireKeyRow);
   wireUpdates();
   wireThumbs();
+  wireAI();
 
   const player = $('#player');
   $('#playBtn').addEventListener('click', () => { stopListening(); player.paused ? player.play() : player.pause(); });
@@ -118,6 +119,42 @@ function wireKeyRow(row) {
   });
   $('.getkey', row).addEventListener('click', () => api('openLink', {url: $('.getkey', row).dataset.url}));
   sync();
+}
+
+/* ---------- picture AI: on this computer, or the customer's own Claude / ChatGPT subscription ---------- */
+const AI_LABEL = {local: 'AI trên máy', claude: 'Claude', codex: 'ChatGPT (Codex)'};
+const AI_GUIDE = {claude: 'https://code.claude.com/docs/en/setup', codex: 'https://developers.openai.com/codex/cli'};
+function paintAI(state) {
+  const ai = state.ai, choice = state.settings.aiProvider, st = ai.status;
+  $$('[data-seg=aiProvider] button').forEach(b => {
+    const v = b.dataset.value; if (v === 'auto') return;
+    if (!b.querySelector('.dot')) b.insertAdjacentHTML('beforeend', '<span class="dot"></span>');
+    b.querySelector('.dot').classList.toggle('ok', !!st[v]);
+    b.title = st[v] ? 'Đã cài trên máy này' : 'Chưa cài';
+  });
+  $('#aiUsed').textContent = ai.used ? (ai.ready ? 'Đang dùng: ' + AI_LABEL[ai.used] : AI_LABEL[ai.used] + ' chưa cài') : 'Chưa có AI nào';
+  const pick = choice === 'auto' ? ai.used : choice;
+  let hint = '', actions = '';
+  if (!pick) {
+    hint = 'Chưa có AI xem ảnh. Dùng gói Claude Pro/Max hoặc ChatGPT bạn đang có: cài Claude Code hoặc Codex, đăng nhập 1 lần, rồi mở lại app.';
+  } else if (pick === 'local') {
+    hint = 'Ảnh được phân tích ngay trên máy, không gửi đi đâu.' + (st.local ? '' : state.platform === 'windows' ? ' Chưa cài: cần tải khoảng 5 GB.' : '');
+    if (!st.local && state.platform === 'windows') actions += '<button class="btn small primary" data-ai-act="install">⬇ Cài AI trên máy (~5 GB)</button>';
+  } else {
+    const who = pick === 'claude' ? 'Anthropic (Claude)' : 'OpenAI (ChatGPT)';
+    hint = `Dùng gói ${pick === 'claude' ? 'Claude Pro/Max' : 'ChatGPT'} của bạn. Ảnh thu nhỏ của tư liệu sẽ được gửi lên ${who} để mô tả, và tính vào hạn mức gói.`;
+    if (!st[pick]) hint = `Chưa cài ${AI_LABEL[pick]} trên máy này. ` + hint;
+  }
+  for (const p of ['claude', 'codex']) if ((pick === p || !pick) && !st[p]) actions += `<button class="link" data-ai-act="guide-${p}">Cách cài ${p === 'claude' ? 'Claude Code' : 'Codex'}</button>`;
+  $('#aiHint').textContent = hint;
+  if ($('#aiActions').dataset.html !== actions) { $('#aiActions').dataset.html = actions; $('#aiActions').innerHTML = actions; }
+}
+function wireAI() {
+  $('#aiActions').addEventListener('click', e => {
+    const act = e.target.closest('[data-ai-act]')?.dataset.aiAct; if (!act) return;
+    if (act === 'install') api('installLocalAI');
+    else api('openLink', {url: AI_GUIDE[act.slice(6)]});
+  });
 }
 
 /* ---------- thumbnails: pick 1–3 candidates, a 4th click replaces the last pick ---------- */
@@ -239,6 +276,7 @@ function render(state) {
   if ($('#updateDialog').open) paintUpdate();
   $('#platformLabel').textContent = 'Xử lý trên máy · ' + (state.platform === 'windows' ? 'Windows' : state.platform === 'mac' ? 'macOS' : 'Linux');
 
+  paintAI(state);
   // analysis
   const analysed = state.analyzedCount > 0;
   $('#analyzeBtn').textContent = analysed ? '✨ Phân tích file mới' : '✨ Phân tích & đặt tên';

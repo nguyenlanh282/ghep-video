@@ -28,6 +28,10 @@ jobs:
           V="${{ github.event.release.tag_name || inputs.version }}"; V="${V#v}"
           [ -n "$V" ] || V="$(cat studio/VERSION)"
           echo "version=$V" >> "$GITHUB_OUTPUT"
+      - name: Kiểm thử (Claude/Codex giả, cập nhật, ảnh bìa)
+        run: |
+          pip install -q pillow numpy
+          cd studio && python -m unittest test_ai test_updater test_thumbnail
       - run: python studio/updater.py "${{ steps.v.outputs.version }}" --out dist
       - uses: actions/upload-artifact@v4
         with: {name: app-zip, path: dist/GhepVideo-*.zip}
@@ -68,12 +72,16 @@ jobs:
           $setup = Join-Path $env:USERPROFILE 'Ghép Video\studio\setup-windows.ps1'
           powershell -NoProfile -ExecutionPolicy Bypass -File $setup -NoOpen
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Thử nút “Cài AI trên máy” (Ollama, không bắt buộc)
+        shell: pwsh
+        run: |
+          $env:GHEPVIDEO_CI = '1'
+          powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:USERPROFILE 'Ghép Video\studio\setup-local-ai.ps1')
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Thử dựng video + AI xem ảnh trên Windows
         shell: pwsh
         run: |
-          $ollama = Join-Path $env:LOCALAPPDATA 'Programs\Ollama\ollama.exe'
-          if (-not (Get-Process ollama -ErrorAction SilentlyContinue)) { Start-Process $ollama -ArgumentList 'serve' -WindowStyle Hidden; Start-Sleep 5 }
-          $env:PATH = "$env:APPDATA\GhepVideo\bin;$env:PATH"; $env:PYTHONUTF8 = '1'
+          $env:PATH = "$env:APPDATA\GhepVideo\bin;$env:PATH"; $env:PYTHONUTF8 = '1'; $env:GHEPVIDEO_AI = 'local'
           & "$env:APPDATA\GhepVideo\venv\Scripts\python.exe" (Join-Path $env:USERPROFILE 'Ghép Video\studio\smoke_test.py') --vlm
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Gắn vào bản phát hành

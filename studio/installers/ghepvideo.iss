@@ -31,9 +31,9 @@ MinVersion=10.0
 
 [Messages]
 WelcomeLabel1=Cài đặt Ghép Video [ver]
-WelcomeLabel2=Dựng video dọc 9:16 từ ảnh, video và lời đọc. Mọi xử lý chạy trên máy của bạn.%n%nSau khi cài, một cửa sổ sẽ tải Python, FFmpeg và mô hình AI (khoảng 5 GB lần đầu, 10–30 phút tuỳ mạng). Xong sẽ tự mở app.
+WelcomeLabel2=Dựng video dọc 9:16 từ ảnh, video và lời đọc. Mọi xử lý chạy trên máy của bạn.%n%nSau khi cài, một cửa sổ sẽ tải Python, FFmpeg và mô hình nghe lời đọc (khoảng 2 GB lần đầu, 5–15 phút tuỳ mạng). Xong sẽ tự mở app.%n%nAI xem ảnh: dùng gói Claude hoặc ChatGPT bạn đang có (qua Claude Code / Codex), hoặc bấm “Cài AI trên máy” trong app.
 FinishedHeadingLabel=Đã cài xong phần app
-FinishedLabel=Bấm Kết thúc để tải phần AI và mở Ghép Video. Đừng đóng cửa sổ tải cho tới khi app tự mở.
+FinishedLabel=Bấm Finish để tải phần còn lại và mở Ghép Video. Đừng đóng cửa sổ tải cho tới khi app tự mở.
 ClickFinish=Bấm Finish để tiếp tục.
 
 [Files]
@@ -49,7 +49,7 @@ Name: "{userprograms}\Ghép Video"; Filename: "{app}\Ghep Video (Windows).bat"; 
 Name: "{userdesktop}\Ghép Video"; Filename: "{app}\Ghep Video (Windows).bat"; WorkingDir: "{app}"; IconFilename: "{app}\studio\assets\icon.ico"; Flags: runminimized
 
 [Run]
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\studio\setup-windows.ps1"""; WorkingDir: "{app}\studio"; Description: "Tải phần AI và mở Ghép Video"; Flags: postinstall nowait skipifsilent
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\studio\setup-windows.ps1"""; WorkingDir: "{app}\studio"; Description: "Tải phần còn lại và mở Ghép Video"; Flags: postinstall nowait skipifsilent
 
 [UninstallDelete]
 ; App files only; the media and output folders (the user's work) are kept.
