@@ -1,23 +1,28 @@
 # Ghép Video — chạy trên Mac và Windows
 
-## Cài đặt: 1 lần bấm
+## Cài đặt: 1 file, bấm là cài
 
-Vào **github.com/nguyenlanh282/ghep-video/releases**, tải **1 file** hợp với máy rồi bấm đúp:
+Vào **github.com/nguyenlanh282/ghep-video/releases/latest**, tải **1 file** hợp với máy rồi bấm đúp:
 
-- **Mac** (chip Apple M1 trở lên): `Cai-dat-Ghep-Video-Mac.command`
-  - Lần đầu macOS có thể báo không mở được file tải từ mạng: vào **Cài đặt hệ thống → Quyền riêng tư & Bảo mật → Vẫn mở**, hoặc chuột phải file → **Mở**.
-  - Hoặc dán 1 lệnh vào Terminal (không bị chặn): `curl -fsSL https://raw.githubusercontent.com/nguyenlanh282/ghep-video/main/studio/installers/install-mac.sh | zsh`
-- **Windows 10/11**: `Cai-dat-Ghep-Video-Windows.bat`. Nếu hiện “Windows protected your PC”: **More info → Run anyway**.
+- **Windows 10/11:** `GhepVideo-Setup-<phiên bản>.exe` → Next → Install → Finish. Không cần quyền quản trị.
+  - Nếu hiện “Windows protected your PC”: **More info → Run anyway** (vì bộ cài chưa ký số).
+- **Mac** (chip Apple M1 trở lên): `GhepVideo-<phiên bản>.pkg` → Tiếp tục → Cài đặt.
+  - Nếu macOS báo không mở được: **Cài đặt hệ thống → Quyền riêng tư & Bảo mật → Vẫn mở** (vì bộ cài chưa ký số).
 
-File cài tự làm hết: tải bản mới nhất, kiểm tra mã SHA-256, đặt app vào thư mục **Ghép Video** trong thư mục người dùng, cài Python, FFmpeg (và Ollama trên Windows), thư viện, mô hình AI (~5 GB lần đầu, mất 10–30 phút tuỳ mạng), tạo biểu tượng, rồi **tự mở app**. Không cần cài Homebrew, Python hay gì trước.
+Sau khi trình cài xong, một cửa sổ tự mở để tải Python, FFmpeg (Windows: cả Ollama) và mô hình AI (~5 GB lần đầu, 10–30 phút tuỳ mạng). **Đừng đóng cửa sổ đó**; xong sẽ tự mở app.
 
-Sau đó mở app bằng **Ghép Video** trong thư mục *Ứng dụng* của bạn (Mac) hoặc biểu tượng trên Desktop (Windows). Tư liệu để trong `Ghép Video/Video - ảnh`, video xuất ở `Ghép Video/output`.
+Mở app về sau: **Ghép Video** trên Desktop / Start menu (Windows) hoặc trong thư mục Ứng dụng / Launchpad (Mac). Tư liệu để trong `Ghép Video/Video - ảnh` (thư mục người dùng), video xuất ở `Ghép Video/output`.
+
+Gỡ cài đặt: Windows → Settings → Apps → Ghép Video → Uninstall (giữ lại tư liệu và video). Mac → xoá “Ghép Video” trong Ứng dụng và thư mục `~/Ghép Video/studio`.
+
+Cách khác không cần trình cài: file `Cai-dat-Ghep-Video-Mac.command` / `Cai-dat-Ghep-Video-Windows.bat`, hoặc trên Mac dán vào Terminal:
+`curl -fsSL https://raw.githubusercontent.com/nguyenlanh282/ghep-video/main/studio/installers/install-mac.sh | zsh`
 
 Cài đặt lưu ở `~/Library/Application Support/GhepVideo/` (Mac) hoặc `%APPDATA%\GhepVideo\` (Windows): Python, FFmpeg, `settings.json` (lựa chọn, key Pexels/Pixabay), `app.log`, bản sao lưu.
 
 ## Mang sang máy khác
 
-Trên máy mới chỉ cần làm như mục **Cài đặt: 1 lần bấm**. Tư liệu, video và key của máy cũ không đi theo; chép tư liệu sang thư mục `Ghép Video/Video - ảnh` của máy mới, rồi dán lại key Pexels/Pixabay trong app.
+Trên máy mới chỉ cần làm như mục **Cài đặt: 1 file, bấm là cài**. Tư liệu, video và key của máy cũ không đi theo; chép tư liệu sang thư mục `Ghép Video/Video - ảnh` của máy mới, rồi dán lại key Pexels/Pixabay trong app.
 
 ## Cập nhật
 
@@ -31,7 +36,7 @@ Trên máy mới chỉ cần làm như mục **Cài đặt: 1 lần bấm**. Tư
 1. Sửa code trong `studio/`, chạy kiểm thử: `python -m unittest test_renderer test_updater`.
 2. Tạo gói: `python studio/updater.py 2.2.0 --notes "• Điều thay đổi 1\n• Điều thay đổi 2" --base-url https://<nơi-để-file>/`
    → tạo `dist/GhepVideo-2.2.0.zip` và `dist/latest.json` (có số phiên bản, link, mã SHA-256, ghi chú).
-3. Đăng lên GitHub kèm 2 file cài 1 lần bấm (lệnh trong `README.md`). Mọi máy đang dùng app sẽ thấy nút cập nhật chuyển xanh.
+3. Đăng lên GitHub (lệnh trong `README.md`). GitHub Actions tự đóng gói `.exe` + `.pkg`, cài thử trên Windows/Mac thật, chạy bài thử dựng video, rồi gắn 2 bộ cài vào bản phát hành (~40–60 phút). Mọi máy đang dùng app sẽ thấy nút cập nhật chuyển xanh.
 4. Số phiên bản dạng `2.2.0`: sửa nhỏ tăng số cuối, thêm tính năng tăng số giữa.
 
 ## Sử dụng
@@ -78,6 +83,7 @@ Kết quả gồm MP4, phụ đề SRT và JSON lưu lựa chọn của lần d�
 - `setup-mac.command`, `setup-windows.ps1`, `requirements-*.txt`: cài đặt.
 - `thumbnail.py`: tìm khung hình làm ảnh bìa và ghép 1–3 hình kèm tiêu đề.
 - `updater.py`: tạo gói phát hành, kiểm tra và cài bản mới, sao lưu / quay lại bản trước. `VERSION`: số phiên bản; `update.json`: link `latest.json` mặc định cho các máy mới.
+- `installers/`: bộ cài 1 file (`ghepvideo.iss` → .exe, `build-mac-pkg.sh` → .pkg, và bản script `.command`/`.bat`); `assets/`: biểu tượng app; `smoke_test.py`: bài thử dựng video + AI trên máy vừa cài; `.github/workflows/installers.yml`: quy trình đóng gói và thử tự động.
 - `test_renderer.py`, `test_updater.py`, `test_thumbnail.py`: kiểm thử (`python -m unittest test_renderer test_updater test_thumbnail`).
 - Bản cũ chỉ chạy trên Mac: `Ghép Video (bản cũ).app`, mã `VideoStudio.swift`, biên dịch bằng `build.command`. Giữ lại để dự phòng; bản mới đã có đủ chức năng.
 

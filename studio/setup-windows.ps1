@@ -15,7 +15,12 @@ New-Item -ItemType Directory -Force -Path $Data, $Bin, (Join-Path $Data 'models'
 
 function Step($t) { Write-Host "`n>> $t" -ForegroundColor Cyan }
 function Fail($t) { Write-Host "`nLOI: $t" -ForegroundColor Red; Write-Host 'Chup man hinh cua so nay gui nguoi ho tro.'; exit 1 }
-function Download($url, $dest) { try { Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $dest } catch { Fail "Không tải được $url. Kiểm tra mạng rồi chạy lại." } }
+# curl.exe ships with Windows 10/11: fast, resumable and shows a progress bar; Invoke-WebRequest is the fallback.
+$Curl = Join-Path $env:SystemRoot 'System32\curl.exe'
+function Download($url, $dest) {
+  if (Test-Path $Curl) { & $Curl -fL --retry 3 --progress-bar -o $dest $url; if ($LASTEXITCODE) { Fail "Không tải được $url. Kiểm tra mạng rồi chạy lại." } }
+  else { try { Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $dest } catch { Fail "Không tải được $url. Kiểm tra mạng rồi chạy lại." } }
+}
 
 Write-Host '== Ghép Video · cài đặt cho Windows ==' -ForegroundColor Green
 if (-not [Environment]::Is64BitOperatingSystem) { Fail 'Cần Windows 64-bit.' }
@@ -60,11 +65,16 @@ if (-not (Test-Path $Ollama)) {
   $setup = Join-Path $env:TEMP 'OllamaSetup.exe'
   Write-Host 'Đang tải Ollama (~1,5 GB)…'
   Download 'https://ollama.com/download/OllamaSetup.exe' $setup
-  Start-Process $setup -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait
+  # Wait for the installer process only: Start-Process -Wait would also wait for the Ollama app it launches (forever).
+  $p = Start-Process $setup -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -PassThru
+  $p.WaitForExit()
   Remove-Item $setup -ErrorAction SilentlyContinue
 }
 if (-not (Test-Path $Ollama)) { Fail 'Chưa cài được Ollama. Cài tay tại ollama.com rồi chạy lại.' }
-if (-not (Get-Process ollama -ErrorAction SilentlyContinue)) { Start-Process $Ollama -ArgumentList 'serve' -WindowStyle Hidden; Start-Sleep 5 }
+# Make sure the Ollama service answers before pulling the model (the installer may already have started it).
+function OllamaUp { try { Invoke-WebRequest -UseBasicParsing -TimeoutSec 3 'http://127.0.0.1:11434/api/tags' | Out-Null; $true } catch { $false } }
+if (-not (OllamaUp)) { Start-Process $Ollama -ArgumentList 'serve' -WindowStyle Hidden; foreach ($i in 1..30) { if (OllamaUp) { break }; Start-Sleep 1 } }
+if (-not (OllamaUp)) { Fail 'Không khởi động được Ollama.' }
 & $Ollama pull qwen3-vl:4b
 if ($LASTEXITCODE) { Fail 'Tải mô hình xem ảnh chưa xong. Chạy lại để tải tiếp.' }
 
