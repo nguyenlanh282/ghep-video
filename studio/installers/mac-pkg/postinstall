@@ -1,0 +1,27 @@
+#!/bin/zsh
+# Runs as root at the end of the .pkg install. Everything user-facing is done as the logged-in user:
+# unpack the app into ~/Ghép Video (media and output live there, and in-app updates can write there),
+# then open Terminal to download Python, FFmpeg and the AI models with visible progress; it opens the app when done.
+set -u
+HERE="$(dirname "$0")"
+USER_NAME="$(stat -f%Su /dev/console)"
+if [ -z "$USER_NAME" ] || [ "$USER_NAME" = "root" ] || [ "$USER_NAME" = "loginwindow" ]; then
+  USER_NAME="${SUDO_USER:-${USER:-}}"
+fi
+[ -n "$USER_NAME" ] && [ "$USER_NAME" != "root" ] || { echo "Không xác định được người dùng"; exit 0; }
+USER_HOME="$(dscl . -read "/Users/$USER_NAME" NFSHomeDirectory | awk '{print $2}')"
+USER_ID="$(id -u "$USER_NAME")"
+DEST="$USER_HOME/Ghép Video"
+as_user() { sudo -u "$USER_NAME" -H "$@"; }
+
+as_user mkdir -p "$DEST"
+# Only app files are in the zip: an existing install keeps its media, output and settings.
+as_user /usr/bin/unzip -oq "$HERE/GhepVideo.zip" -d "$DEST"
+as_user xattr -dr com.apple.quarantine "$DEST" 2>/dev/null || true
+as_user chmod +x "$DEST/studio/setup-mac.command" "$DEST/Ghép Video.app/Contents/MacOS/GhepVideo" "$DEST/studio/face-detect" 2>/dev/null || true
+
+# Skip the interactive part when there is no logged-in desktop (e.g. automated installs).
+if [ "${GHEPVIDEO_NO_SETUP:-}" != "1" ] && launchctl print "gui/$USER_ID" >/dev/null 2>&1; then
+  launchctl asuser "$USER_ID" sudo -u "$USER_NAME" -H open -a Terminal "$DEST/studio/setup-mac.command" || true
+fi
+exit 0

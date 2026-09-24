@@ -1,0 +1,108 @@
+# Builds the one-file installers (Windows .exe, macOS .pkg) for every release, installs them on real GitHub
+# Windows/macOS machines, runs the smoke test (render a video + AI) on Windows, and attaches the installers to the release.
+name: Bộ cài đặt
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Số phiên bản ghi trên bộ cài (để trống = studio/VERSION)'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  app-zip:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - id: v
+        run: |
+          V="${{ github.event.release.tag_name || inputs.version }}"; V="${V#v}"
+          [ -n "$V" ] || V="$(cat studio/VERSION)"
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+      - run: python studio/updater.py "${{ steps.v.outputs.version }}" --out dist
+      - uses: actions/upload-artifact@v4
+        with: {name: app-zip, path: dist/GhepVideo-*.zip}
+
+  windows:
+    needs: app-zip
+    runs-on: windows-latest
+    timeout-minutes: 120
+    env:
+      V: ${{ needs.app-zip.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: {name: app-zip, path: dist}
+      - name: Đóng gói .exe (Inno Setup)
+        shell: pwsh
+        run: |
+          Expand-Archive dist/GhepVideo-$env:V.zip src
+          $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress | Out-Null }
+          $env:GHEPVIDEO_VERSION = $env:V; $env:GHEPVIDEO_SRC = (Resolve-Path src).Path; $env:GHEPVIDEO_OUT = "$PWD\out"
+          & $iscc /Q studio\installers\ghepvideo.iss
+          if ($LASTEXITCODE) { exit 1 }
+          Get-ChildItem out
+      - uses: actions/upload-artifact@v4
+        with: {name: windows-installer, path: out/*.exe}
+      - name: Thử cài như khách (im lặng)
+        shell: pwsh
+        run: |
+          Start-Process "out\GhepVideo-Setup-$env:V.exe" -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait
+          $app = Join-Path $env:USERPROFILE 'Ghép Video'
+          foreach ($f in 'studio\app\main.py','studio\setup-windows.ps1','Ghep Video (Windows).bat') { if (-not (Test-Path (Join-Path $app $f))) { throw "Thiếu $f" } }
+          if (-not (Test-Path (Join-Path ([Environment]::GetFolderPath('Programs')) 'Ghép Video.lnk'))) { throw 'Thiếu biểu tượng Start menu' }
+          "Đã cài vào $app"
+      - name: Thử bước tải phần AI (Windows PowerShell 5.1, giống máy khách)
+        shell: pwsh
+        run: |
+          $setup = Join-Path $env:USERPROFILE 'Ghép Video\studio\setup-windows.ps1'
+          powershell -NoProfile -ExecutionPolicy Bypass -File $setup -NoOpen
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Thử dựng video + AI xem ảnh trên Windows
+        shell: pwsh
+        run: |
+          $ollama = Join-Path $env:LOCALAPPDATA 'Programs\Ollama\ollama.exe'
+          if (-not (Get-Process ollama -ErrorAction SilentlyContinue)) { Start-Process $ollama -ArgumentList 'serve' -WindowStyle Hidden; Start-Sleep 5 }
+          $env:PATH = "$env:APPDATA\GhepVideo\bin;$env:PATH"; $env:PYTHONUTF8 = '1'
+          & "$env:APPDATA\GhepVideo\venv\Scripts\python.exe" (Join-Path $env:USERPROFILE 'Ghép Video\studio\smoke_test.py') --vlm
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Gắn vào bản phát hành
+        if: github.event_name == 'release'
+        shell: pwsh
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: gh release upload "${{ github.event.release.tag_name }}" (Get-ChildItem out\*.exe).FullName --clobber
+
+  mac:
+    needs: app-zip
+    runs-on: macos-14
+    timeout-minutes: 30
+    env:
+      V: ${{ needs.app-zip.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: {name: app-zip, path: dist}
+      - name: Đóng gói .pkg
+        run: zsh studio/installers/build-mac-pkg.sh "$V" "dist/GhepVideo-$V.zip" out
+      - uses: actions/upload-artifact@v4
+        with: {name: mac-installer, path: out/*.pkg}
+      - name: Thử cài .pkg
+        run: |
+          sudo installer -pkg "out/GhepVideo-$V.pkg" -target /
+          ls -d "/Applications/Ghép Video.app"
+          ls "$HOME/Ghép Video/studio/app/main.py" "$HOME/Ghép Video/studio/setup-mac.command"
+          test -x "$HOME/Ghép Video/Ghép Video.app/Contents/MacOS/GhepVideo"
+      - name: Gắn vào bản phát hành
+        if: github.event_name == 'release'
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: gh release upload "${{ github.event.release.tag_name }}" out/*.pkg --clobber

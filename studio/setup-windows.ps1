@@ -74,6 +74,7 @@ $Link = $Shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Desktop'
 $Link.TargetPath = Join-Path $Venv 'Scripts\pythonw.exe'
 $Link.Arguments = '"' + (Join-Path $Here 'app\main.py') + '"'
 $Link.WorkingDirectory = $Here
+$Link.IconLocation = Join-Path $Here 'assets\icon.ico'
 $Link.Save()
 
 Write-Host "`nCài đặt xong." -ForegroundColor Green

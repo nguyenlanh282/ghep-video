@@ -1,6 +1,7 @@
 # Allowlist: only the app is tracked. Media, recordings, music, output and the old app never enter git.
 /*
 !/.gitignore
+!/.github/
 !/README.md
 !/studio/
 !/Ghép Video.app/
@@ -13,3 +14,4 @@ __pycache__/
 /studio/app/ui/assets/local/
 /studio/VideoStudio.swift
 /studio/build.command
+/studio/FILES.txt
