@@ -1,0 +1,17 @@
+{
+  // Ghép Video landing page: static page in ./public + download form API (src/index.js) + D1 for leads.
+  "name": "ghep-video",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+  "account_id": "d4a30462b305677d4a98c834d8e5f06c",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/d/*", "/admin", "/admin/*"]
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "ghepvideo-leads", "database_id": "56226761-21c0-4ee0-ab39-102da657d3cd", "migrations_dir": "migrations" }
+  ],
+  "observability": { "enabled": true }
+  // Secrets (not in this file): ADMIN_PASSWORD, SECRET  →  npx wrangler secret put <NAME>
+}
