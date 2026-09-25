@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tải Ghép Video · Hướng dẫn cài đặt</title>
+<meta name="robots" content="noindex">
+<meta name="description" content="Tải Ghép Video cho Windows và Mac, kèm hướng dẫn cài đặt từng bước.">
+<link rel="icon" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0f14;--panel:#131922;--panel2:#1a2230;--line:rgba(255,255,255,.09);--text:#eef1f5;--muted:#9ca8ba;--accent:#baf25e;--ink:#0b0f14;--yellow:#ffd54a;--zalo:#0068ff;--warn:#ffb057;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 "Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+header.nav{position:sticky;top:0;z-index:10;background:rgba(11,15,20,.8);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+header.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:64px;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.06em;color:var(--text);text-decoration:none}
+.brand img{width:32px;height:32px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border-radius:14px;padding:14px 20px;font:700 16px/1.2 inherit;text-decoration:none;border:1px solid var(--line);color:var(--text);background:rgba(255,255,255,.06);cursor:pointer;transition:transform .15s,filter .15s}
+.btn:hover{transform:translateY(-2px)}
+.btn.primary{background:var(--accent);color:var(--ink);border-color:transparent;box-shadow:0 10px 30px rgba(186,242,94,.22)}
+.btn.zalo{background:var(--zalo);color:#fff;border-color:transparent}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hero{padding:56px 0 24px;text-align:center}
+.hero h1{font-size:clamp(32px,5vw,52px);line-height:1.1;margin:0 0 12px;letter-spacing:-.02em;font-weight:900}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.hero p{color:var(--muted);margin:0 auto;max-width:620px;font-size:17px}
+.ver{display:inline-block;margin-top:14px;font-size:14px;font-weight:600;color:var(--accent);background:rgba(186,242,94,.1);border:1px solid rgba(186,242,94,.28);padding:6px 12px;border-radius:999px}
+.picks{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:32px 0 12px}
+.pick{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:26px;display:flex;flex-direction:column;gap:14px}
+.pick.mine{border-color:rgba(186,242,94,.45);background:linear-gradient(160deg,rgba(186,242,94,.1),var(--panel) 55%)}
+.pick h2{margin:0;font-size:24px;display:flex;align-items:center;gap:10px}
+.pick .os-ic{font-size:30px}
+.pick .req{margin:0;color:var(--muted);font-size:14px}
+.pick .btn{width:100%;padding:16px}
+.pick .file{font-size:13px;color:var(--muted);text-align:center;margin-top:-6px}
+.pick .alt{font-size:13px;color:var(--muted);text-align:center}
+.mine-tag{margin-left:auto;font-size:12px;font-weight:800;color:var(--ink);background:var(--accent);padding:3px 8px;border-radius:6px}
+section{padding:40px 0}
+section h2.t{font-size:clamp(24px,3.2vw,32px);margin:0 0 8px;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0 0 22px}
+.tabs{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:4px;gap:4px;margin-bottom:20px}
+.tabs button{border:0;background:none;color:var(--muted);font:700 15px/1 inherit;padding:11px 18px;border-radius:10px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--ink)}
+.steps{list-style:none;padding:0;margin:0;display:grid;gap:12px;counter-reset:s}
+.steps li{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px 20px 18px 70px;counter-increment:s}
+.steps li::before{content:counter(s);position:absolute;left:20px;top:18px;width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--ink);font-weight:900;display:grid;place-items:center}
+.steps b{display:block;font-size:17px;margin-bottom:2px}
+.steps p{margin:0;color:var(--muted)}
+.steps kbd,.k{display:inline-block;background:#0f141c;border:1px solid var(--line);border-bottom-width:2px;border-radius:7px;padding:1px 8px;font:600 14px/1.5 inherit;color:var(--text)}
+.note{margin-top:10px;background:rgba(255,176,87,.08);border:1px solid rgba(255,176,87,.3);border-radius:12px;padding:10px 14px;font-size:14px;color:#ffd6a6}
+.tip{margin-top:10px;background:rgba(186,242,94,.07);border:1px solid rgba(186,242,94,.25);border-radius:12px;padding:10px 14px;font-size:14px;color:#dff7b8}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:22px}
+.card h3{margin:0 0 8px;font-size:18px}
+.card p,.card li{color:var(--muted);font-size:15px}
+.card ol{margin:8px 0 0;padding-left:20px}
+.card p{margin:0}
+details{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 20px;margin-bottom:10px}
+details summary{cursor:pointer;font-weight:600}
+details p,details li{color:var(--muted)}
+details p{margin:10px 0 0}
+details ul{margin:10px 0 0;padding-left:20px}
+.help{text-align:center;padding:48px 0 64px}
+.help p{color:var(--muted);margin:0 auto 18px;max-width:560px}
+footer{border-top:1px solid var(--line);padding:24px 0;color:var(--muted);font-size:14px}
+footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+[hidden]{display:none!important}
+@media (max-width:760px){.picks,.grid2{grid-template-columns:1fr}.steps li{padding-left:62px}.steps li::before{left:16px}}
+</style>
+</head>
+<body>
+<header class="nav"><div class="wrap">
+  <a class="brand" href="/"><img src="/icon.png" alt="">GHÉP VIDEO</a>
+  <a class="btn zalo" href="https://zalo.me/g/gimz1uxcifvaydqar800" target="_blank" rel="noopener" style="padding:10px 16px;font-size:14px">Nhóm Zalo hỗ trợ</a>
+</div></header>
+
+<main>
+<div class="hero"><div class="wrap">
+  <h1>Tải <em>Ghép Video</em></h1>
+  <p>Chọn bản cho máy của bạn, rồi làm theo hướng dẫn bên dưới. Lần đầu cài mất khoảng 10–20 phút, phần lớn là tự tải.</p>
+  <span class="ver" id="ver">Bản mới nhất</span>
+
+  <div class="picks">
+    <div class="pick" id="pickWin">
+      <h2><span class="os-ic">🪟</span>Windows</h2>
+      <p class="req">Windows 10 hoặc 11, bản 64-bit. RAM từ 8 GB (nên 16 GB). Có card NVIDIA sẽ nhanh hơn.</p>
+      <a class="btn primary" href="/d/windows">⬇ Tải cho Windows</a>
+      <div class="file" id="fileWin">GhepVideo-Setup.exe</div>
+      <a class="alt" href="#windows">Xem hướng dẫn cài Windows ↓</a>
+    </div>
+    <div class="pick" id="pickMac">
+      <h2><span class="os-ic">🍎</span>Mac</h2>
+      <p class="req">Mac chip Apple (M1, M2, M3, M4…), macOS 12 trở lên. RAM từ 8 GB (nên 16 GB).</p>
+      <a class="btn primary" href="/d/mac">⬇ Tải cho Mac</a>
+      <div class="file" id="fileMac">GhepVideo.pkg</div>
+      <a class="alt" href="#mac">Xem hướng dẫn cài Mac ↓</a>
+    </div>
+  </div>
+  <p style="font-size:14px">Cần trống khoảng 6 GB ổ đĩa. Lần đầu mở, app tự tải thêm khoảng 1,5–2 GB (phần nghe lời nói và công cụ xử lý video).</p>
+</div></div>
+
+<section id="huong-dan"><div class="wrap">
+  <h2 class="t">Hướng dẫn cài đặt</h2>
+  <p class="sub">Chọn máy của bạn.</p>
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tabWin" aria-controls="windows" aria-selected="true">🪟 Windows</button>
+    <button role="tab" id="tabMac" aria-controls="mac" aria-selected="false">🍎 Mac</button>
+  </div>
+
+  <div id="windows" role="tabpanel" aria-labelledby="tabWin">
+    <ol class="steps">
+      <li><b>Tải file cài đặt</b><p>Bấm <b>Tải cho Windows</b> ở trên. File tên <span class="k">GhepVideo-Setup-….exe</span> sẽ nằm trong thư mục <b>Downloads (Tải xuống)</b>.</p></li>
+      <li><b>Mở file vừa tải</b><p>Bấm đúp vào file. Nếu hiện màn hình xanh <b>“Windows protected your PC”</b>, bấm <b>More info</b> rồi <b>Run anyway</b>.</p>
+        <div class="note">Cảnh báo này hiện vì phần mềm chưa mua chứng chỉ ký số của Microsoft, không phải do virus.</div></li>
+      <li><b>Bấm Next → Install</b><p>Giữ nguyên thư mục cài mặc định. App được cài vào thư mục của bạn, không cần quyền quản trị.</p></li>
+      <li><b>Để dấu tích “Tải phần còn lại và mở Ghép Video”, bấm Finish</b><p>Một cửa sổ màu xanh đen (PowerShell) mở ra và tự tải FFmpeg, Python, bộ nghe lời nói. Mất khoảng 5–15 phút tuỳ mạng.</p>
+        <div class="note"><b>Đừng đóng cửa sổ này</b> cho tới khi nó báo <b>“Cài đặt xong”</b> và tự mở app.</div></li>
+      <li><b>Mở app những lần sau</b><p>Bấm biểu tượng <b>Ghép Video</b> ngoài màn hình Desktop hoặc trong menu Start.</p></li>
+    </ol>
+  </div>
+
+  <div id="mac" role="tabpanel" aria-labelledby="tabMac" hidden>
+    <ol class="steps">
+      <li><b>Kiểm tra máy có chip Apple</b><p>Bấm logo  ở góc trái trên → <b>Giới thiệu về máy Mac này</b>. Dòng <b>Chip</b> phải là <b>Apple M1, M2, M3…</b> Mac chip Intel chưa được hỗ trợ.</p></li>
+      <li><b>Tải file cài đặt</b><p>Bấm <b>Tải cho Mac</b> ở trên. File tên <span class="k">GhepVideo-….pkg</span> sẽ nằm trong thư mục <b>Tải về (Downloads)</b>.</p></li>
+      <li><b>Mở file vừa tải</b><p>Bấm đúp vào file .pkg. Nếu máy báo <b>không mở được vì không xác minh được nhà phát triển</b>: bấm <b>Xong</b>, vào <b>Cài đặt hệ thống → Quyền riêng tư &amp; Bảo mật</b>, kéo xuống, bấm <b>Vẫn mở</b>, rồi mở lại file.</p>
+        <div class="note">Cảnh báo này hiện vì phần mềm chưa mua chứng chỉ ký số của Apple, không phải do virus.</div></li>
+      <li><b>Bấm Tiếp tục → Cài đặt</b><p>Nhập mật khẩu máy Mac khi được hỏi (mật khẩu bạn dùng để mở máy).</p></li>
+      <li><b>Chờ cửa sổ Terminal tải phần còn lại</b><p>Sau khi cài, một cửa sổ Terminal (nền trắng hoặc đen) tự mở và tải FFmpeg, Python, bộ nghe lời nói. Mất khoảng 5–15 phút.</p>
+        <div class="note"><b>Đừng đóng cửa sổ này</b> cho tới khi nó báo cài xong và tự mở app.</div></li>
+      <li><b>Mở app những lần sau</b><p>Mở <b>Launchpad</b> hoặc thư mục <b>Ứng dụng (Applications)</b>, bấm <b>Ghép Video</b>. Nên kéo biểu tượng xuống thanh Dock cho tiện.</p></li>
+    </ol>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="t">Sau khi cài xong</h2>
+  <p class="sub">Hai việc nên làm ngay lần đầu.</p>
+  <div class="grid2">
+    <div class="card">
+      <h3>🤖 Bật AI (gói Claude hoặc ChatGPT)</h3>
+      <p>AI giúp xem và đặt tên ảnh, gợi ý tiêu đề, caption, soát chính tả phụ đề. Không có AI thì cắt video, phụ đề, giọng đọc vẫn chạy bình thường.</p>
+      <ol>
+        <li>Cài <a href="https://code.claude.com/docs/en/setup" target="_blank" rel="noopener">Claude Code</a> (nếu bạn có gói Claude Pro/Max) hoặc <a href="https://developers.openai.com/codex/cli" target="_blank" rel="noopener">Codex</a> (nếu có gói ChatGPT).</li>
+        <li>Đăng nhập 1 lần bằng tài khoản của bạn.</li>
+        <li>Trong app, mục <b>AI xem ảnh</b>, chọn <b>Tự động</b>, <b>Claude</b> hoặc <b>ChatGPT</b>.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>🔄 Cập nhật bản mới</h3>
+      <p>Khi có tính năng mới, nút <b>Phiên bản</b> ở góc trên bên phải app chuyển sang màu xanh.</p>
+      <ol>
+        <li>Bấm nút <b>Phiên bản</b>.</li>
+        <li>Bấm <b>Cập nhật</b>, chờ vài giây.</li>
+        <li>Bấm <b>Khởi động lại</b>. Ảnh, video, cài đặt của bạn được giữ nguyên.</li>
+      </ol>
+    </div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2 class="t">Gặp lỗi khi cài?</h2>
+  <p class="sub">Những trường hợp hay gặp nhất.</p>
+  <details><summary>Windows báo “Windows protected your PC” hoặc trình diệt virus chặn</summary><p>Bấm <b>More info → Run anyway</b>. Nếu phần mềm diệt virus xoá file, hãy tạm cho phép (Allow) file GhepVideo-Setup rồi tải lại.</p></details>
+  <details><summary>Mac báo “không thể mở vì Apple không thể kiểm tra phần mềm độc hại”</summary><p>Vào <b>Cài đặt hệ thống → Quyền riêng tư &amp; Bảo mật</b>, kéo xuống phần Bảo mật, bấm <b>Vẫn mở</b> cạnh dòng GhepVideo, rồi mở lại file .pkg.</p></details>
+  <details><summary>Cửa sổ tải phần còn lại bị lỗi hoặc tôi lỡ đóng nó</summary>
+    <p>Chạy lại bước tải bằng file dự phòng, giữ nguyên các thứ đã tải:</p>
+    <ul>
+      <li><b>Windows:</b> <a href="/d/windows-script">tải Cai-dat-Ghep-Video-Windows.bat</a>, bấm đúp để chạy.</li>
+      <li><b>Mac:</b> <a href="/d/mac-script">tải Cai-dat-Ghep-Video-Mac.command</a>, bấm chuột phải → <b>Mở</b> → <b>Mở</b>.</li>
+    </ul>
+    <p>Nếu vẫn lỗi, chụp màn hình cửa sổ đó gửi vào nhóm Zalo.</p></details>
+  <details><summary>Mạng chậm, tải mãi không xong</summary><p>Phần tải thêm khoảng 1,5–2 GB. Nên dùng Wi-Fi ổn định, không dùng 4G giới hạn dung lượng. Nếu bị ngắt giữa chừng, chạy lại file dự phòng ở trên, nó tải tiếp phần còn thiếu.</p></details>
+  <details><summary>Mac chip Intel có cài được không?</summary><p>Hiện chưa hỗ trợ. Phần nghe lời nói trên Mac dùng chip Apple (M1 trở lên).</p></details>
+  <details><summary>Máy yếu có chạy được không?</summary><p>Cần RAM từ 8 GB, nên có 16 GB. Máy yếu vẫn chạy được nhưng bước nhận dạng giọng nói và xuất video sẽ chậm hơn.</p></details>
+</div></section>
+
+<div class="help"><div class="wrap">
+  <h2 class="t">Cần hỗ trợ?</h2>
+  <p>Hỏi trực tiếp trong nhóm Zalo. Lịch buổi Zoom hướng dẫn cũng được thông báo trong nhóm.</p>
+  <a class="btn zalo" href="https://zalo.me/g/gimz1uxcifvaydqar800" target="_blank" rel="noopener">💬 Vào nhóm Zalo Ghép Video</a>
+</div></div>
+</main>
+
+<footer><div class="wrap"><span>© Ghép Video</span><a href="/">Trang chủ</a></div></footer>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const ua = navigator.userAgent, os = /Windows/i.test(ua) ? 'windows' : /Mac/i.test(ua) ? 'mac' : 'other';
+
+function tab(which) {
+  const win = which === 'windows';
+  $('#tabWin').setAttribute('aria-selected', win); $('#tabMac').setAttribute('aria-selected', !win);
+  $('#windows').hidden = !win; $('#mac').hidden = win;
+}
+$('#tabWin').addEventListener('click', () => tab('windows'));
+$('#tabMac').addEventListener('click', () => tab('mac'));
+document.querySelectorAll('a[href="#windows"], a[href="#mac"]').forEach(a => a.addEventListener('click', e => {
+  e.preventDefault(); tab(a.getAttribute('href').slice(1)); $('#huong-dan').scrollIntoView({behavior: 'smooth'});
+}));
+
+// Put this computer's download first and open its guide.
+if (os === 'mac') { $('#pickMac').classList.add('mine'); $('#pickMac').parentElement.prepend($('#pickMac')); tab('mac'); }
+else if (os === 'windows') $('#pickWin').classList.add('mine');
+const mine = os === 'mac' ? $('#pickMac h2') : os === 'windows' ? $('#pickWin h2') : null;
+if (mine) mine.insertAdjacentHTML('beforeend', '<span class="mine-tag">MÁY CỦA BẠN</span>');
+
+fetch('/api/version').then(r => r.json()).then(({version}) => {
+  if (!version) return;
+  $('#ver').textContent = 'Bản mới nhất: ' + version;
+  $('#fileWin').textContent = `GhepVideo-Setup-${version}.exe`; $('#fileMac').textContent = `GhepVideo-${version}.pkg`;
+}).catch(() => {});
+</script>
+</body>
+</html>

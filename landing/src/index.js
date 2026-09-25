@@ -1,12 +1,21 @@
 // Ghép Video landing page backend (Cloudflare Worker + D1).
 //   POST /api/lead        save the sign-up form and answer with the Zalo group link
-//   GET  /d/<kind>        old download links: back to the sign-up form (the software is shared in the Zalo group)
+//   GET  /download        download page with install guides (not linked from the home page; shared in the Zalo group)
+//   GET  /d/<kind>        the latest installer on GitHub Releases;  GET /api/version  latest version number
 //   GET  /admin           password-protected list of leads;  /admin/leads.csv  Excel-friendly export
 //   POST /admin/sync-lark push leads not yet in Lark Base (every new lead is also pushed right after the form)
 // Static files (the page itself) come from ./public.
 
 import { larkReady, pushLead, pushMany, ROLES } from './lark.js';
 
+const REPO = 'nguyenlanh282/ghep-video';
+// Installer file names in each release, from its version number (latest.json on the release download URL).
+const KINDS = {
+  windows: v => `GhepVideo-Setup-${v}.exe`,
+  mac: v => `GhepVideo-${v}.pkg`,
+  'windows-script': () => 'Cai-dat-Ghep-Video-Windows.bat',
+  'mac-script': () => 'Cai-dat-Ghep-Video-Mac.command',
+};
 const COOKIE = 'gv_dl';
 const DAY = 86400;
 
@@ -16,8 +25,8 @@ export default {
     try {
       if (url.pathname === '/api/lead' && request.method === 'POST') return await saveLead(request, env, ctx);
       if (url.pathname === '/admin/sync-lark' && request.method === 'POST') return await syncLark(request, env);
-      // Downloads are no longer offered on the page: the software is shared inside the Zalo group.
-      if (url.pathname.startsWith('/d/')) return Response.redirect(new URL('/#dang-ky', request.url).toString(), 302);
+      if (url.pathname.startsWith('/d/')) return await download(request, ctx, url.pathname.slice(3));
+      if (url.pathname === '/api/version') return json({ version: await latestVersion(ctx) });
       if (url.pathname === '/admin' || url.pathname === '/admin/leads.csv') return await admin(request, env, url.pathname.endsWith('.csv'), url);
       return env.ASSETS.fetch(request);
     } catch (err) {
@@ -81,6 +90,29 @@ function normalisePhone(v) {
   let d = String(v ?? '').replace(/[^\d+]/g, '');
   if (d.startsWith('+84')) d = '0' + d.slice(3); else if (d.startsWith('84') && d.length === 11) d = '0' + d.slice(2);
   return /^0[35789]\d{8}$/.test(d) ? d : '';
+}
+
+// ---------------- downloads ----------------
+
+async function download(request, ctx, kind) {
+  if (!KINDS[kind]) return new Response('Không có file này.', { status: 404 });
+  const version = await latestVersion(ctx);
+  if (!version) return new Response('Bản cài đặt đang được chuẩn bị. Vui lòng thử lại sau ít phút.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  return Response.redirect(`https://github.com/${REPO}/releases/download/v${version}/${KINDS[kind](version)}`, 302);
+}
+
+async function latestVersion(ctx) {
+  // latest.json comes from the release *download* URL, which has no API rate limit (the GitHub API allows only
+  // 60 requests/hour per IP, and Cloudflare shares IPs). Cached for 5 minutes.
+  const cacheKey = new Request('https://cache.ghepvideo/latest-json');
+  let res = await caches.default.match(cacheKey);
+  if (!res) {
+    const r = await fetch(`https://github.com/${REPO}/releases/latest/download/latest.json`, { headers: { 'User-Agent': 'ghepvideo-landing' } });
+    if (!r.ok) return '';
+    res = new Response(await r.text(), { headers: { 'Cache-Control': 'max-age=300', 'Content-Type': 'application/json' } });
+    ctx.waitUntil(caches.default.put(cacheKey, res.clone()));
+  }
+  try { return (await res.json()).version || ''; } catch { return ''; }
 }
 
 // ---------------- Lark Base ----------------
