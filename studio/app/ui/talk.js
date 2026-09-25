@@ -10,7 +10,8 @@ const base = p => p ? p.split(/[\\/]/).pop() : '';
 const fmt = s => { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 const REASON = {'im-lang': 'Im lặng', 'am-u': 'Ậm ừ', 'lap': 'Nói vấp', 'noi-lai': 'Nói lại', 'tay': 'Bạn cắt'};
 let S = null, P = null, videoUrl = null, keep = [];
-let autoExport = false;  // “Edit & xuất ngay”: export as soon as the analysis finishes
+let autoExport = false;
+let exportsList = [], view = 'raw', currentExport = 0, preferRaw = false;  // preview: the edited result, or the raw video with cuts skipped  // “Edit & xuất ngay”: export as soon as the analysis finishes
 
 async function api(name, body = {}) {
   const r = await fetch('/api/' + name, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Token': TOKEN}, body: JSON.stringify(body)});
@@ -46,6 +47,10 @@ function renderState(st) {
   $$('[data-seg]').forEach(seg => $$('button', seg).forEach(b => b.classList.toggle('on', s[seg.dataset.seg] === b.dataset.value)));
   $$('[data-choice]').forEach(box => $$('button', box).forEach(b => b.classList.toggle('on', s[box.dataset.choice] === b.dataset.value)));
   $$('[data-path]').forEach(el => { const p = s[el.dataset.path]; if (p) { el.textContent = base(p); el.closest('button').title = p; } });
+  const secs = +s.titleSeconds || 3; const tr = $('#titleSecs input');
+  if (document.activeElement !== tr) tr.value = secs;
+  $('#titleSecsOut').textContent = secs.toFixed(1).replace('.', ',') + ' giây';
+  $$('#titleSecs .step').forEach(b => b.disabled = +b.dataset.d < 0 ? secs <= 1 : secs >= 5);
   const aspects = (s.talkAspects || '9:16').split(',');
   $$('#aspects input').forEach(i => i.checked = aspects.includes(i.value));
   const ai = st.ai;
@@ -61,7 +66,10 @@ function renderState(st) {
   if (prev && prev.running && !job.running) {
     if (job.task === 'talk-analyze' && !job.error) loadProject().then(() => { if (autoExport) { autoExport = false; startExport(); } });
     if (job.task === 'talk-analyze' && job.error) autoExport = false;
-    if (job.task === 'talk-render' && job.result && !job.error) { $('#resultRow').hidden = false; $('#status').textContent = '✓ ' + job.status; }
+    if (job.task === 'talk-render' && job.result && !job.error) {
+      $('#resultRow').hidden = false; $('#status').textContent = '✓ ' + job.status;
+      preferRaw = false; loadProject().then(() => { if (exportsList.length) { currentExport = 0; setView('edited', true); } });
+    }
   }
 }
 
@@ -142,17 +150,31 @@ function paintExtras() {
 
 async function loadProject() {
   const out = await api('talkState');
-  P = out.project; videoUrl = out.videoUrl;
+  P = out.project; videoUrl = out.videoUrl; exportsList = out.exports || [];
   $('#emptyEditor').hidden = !!P; $('#editorBody').hidden = !P; $('#exportBtn').disabled = !P;
-  const player = $('#player');
-  if (videoUrl && player.dataset.src !== videoUrl) { player.src = videoUrl; player.dataset.src = videoUrl; }
+  $('#resultRow').hidden = !exportsList.length;
   if (P) { buildTranscript(); paintExtras(); }
+  setView(exportsList.length && !preferRaw ? 'edited' : 'raw');
+}
+
+/* Preview source: the finished video (what viewers will see: title, captions, B-roll) or the raw take with cuts skipped. */
+function setView(v, play) {
+  view = v === 'edited' && exportsList.length ? 'edited' : 'raw';
+  $$('#viewSeg button').forEach(b => { b.classList.toggle('on', b.dataset.view === view); b.disabled = b.dataset.view === 'edited' && !exportsList.length; });
+  $('#editedPick').innerHTML = view === 'edited' ? exportsList.map((e, k) =>
+    `<button data-export="${k}" class="${k === currentExport ? 'on' : ''}"><span>${esc(e.kind === 'clip ngắn' ? e.name : e.name)}</span><small>${e.duration ? fmt(e.duration) : ''}</small></button>`).join('') : '';
+  $('#skipRow').hidden = view !== 'raw';
+  $('#viewHint').textContent = view === 'edited' ? 'Video đã edit, đúng như người xem sẽ thấy. Sửa bản chữ rồi bấm “Xuất video” để xem lại bản mới.'
+    : exportsList.length ? 'Bản thô: bấm chữ trong bản chữ để nghe đúng đoạn đó.' : 'Chưa xuất video: đang phát bản thô. Bấm “Xuất video” hoặc “⚡ Edit & xuất ngay” để xem video đã edit.';
+  const src = view === 'edited' ? exportsList[currentExport].url : videoUrl, p = $('#player');
+  if (src && p.dataset.src !== src) { p.src = src; p.dataset.src = src; }
+  if (play) p.play().catch(() => {});
 }
 
 /* ---------- preview: play the raw video but jump over every cut ---------- */
 function followPlayer() {
   const p = $('#player');
-  if (P && !p.paused) {
+  if (P && !p.paused && view === 'raw') {
     const t = p.currentTime;
     if ($('#skipCuts').checked && keep.length) {
       const inside = keep.some(([a, b]) => t >= a && t < b);
@@ -201,6 +223,12 @@ function wire() {
     const out = await api('start', {task: 'talk-analyze'}); if (out.job && out.job.running) poll(); else autoExport = false;
   });
   $('#cancelBtn').addEventListener('click', () => api('cancel'));
+  $('#viewSeg').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b && !b.disabled) { preferRaw = b.dataset.view === 'raw'; setView(b.dataset.view, true); } });
+  $('#editedPick').addEventListener('click', e => { const b = e.target.closest('[data-export]'); if (b) { currentExport = +b.dataset.export; setView('edited', true); } });
+  const titleSet = debounce(v => set({titleSeconds: v}), 250);
+  const titleApply = v => { v = Math.min(5, Math.max(1, Math.round(v * 2) / 2)); $('#titleSecs input').value = v; $('#titleSecsOut').textContent = v.toFixed(1).replace('.', ',') + ' giây'; titleSet(v); };
+  $('#titleSecs input').addEventListener('input', e => titleApply(+e.target.value));
+  $$('#titleSecs .step').forEach(b => b.addEventListener('click', () => titleApply(+$('#titleSecs input').value + (+b.dataset.d) * .5)));
   $('#errorClose').addEventListener('click', () => api('clearError'));
   $('#openFolder').addEventListener('click', () => api('reveal'));
 
@@ -211,7 +239,7 @@ function wire() {
     const el = e.target.closest('.w'); if (!el || !getSelection().isCollapsed) return;
     const i = +el.dataset.i, w = P.words[i];
     if (w.cut) setCut([i], null);
-    else { const p = $('#player'); p.currentTime = Math.max(0, w.start - .05); p.play().catch(() => {}); }
+    else { if (view === 'edited') setView('raw'); const p = $('#player'); p.currentTime = Math.max(0, w.start - .05); p.play().catch(() => {}); }
   });
   const cutSelection = () => { const idx = selectedWordIndices().filter(i => !P.words[i].cut); if (idx.length) { setCut(idx, 'tay'); getSelection().removeAllRanges(); } };
   tr.addEventListener('keydown', e => { if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); cutSelection(); } });
@@ -236,7 +264,7 @@ function wire() {
     setTimeout(() => $('#copyPost').textContent = '📋 Sao chép caption + hashtag', 1800);
   });
   $('#shorts').addEventListener('change', e => { const k = e.target.dataset.short; if (k != null) { P.shorts[+k].on = e.target.checked; editOther({shorts: {[k]: e.target.checked}}); } });
-  $('#shorts').addEventListener('click', e => { const b = e.target.closest('[data-play]'); if (b) { e.preventDefault(); const p = $('#player'); p.currentTime = +b.dataset.play; p.play().catch(() => {}); } });
+  $('#shorts').addEventListener('click', e => { const b = e.target.closest('[data-play]'); if (b) { e.preventDefault(); if (view === 'edited') setView('raw'); const p = $('#player'); p.currentTime = +b.dataset.play; p.play().catch(() => {}); } });
 }
 
 async function init() {

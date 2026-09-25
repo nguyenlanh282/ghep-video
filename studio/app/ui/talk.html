@@ -46,6 +46,12 @@
     <label class="switch"><input type="checkbox" data-key="talkDenoise"><span></span>Khử ồn giọng nói</label>
     <label class="switch"><input type="checkbox" data-key="talkKeywords"><span></span>Tô màu từ khoá trong phụ đề</label>
     <label class="switch"><input type="checkbox" data-key="talkShorts"><span></span>Xuất thêm các clip ngắn đã chọn</label>
+    <div class="row between"><span class="hint">Kiểu tiêu đề</span>
+      <div class="seg" data-seg="titleStyle"><button data-value="pop">Nổi bật</button><button data-value="card">Khung tối</button><button data-value="ribbon">Dải màu</button><button data-value="none">Không</button></div></div>
+    <div class="value" id="titleSecs">
+      <span class="label">Tiêu đề hiện trong</span><span class="out" id="titleSecsOut"></span>
+      <div class="ctl"><button class="step" data-d="-1" aria-label="Giảm thời gian hiện tiêu đề">−</button><input type="range" min="1" max="5" step="0.5" aria-label="Thời gian hiện tiêu đề"><button class="step" data-d="1" aria-label="Tăng thời gian hiện tiêu đề">+</button></div>
+    </div>
     <div class="styles compact" data-choice="subStyle">
       <button data-value="sweep" style="--c:#ffd54a"><i>Aa</i><span><b>Karaoke vàng</b></span></button>
       <button data-value="active" style="--c:var(--accent)"><i>Aa</i><span><b>Karaoke xanh</b></span></button>
@@ -90,9 +96,12 @@
   </section>
 
   <section class="panel preview" aria-labelledby="t3">
-    <div class="row between"><span class="eyebrow" id="t3">XEM TRƯỚC</span><label class="hint"><input type="checkbox" id="skipCuts" checked> Chỉ phát phần giữ lại</label></div>
+    <div class="row between"><span class="eyebrow" id="t3">XEM TRƯỚC</span>
+      <div class="seg" id="viewSeg"><button data-view="edited">Video đã edit</button><button data-view="raw">Bản thô</button></div></div>
     <div class="frame talkframe"><video id="player" playsinline controls preload="metadata"></video></div>
-    <p class="hint">Phát thử bản thô và bỏ qua các chỗ đã cắt, để nghe câu có liền mạch không trước khi xuất.</p>
+    <div id="editedPick" class="exports"></div>
+    <p class="hint" id="viewHint"></p>
+    <label class="hint" id="skipRow"><input type="checkbox" id="skipCuts" checked> Bỏ qua chỗ cắt khi phát bản thô</label>
     <div class="row gap" id="resultRow" hidden>
       <button class="btn primary" id="openFolder">📁 Mở thư mục video đã xuất</button>
     </div>

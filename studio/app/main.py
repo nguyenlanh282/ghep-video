@@ -37,7 +37,7 @@ def first_audio():
 DEFAULTS=dict(mediaFolder=str(find_child(ROOT,'Video - ảnh')),audio=first_audio(),music='',outputFolder=str(ROOT/'output'),
  title='VỢ CHỒNG',subtitle='Ai làm việc nhà?',titleStyle='pop',subStyle='sweep',musicVolume=.15,voiceVolume=1.0,normalizeVoice=True,
  shotSeconds=2.5,removeSilence=True,faceAwareFill=True,resolution='1080',fixesText='xòng => sòng\nđận => đần',
- matchScenes=True,stockEnabled=False,stockSource='auto',pexelsKey='',pixabayKey='',updateManifest='',captionY=.73,aiProvider='auto',
+ matchScenes=True,stockEnabled=False,stockSource='auto',pexelsKey='',pixabayKey='',updateManifest='',captionY=.73,aiProvider='auto',titleSeconds=3.0,
  # Video chia sẻ (talking-video editor)
  talkVideo='',talkBrollFolder=str(find_child(ROOT,'Video - ảnh')),talkBroll=True,talkDensity='vua',talkAspects='9:16',
  talkPunchIn=True,talkDenoise=True,talkRetakes=True,talkKeywords=True,talkShorts=True)
@@ -174,11 +174,11 @@ class Studio:
    if task=='talk-render' and not self.talk_project():return self.fail('Hãy bấm “Phân tích video” trước.')
    job=dict(video=s['talkVideo'],projectDir=str(self.talk_dir()),cacheFolder=str(self.cache()),brollFolder=s['talkBrollFolder'],broll=s['talkBroll'],
             brollDensity=TALK_DENSITY.get(s['talkDensity'],.3),stockEnabled=s['stockEnabled'],stockSource=s['stockSource'],cutRetakes=s['talkRetakes'],
-            fixesText=s['fixesText'],outputFolder=s['outputFolder'],titleStyle=s['titleStyle'],subStyle=s['subStyle'],captionY=s['captionY'],
+            fixesText=s['fixesText'],outputFolder=s['outputFolder'],titleStyle=s['titleStyle'],titleSeconds=s['titleSeconds'],subStyle=s['subStyle'],captionY=s['captionY'],
             aspects=[a for a in s['talkAspects'].split(',') if a],exportShorts=s['talkShorts'],punchIn=s['talkPunchIn'],denoise=s['talkDenoise'],
             highlightKeywords=s['talkKeywords'],voiceVolume=s['voiceVolume'],normalizeVoice=s['normalizeVoice'],music=s['music'],musicVolume=s['musicVolume'],aiPython=sys.executable)
    if task=='talk-render':
-    pick=(self.talk_project() or {}).get('title_choice') or {}
+    proj=self.talk_project() or {};pick=proj.get('title_choice') or (proj.get('titles') or [{}])[0]  # ⚡ exports before the editor saves a choice
     job.update(title=pick.get('dong1',''),subtitle=pick.get('dong2',''))
    job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
    args=[str(ENGINE/'talk.py'),task[5:],str(job_file)];log='talk.log';cleanup=lambda:job_file.unlink(missing_ok=True)
@@ -186,7 +186,7 @@ class Studio:
    if not Path(s['audio']).is_file():return self.fail('Hãy chọn file ghi âm.')
    if not Path(s['outputFolder']).is_dir():return self.fail('Hãy chọn thư mục lưu video.')
    analysed=len(self.analysis())>0
-   job={k:s[k] for k in ('mediaFolder','audio','music','outputFolder','title','subtitle','titleStyle','subStyle','musicVolume','shotSeconds','resolution','removeSilence','faceAwareFill','fixesText','voiceVolume','normalizeVoice','stockSource','captionY')}
+   job={k:s[k] for k in ('mediaFolder','audio','music','outputFolder','title','subtitle','titleStyle','subStyle','musicVolume','shotSeconds','resolution','removeSilence','faceAwareFill','fixesText','voiceVolume','normalizeVoice','stockSource','captionY','titleSeconds')}
    job.update(preview=bool(preview),cacheFolder=str(self.cache()),matchScenes=s['matchScenes'] and analysed,stockEnabled=s['stockEnabled'] and s['matchScenes'] and analysed,aiPython=sys.executable)
    job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
    args=[str(ENGINE/'renderer.py'),str(job_file)];log='render.log';cleanup=lambda:job_file.unlink(missing_ok=True)
@@ -277,7 +277,12 @@ class Studio:
 
  def talk_state(self):
   p=self.talk_project()
-  return dict(project=p,videoUrl=self.url(self.settings['talkVideo']) if self.settings['talkVideo'] else None)
+  # Finished videos of the last export, so the preview can play the edited result (title, captions, B-roll).
+  exports=[]
+  for r in ((p or {}).get('last_export') or {}).get('results',[]):
+   if Path(r['path']).is_file():exports.append(dict(kind=r['kind'],name=Path(r['path']).name,duration=r.get('duration'),url=self.url(r['path'])))
+  return dict(project=p,videoUrl=self.url(self.settings['talkVideo']) if self.settings['talkVideo'] else None,exports=exports,
+              exportFolder=((p or {}).get('last_export') or {}).get('folder'))
 
  def talk_edit(self,b):
   """Edits from the transcript editor: cut flags per word, chosen title, keywords, caption, shorts, B-roll on/off."""

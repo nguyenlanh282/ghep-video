@@ -186,3 +186,7 @@ kbd{font:11px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.1);borde
 .shorts{display:flex;flex-direction:column;gap:6px}
 .frame.talkframe{aspect-ratio:auto;max-width:none;background:#000}
 .frame.talkframe video{max-height:60vh;object-fit:contain}
+.exports{display:flex;flex-direction:column;gap:6px}
+.exports button{display:flex;justify-content:space-between;gap:8px;text-align:left;padding:8px 10px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.04);font-size:12px}
+.exports button.on{border-color:var(--accent);background:rgba(186,242,94,.08)}
+.exports button small{color:var(--muted)}

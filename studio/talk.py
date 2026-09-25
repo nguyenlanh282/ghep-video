@@ -371,7 +371,7 @@ def render_variant(project, job, aspect, first, last, title, dest, tmp, progress
     positions = [R.caption_layout(g, font, W, H, cy) for g in groups]; top, bh = R.caption_band(font, H, cy)
     tw = min(W, 1080); tjob = dict(job, title=title[0], subtitle=title[1])
     title_img = R.make_title(tjob, tw, H) if job.get('titleStyle', 'pop') != 'none' and (title[0] or title[1]) else None
-    ty = round(H * (.21875 if aspect == '9:16' else .12)); style = job.get('subStyle', 'sweep'); gi = 0; key = None; cap = None; last_frame = None
+    ty = round(H * (.21875 if aspect == '9:16' else .12)); title_secs = max(.5, min(6, float(job.get('titleSeconds', 3)))); style = job.get('subStyle', 'sweep'); gi = 0; key = None; cap = None; last_frame = None
     try:
         for n in range(nframes):
             data = dec.stdout.read(W * H * 3)
@@ -380,9 +380,8 @@ def render_variant(project, job, aspect, first, last, title, dest, tmp, progress
                 data = last_frame  # a frame or two short at the very end: hold the last picture
             last_frame = data
             im = Image.frombytes('RGB', (W, H), data); t = n / FPS
-            if title_img and t < 3.4:
-                z = .86 + .14 * min(1, t / .22); ov = title_img if z >= 1 else title_img.resize((round(tw * z), round(title_img.height * z)))
-                im.paste(ov, ((W - ov.width) // 2, ty), ov)
+            shown = R.title_overlay(title_img, job.get('titleStyle', 'pop'), t, title_secs, W) if title_img else None
+            if shown: im.paste(shown[0], (shown[1], ty), shown[0])
             if style != 'none' and groups:
                 while gi + 1 < len(groups) and groups[gi + 1][0]['start'] <= t: gi += 1
                 g = groups[gi]
@@ -428,6 +427,10 @@ def render(job):
         # Leave no empty result folder behind when nothing was produced.
         if folder.exists() and not any(folder.iterdir()): folder.rmdir()
         raise
+    project_file = Path(job['projectDir'], 'project.json')
+    saved = json.loads(project_file.read_text(encoding='utf-8'))
+    saved['last_export'] = dict(folder=str(folder), results=results, at=time.strftime('%Y-%m-%d %H:%M'))
+    project_file.write_text(json.dumps(saved, ensure_ascii=False, indent=1), encoding='utf-8')
     post = (project.get('caption', '') + '\n\n' + ' '.join(project.get('hashtags', []))).strip()
     if post: (folder / 'caption-hashtag.txt').write_text(post + '\n', encoding='utf-8')
     (folder / 'ket-qua.json').write_text(json.dumps(dict(results=results, job={k: v for k, v in job.items() if 'Key' not in k}), ensure_ascii=False, indent=1), encoding='utf-8')

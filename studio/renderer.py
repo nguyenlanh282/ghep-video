@@ -367,6 +367,20 @@ def make_title(job,W,H):
  d.text((W/2,152*scale),subtitle,font=small,anchor='mm',fill=colors[1],stroke_width=0 if style=='ribbon' else stroke,stroke_fill='#151a22')
  return layer
 
+def title_overlay(title,style,t,secs,frame_w):
+ """(image, x) of the opening title at time t, or None once its time is up. Pop zooms in, card slides in; all fade out
+ over the last 0.3 s instead of vanishing."""
+ if t>=secs:return None
+ if style=='pop':
+  z=.86+.14*min(1,t/.22);ov=title if z>=1 else title.resize((round(title.width*z),round(title.height*z)),Image.Resampling.LANCZOS)
+  x=(frame_w-ov.width)//2
+ elif style=='card':ov=title;x=round((frame_w-title.width)/2-frame_w*(1-min(1,t/.26))**3)
+ else:ov=title;x=(frame_w-title.width)//2
+ fade=min(1,(secs-t)/.3)
+ if fade<1:
+  ov=ov.copy();ov.putalpha(ov.getchannel('A').point(lambda v:int(v*fade)))
+ return ov,x
+
 HIGHLIGHT={'active':'#9cfa68','sweep':'#ffd54a','pill':'#f37aa5'}
 
 def caption_band(font,H,y=CAPTION_Y):
@@ -475,18 +489,13 @@ def render(job):
    enc=subprocess.Popen(cmd,stdin=subprocess.PIPE,stderr=enc_log,**NOWIN);CHILDREN.append(enc)
    style=job.get('subStyle','active');title_style=job.get('titleStyle','pop')
    font=ImageFont.truetype(FONT,round(40*W/720));cap_y=max(.5,min(.9,float(job.get('captionY',CAPTION_Y))));positions=[caption_layout(g,font,W,H,cap_y) for g in groups];band_top,band_h=caption_band(font,H,cap_y)
-   title=make_title(job,W,H);title_y=round(H*.21875);gi=0;nframes=round(duration*fps);cached_key=None;cached=None
+   title=make_title(job,W,H);title_y=round(H*.21875);title_secs=max(.5,min(6,float(job.get('titleSeconds',3))));gi=0;nframes=round(duration*fps);cached_key=None;cached=None
    for n in range(nframes):
     data=dec.stdout.read(W*H*3)
     if len(data)!=W*H*3:raise RuntimeError(f'Video nguồn kết thúc ở khung {n}/{nframes} ({len(data)} byte).')
     im=Image.frombytes('RGB',(W,H),data);t=n/fps
-    if t<3.4 and title_style!='none':
-     if title_style=='pop':
-      z=.86+.14*min(1,t/.22)
-      ov=title if z>=1 else title.resize((round(W*z),round(title.height*z)),Image.Resampling.LANCZOS)
-      im.paste(ov,((W-ov.width)//2,title_y),ov)
-     elif title_style=='card':im.paste(title,(round(-W*(1-min(1,t/.26))**3),title_y),title)
-     else:im.paste(title,(0,title_y),title)
+    shown=title_overlay(title,title_style,t,title_secs,W) if title_style!='none' else None
+    if shown:im.paste(shown[0],(shown[1],title_y),shown[0])
     if style!='none' and groups:
      while gi+1<len(groups) and groups[gi+1][0]['start']<=t:gi+=1
      g=groups[gi]
