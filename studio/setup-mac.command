@@ -1,6 +1,7 @@
 #!/bin/zsh
 # Cài đặt Ghép Video trên macOS (chip Apple M1 trở lên). Không cần Homebrew hay Python có sẵn.
-# Tự cài: Python 3.12 (qua uv), FFmpeg, thư viện, mô hình AI (~4,5 GB lần đầu). Chạy lại bao nhiêu lần cũng được.
+# Tự cài: Python 3.12 (qua uv), FFmpeg, thư viện, mô hình nghe lời đọc (~1,5 GB lần đầu). Chạy lại bao nhiêu lần cũng được.
+# AI xem ảnh dùng gói Claude / ChatGPT của khách qua Claude Code / Codex (không tải mô hình về máy).
 # Dùng: bấm đúp, hoặc  zsh setup-mac.command [--no-open]
 set -eu
 cd "$(dirname "$0")"
@@ -45,10 +46,10 @@ fi
 step "3/5 Thư viện (lần đầu mất vài phút)"
 "$UV" pip install --python "$VENV/bin/python" -q -r requirements-mac.txt || fail "Cài thư viện chưa được."
 
-step "4/5 Mô hình AI: nghe lời đọc + xem ảnh (lần đầu ~4,5 GB)"
+step "4/5 Mô hình nghe lời đọc (lần đầu ~1,5 GB)"
 "$VENV/bin/python" - <<'PYCODE' || fail "Tải mô hình chưa xong. Kiểm tra mạng rồi chạy lại (phần đã tải được giữ lại)."
 from huggingface_hub import snapshot_download
-for repo in ('mlx-community/whisper-medium-mlx','mlx-community/Qwen3-VL-4B-Instruct-4bit'):
+for repo in ('mlx-community/whisper-medium-mlx',):
     print('  ', repo); snapshot_download(repo)
 PYCODE
 

@@ -1,8 +1,8 @@
 ﻿; Windows installer for Ghép Video (Inno Setup 6). Built by GitHub Actions:
 ;   set GHEPVIDEO_VERSION=2.3.0 & set GHEPVIDEO_SRC=<unzipped app folder> & ISCC.exe ghepvideo.iss
 ; Installs for the current user only (no admin prompt) into %USERPROFILE%\Ghép Video, so in-app updates can write
-; there and media/output folders sit next to the app. After the wizard, a PowerShell window installs Python, FFmpeg,
-; Ollama and the AI models with visible progress, then opens the app.
+; there and media/output folders sit next to the app. After the wizard, a PowerShell window installs Python, FFmpeg
+; and the speech model with visible progress, then opens the app. Picture AI uses the customer's Claude / ChatGPT login.
 #define AppVersion GetEnv("GHEPVIDEO_VERSION")
 #define SourceDir GetEnv("GHEPVIDEO_SRC")
 #define OutDir GetEnv("GHEPVIDEO_OUT")
@@ -31,7 +31,7 @@ MinVersion=10.0
 
 [Messages]
 WelcomeLabel1=Cài đặt Ghép Video [ver]
-WelcomeLabel2=Dựng video dọc 9:16 từ ảnh, video và lời đọc. Mọi xử lý chạy trên máy của bạn.%n%nSau khi cài, một cửa sổ sẽ tải Python, FFmpeg và mô hình nghe lời đọc (khoảng 2 GB lần đầu, 5–15 phút tuỳ mạng). Xong sẽ tự mở app.%n%nAI xem ảnh: dùng gói Claude hoặc ChatGPT bạn đang có (qua Claude Code / Codex), hoặc bấm “Cài AI trên máy” trong app.
+WelcomeLabel2=Dựng video dọc 9:16 từ ảnh, video và lời đọc. Mọi xử lý chạy trên máy của bạn.%n%nSau khi cài, một cửa sổ sẽ tải Python, FFmpeg và mô hình nghe lời đọc (khoảng 2 GB lần đầu, 5–15 phút tuỳ mạng). Xong sẽ tự mở app.%n%nAI xem ảnh dùng gói Claude hoặc ChatGPT bạn đang có (qua Claude Code / Codex).
 FinishedHeadingLabel=Đã cài xong phần app
 FinishedLabel=Bấm Finish để tải phần còn lại và mở Ghép Video. Đừng đóng cửa sổ tải cho tới khi app tự mở.
 ClickFinish=Bấm Finish để tiếp tục.

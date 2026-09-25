@@ -1,8 +1,8 @@
 """Everything that differs between macOS and Windows, in one place.
 
 macOS (Apple Silicon): mlx-whisper, Apple Vision face detector (face-detect helper), mlx-vlm.
-Windows / other:       faster-whisper, OpenCV YuNet face detector, Ollama (qwen3-vl, optional).
-Picture descriptions can also come from the customer's own Claude / ChatGPT subscription (see vlm_ask).
+Windows / other:       faster-whisper, OpenCV YuNet face detector.
+Picture descriptions come from the customer's own Claude / ChatGPT subscription (see vlm_ask).
 """
 import json, os, platform, re, shutil, subprocess, sys
 from pathlib import Path
@@ -99,11 +99,11 @@ def detect_faces_many(images):
  return {str(i):detect_faces(i) for i in images}
 
 # ---------- Vision-language model ----------
-# Four ways to have pictures described, chosen by GHEPVIDEO_AI (set by the app from its settings):
-#   local   on this computer: MLX + Qwen3-VL on Apple Silicon, Ollama + Qwen3-VL on Windows (optional, ~5 GB)
-#   claude  the customer's Claude Pro/Max subscription, through the official Claude Code CLI they installed and signed in to
-#   codex   the customer's ChatGPT subscription, through the official Codex CLI
-#   auto    local if installed, else Claude, else Codex
+# Pictures are described by the customer's own subscription, chosen by GHEPVIDEO_AI (set by the app from its settings):
+#   claude  Claude Pro/Max, through the official Claude Code CLI they installed and signed in to
+#   codex   ChatGPT, through the official Codex CLI
+#   auto    Claude if installed, else Codex
+#   local   (developers only, not installed for customers) MLX on Apple Silicon / Ollama on Windows
 # With claude/codex, the small (768 px) stills are sent to Anthropic / OpenAI; the app says so next to the choice.
 
 MLX_MODEL='mlx-community/Qwen3-VL-4B-Instruct-4bit'
@@ -141,8 +141,7 @@ def ai_status():
 def ai_provider():
  choice=os.environ.get('GHEPVIDEO_AI','auto')
  if choice in ('local','claude','codex'):return choice
- status=ai_status()
- return next((p for p in ('local','claude','codex') if status[p]),None)
+ return next((p for p in ('claude','codex') if cli_path(p)),None)
 
 def vlm_name():
  p=ai_provider()
@@ -150,7 +149,7 @@ def vlm_name():
 
 def vlm_ready():
  p=ai_provider()
- if p is None:raise RuntimeError('Chưa có AI xem ảnh. Cài Claude Code hoặc Codex rồi đăng nhập bằng gói Claude/ChatGPT, hoặc bấm “Cài AI trên máy” trong app.')
+ if p is None:raise RuntimeError('Chưa có AI xem ảnh. Cài Claude Code hoặc Codex rồi đăng nhập 1 lần bằng gói Claude / ChatGPT của bạn.')
  if p in ('claude','codex'):
   if not cli_path(p):raise RuntimeError(f'Chưa cài {AI_NAMES[p]} trên máy này.')
   return
@@ -169,7 +168,7 @@ def vlm_ready():
   for _ in range(30):
    if up():break
    time.sleep(1)
- if not up():raise RuntimeError('Chưa có AI trên máy (Ollama). Bấm “Cài AI trên máy” trong app, hoặc chọn Claude / ChatGPT.')
+ if not up():raise RuntimeError('Chưa có AI trên máy (Ollama). Chọn Claude hoặc ChatGPT.')
 
 JSON_ONLY='\n\nChỉ in đúng một đối tượng JSON, không giải thích, không bọc trong ```.'
 

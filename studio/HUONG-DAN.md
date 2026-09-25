@@ -9,7 +9,7 @@ Vào **github.com/nguyenlanh282/ghep-video/releases/latest**, tải **1 file** h
 - **Mac** (chip Apple M1 trở lên): `GhepVideo-<phiên bản>.pkg` → Tiếp tục → Cài đặt.
   - Nếu macOS báo không mở được: **Cài đặt hệ thống → Quyền riêng tư & Bảo mật → Vẫn mở** (vì bộ cài chưa ký số).
 
-Sau khi trình cài xong, một cửa sổ tự mở để tải Python, FFmpeg (Windows: cả Ollama) và mô hình AI (~5 GB lần đầu, 10–30 phút tuỳ mạng). **Đừng đóng cửa sổ đó**; xong sẽ tự mở app.
+Sau khi trình cài xong, một cửa sổ tự mở để tải Python, FFmpeg và mô hình nghe lời đọc (~1,5–2 GB lần đầu, 5–15 phút tuỳ mạng). **Đừng đóng cửa sổ đó**; xong sẽ tự mở app.
 
 Mở app về sau: **Ghép Video** trên Desktop / Start menu (Windows) hoặc trong thư mục Ứng dụng / Launchpad (Mac). Tư liệu để trong `Ghép Video/Video - ảnh` (thư mục người dùng), video xuất ở `Ghép Video/output`.
 
@@ -64,12 +64,11 @@ Kết quả gồm MP4, phụ đề SRT và JSON lưu lựa chọn của lần d�
   - Chưa dán key cho nguồn đã chọn thì app tự dùng Openverse.
   - Pinterest không hỗ trợ: ảnh trên đó thuộc bản quyền của nhiều người đăng, không phải kho miễn phí, và Pinterest không cho tải tự động.
   - Nguồn ảnh đã dùng ghi trong file `.nguon-anh.txt` cạnh video. Ảnh tải về lưu ở `output/.studio-cache/stock/`.
-- **AI xem ảnh** (mục 01, “AI xem ảnh”): **Tự động** (trên máy nếu đã cài, không thì Claude, rồi ChatGPT) · **Trên máy** · **Claude** · **ChatGPT**.
-  - **Claude**: dùng gói Claude Pro/Max qua **Claude Code** (cài theo code.claude.com/docs/en/setup, rồi gõ `claude` và đăng nhập 1 lần). App gọi bản Sonnet.
-  - **ChatGPT**: dùng gói ChatGPT qua **Codex** (developers.openai.com/codex/cli, rồi `codex login`).
-  - Với Claude/ChatGPT, ảnh thu nhỏ (768 px) được gửi lên Anthropic/OpenAI và tính vào hạn mức gói; mỗi ảnh/đoạn cảnh ~10 giây.
-  - **Trên máy**: Mac đã có sẵn (MLX). Windows không cài sẵn nữa; bấm **Cài AI trên máy (~5 GB)** trong app nếu muốn (Ollama + Qwen3-VL Instruct).
-- Bộ phân tích dùng mô hình Qwen3-VL 4B chạy trên máy (Mac: MLX; Windows: Ollama). Trên Mac M1 Pro khoảng 2 phút cho 8 file; file đã phân tích được nhớ, lần sau chỉ xem file mới.
+- **AI xem ảnh** (mục 01, “AI xem ảnh”) dùng gói của bạn: **Tự động** (Claude nếu có, không thì ChatGPT) · **Claude** · **ChatGPT**.
+  - **Claude**: gói Claude Pro/Max qua **Claude Code** (cài theo code.claude.com/docs/en/setup, gõ `claude` và đăng nhập 1 lần). App gọi bản Sonnet.
+  - **ChatGPT**: gói ChatGPT qua **Codex** (developers.openai.com/codex/cli, rồi `codex login`).
+  - Ảnh thu nhỏ (768 px) được gửi lên Anthropic/OpenAI và tính vào hạn mức gói; mỗi ảnh/đoạn cảnh khoảng 10 giây.
+  - Không có gói nào: vẫn dựng video, phụ đề, giọng đọc, ảnh bìa bình thường; chỉ phần đặt tên và ghép cảnh theo nội dung ảnh không chạy.
 - Lời đọc được nhận dạng bằng mô hình tiếng nói chạy trên máy; tên riêng và từ khó nên thêm vào ô Sửa chữ nhận dạng sai (sửa cả chữ in trên video lẫn SRT). Sửa tay file SRT thì không cập nhật chữ đã in vào MP4.
 - Phụ đề karaoke: mỗi câu hiện trọn trên một hàng cố định, chữ không di chuyển, chỉ chữ đang đọc đổi màu. Câu kết thúc ở dấu câu; câu dài được chia đều thành các dòng gần bằng nhau. Câu cũ giữ lại đến khi câu mới bắt đầu (tối đa 1,5 giây) để không bị nháy.
 - Nhạc nền ngắn được lặp trong video xuất. Mặc định ảnh/video phủ kín khung dọc. Ảnh và video được nhận diện khuôn mặt để chọn vùng cắt. Ảnh không giữ được tất cả khuôn mặt sẽ bị bỏ qua; video ngang không giữ được mặt thì dùng nền mờ cho cảnh đó (kiểm tra mặt ở giữa mỗi cảnh). Tắt “Ảnh đầy khung, giữ trọn mặt” để trở lại chế độ nền mờ.
@@ -81,7 +80,7 @@ Kết quả gồm MP4, phụ đề SRT và JSON lưu lựa chọn của lần d�
 
 - `app/main.py`: app chạy trên cả hai hệ. Mở cửa sổ (pywebview) và phục vụ giao diện qua máy chủ nội bộ `127.0.0.1` có mã bảo vệ; chạy dựng/phân tích thành tiến trình riêng. `python main.py --browser` mở giao diện trong trình duyệt (dùng khi cửa sổ app lỗi).
 - `app/ui/`: giao diện HTML/CSS/JS (`index.html`, `style.css`, `app.js`) và video mẫu trong `assets/`.
-- `platform_tools.py`: mọi phần khác nhau giữa Mac và Windows: FFmpeg, font, nhận dạng lời (mlx-whisper / faster-whisper), nhận diện mặt (Apple Vision / OpenCV YuNet), mô hình xem ảnh (MLX / Ollama).
+- `platform_tools.py`: mọi phần khác nhau giữa Mac và Windows: FFmpeg, font, nhận dạng lời (mlx-whisper / faster-whisper), nhận diện mặt (Apple Vision / OpenCV YuNet), AI xem ảnh qua Claude Code / Codex (gói của khách).
 - `renderer.py`: dựng video, vẽ karaoke, trộn âm thanh, dựng theo kế hoạch cảnh.
 - `analyzer.py`: phân tích ảnh/video, đổi tên, ghi chú, chọn cảnh cho từng câu, tìm ảnh miễn phí.
 - `FaceDetect.swift` → `face-detect`: bộ nhận diện mặt Apple Vision (Mac).

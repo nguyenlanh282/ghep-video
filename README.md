@@ -9,7 +9,7 @@ Tải ở mục [Releases](https://github.com/nguyenlanh282/ghep-video/releases/
 - **Windows 10/11:** `GhepVideo-Setup-<phiên bản>.exe`
 - **Mac** (chip Apple): `GhepVideo-<phiên bản>.pkg`
 
-Bấm đúp, cài như phần mềm thường. Xong trình cài, một cửa sổ tải phần AI (~5 GB lần đầu) rồi tự mở app. Cập nhật về sau: nút **Phiên bản** ở góc trên bên phải app.
+Bấm đúp, cài như phần mềm thường. Xong trình cài, một cửa sổ tải phần còn lại (~2 GB lần đầu) rồi tự mở app. AI xem ảnh dùng gói Claude hoặc ChatGPT của bạn (qua Claude Code / Codex). Cập nhật về sau: nút **Phiên bản** ở góc trên bên phải app.
 
 Bộ cài chưa ký số nên lần đầu: Windows → *More info → Run anyway*; Mac → *Cài đặt hệ thống → Quyền riêng tư & Bảo mật → Vẫn mở*.
 

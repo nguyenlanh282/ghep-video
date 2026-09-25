@@ -121,11 +121,12 @@ function wireKeyRow(row) {
   sync();
 }
 
-/* ---------- picture AI: on this computer, or the customer's own Claude / ChatGPT subscription ---------- */
-const AI_LABEL = {local: 'AI trên máy', claude: 'Claude', codex: 'ChatGPT (Codex)'};
+/* ---------- picture AI: the customer's own Claude / ChatGPT subscription ---------- */
+const AI_LABEL = {claude: 'Claude', codex: 'ChatGPT (Codex)'};
 const AI_GUIDE = {claude: 'https://code.claude.com/docs/en/setup', codex: 'https://developers.openai.com/codex/cli'};
 function paintAI(state) {
-  const ai = state.ai, choice = state.settings.aiProvider, st = ai.status;
+  const ai = state.ai, choice = ['claude', 'codex'].includes(state.settings.aiProvider) ? state.settings.aiProvider : 'auto', st = ai.status;
+  $$('[data-seg=aiProvider] button').forEach(b => b.classList.toggle('on', b.dataset.value === choice));
   $$('[data-seg=aiProvider] button').forEach(b => {
     const v = b.dataset.value; if (v === 'auto') return;
     if (!b.querySelector('.dot')) b.insertAdjacentHTML('beforeend', '<span class="dot"></span>');
@@ -137,9 +138,6 @@ function paintAI(state) {
   let hint = '', actions = '';
   if (!pick) {
     hint = 'Chưa có AI xem ảnh. Dùng gói Claude Pro/Max hoặc ChatGPT bạn đang có: cài Claude Code hoặc Codex, đăng nhập 1 lần, rồi mở lại app.';
-  } else if (pick === 'local') {
-    hint = 'Ảnh được phân tích ngay trên máy, không gửi đi đâu.' + (st.local ? '' : state.platform === 'windows' ? ' Chưa cài: cần tải khoảng 5 GB.' : '');
-    if (!st.local && state.platform === 'windows') actions += '<button class="btn small primary" data-ai-act="install">⬇ Cài AI trên máy (~5 GB)</button>';
   } else {
     const who = pick === 'claude' ? 'Anthropic (Claude)' : 'OpenAI (ChatGPT)';
     hint = `Dùng gói ${pick === 'claude' ? 'Claude Pro/Max' : 'ChatGPT'} của bạn. Ảnh thu nhỏ của tư liệu sẽ được gửi lên ${who} để mô tả, và tính vào hạn mức gói.`;
@@ -152,8 +150,7 @@ function paintAI(state) {
 function wireAI() {
   $('#aiActions').addEventListener('click', e => {
     const act = e.target.closest('[data-ai-act]')?.dataset.aiAct; if (!act) return;
-    if (act === 'install') api('installLocalAI');
-    else api('openLink', {url: AI_GUIDE[act.slice(6)]});
+    api('openLink', {url: AI_GUIDE[act.slice(6)]});
   });
 }
 

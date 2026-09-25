@@ -57,10 +57,9 @@ class ProviderTests(unittest.TestCase):
         with self.assertRaises(RuntimeError) as err: pt.vlm_ask('LOGGED_OUT', [self.img])
         self.assertIn('chưa đăng nhập', str(err.exception))
 
-    def test_auto_prefers_local_then_claude_then_codex(self):
+    def test_auto_uses_claude_then_codex_never_local(self):
         os.environ['GHEPVIDEO_AI'] = 'auto'
-        pt.local_ai_available = lambda: True; self.assertEqual(pt.ai_provider(), 'local')
-        pt.local_ai_available = lambda: False; self.assertEqual(pt.ai_provider(), 'claude')
+        pt.local_ai_available = lambda: True; self.assertEqual(pt.ai_provider(), 'claude', 'on-device AI is not used for customers')
         (self.tmp / 'claude').unlink()
         real = pt.cli_path
         try:

@@ -72,17 +72,12 @@ jobs:
           $setup = Join-Path $env:USERPROFILE 'Ghép Video\studio\setup-windows.ps1'
           powershell -NoProfile -ExecutionPolicy Bypass -File $setup -NoOpen
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
-      - name: Thử nút “Cài AI trên máy” (Ollama, không bắt buộc)
+      - name: Thử dựng video + tìm ảnh bìa trên Windows
         shell: pwsh
         run: |
-          $env:GHEPVIDEO_CI = '1'
-          powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:USERPROFILE 'Ghép Video\studio\setup-local-ai.ps1')
-          if ($LASTEXITCODE) { exit $LASTEXITCODE }
-      - name: Thử dựng video + AI xem ảnh trên Windows
-        shell: pwsh
-        run: |
-          $env:PATH = "$env:APPDATA\GhepVideo\bin;$env:PATH"; $env:PYTHONUTF8 = '1'; $env:GHEPVIDEO_AI = 'local'
-          & "$env:APPDATA\GhepVideo\venv\Scripts\python.exe" (Join-Path $env:USERPROFILE 'Ghép Video\studio\smoke_test.py') --vlm
+          $env:PATH = "$env:APPDATA\GhepVideo\bin;$env:PATH"; $env:PYTHONUTF8 = '1'
+          # Picture AI uses the customer's Claude / ChatGPT login, which CI does not have: covered by test_ai with stand-in CLIs.
+          & "$env:APPDATA\GhepVideo\venv\Scripts\python.exe" (Join-Path $env:USERPROFILE 'Ghép Video\studio\smoke_test.py')
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - name: Gắn vào bản phát hành
         if: github.event_name == 'release'

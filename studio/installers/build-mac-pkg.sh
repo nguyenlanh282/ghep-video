@@ -45,14 +45,15 @@ cat > "$work/resources/welcome.html" <<HTML
 <html><body style="font-family:-apple-system;font-size:13px">
 <h2>Ghép Video $VERSION</h2>
 <p>Dựng video dọc 9:16 từ ảnh, video và lời đọc. Mọi xử lý chạy trên máy của bạn.</p>
-<p>Sau khi bấm <b>Cài đặt</b>, một cửa sổ Terminal sẽ mở để tải Python, FFmpeg và mô hình AI (khoảng 5 GB lần đầu, 10–30 phút tuỳ mạng). Xong sẽ tự mở app.</p>
+<p>Sau khi bấm <b>Cài đặt</b>, một cửa sổ Terminal sẽ mở để tải Python, FFmpeg và mô hình nghe lời đọc (khoảng 1,5 GB lần đầu, 5–15 phút tuỳ mạng). Xong sẽ tự mở app.</p>
+<p>AI xem ảnh dùng gói Claude hoặc ChatGPT của bạn (qua Claude Code / Codex).</p>
 <p>App và tư liệu nằm trong thư mục <b>Ghép Video</b> ở thư mục người dùng của bạn.</p>
 </body></html>
 HTML
 cat > "$work/resources/conclusion.html" <<HTML
 <html><body style="font-family:-apple-system;font-size:13px">
 <h2>Đã cài xong phần app</h2>
-<p>Cửa sổ Terminal đang tải phần AI. <b>Đừng đóng cửa sổ đó</b> cho tới khi app tự mở.</p>
+<p>Cửa sổ Terminal đang tải phần còn lại. <b>Đừng đóng cửa sổ đó</b> cho tới khi app tự mở.</p>
 <p>Về sau mở app bằng <b>Ghép Video</b> trong thư mục Ứng dụng hoặc Launchpad. Cập nhật: bấm nút <b>Phiên bản</b> ở góc trên bên phải app.</p>
 </body></html>
 HTML

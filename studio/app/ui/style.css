@@ -96,7 +96,7 @@ textarea{font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;resize:vertical}
 .analysis{display:flex;flex-direction:column;gap:10px}
 .aibox{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.03)}
 .ailabel{font-size:13px;font-weight:600}
-.aibox .seg{display:grid;grid-template-columns:repeat(auto-fit,minmax(74px,1fr));gap:2px}
+.aibox .seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px}
 .aibox .seg button{padding:5px 4px;white-space:nowrap;font-size:12px}
 .aibox .seg button .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-left:4px;vertical-align:middle;background:#5b6576}
 .aibox .seg button .dot.ok{background:var(--accent)}
