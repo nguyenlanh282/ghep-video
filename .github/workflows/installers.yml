@@ -31,7 +31,7 @@ jobs:
       - name: Kiểm thử (Claude/Codex giả, cập nhật, ảnh bìa)
         run: |
           pip install -q pillow numpy
-          cd studio && python -m unittest test_ai test_updater test_thumbnail
+          cd studio && python -m unittest test_ai test_updater test_thumbnail test_talk
       - run: python studio/updater.py "${{ steps.v.outputs.version }}" --out dist
       - uses: actions/upload-artifact@v4
         with: {name: app-zip, path: dist/GhepVideo-*.zip}

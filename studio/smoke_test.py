@@ -70,6 +70,26 @@ def main():
   import thumbnail
   thumbnail.find_candidates(json.loads(Path(result['output']).with_suffix('.json').read_text(encoding='utf-8')),str(media),out/'thumbs')
   print('✓ Tìm ảnh bìa chạy được',flush=True)
+ # Video chia sẻ: a raw talking clip with long pauses → analyse (no AI on CI) → export 9:16 and 16:9.
+ t=time.time();print('Video chia sẻ: phân tích + xuất 9:16 và 16:9…',flush=True)
+ raw=work/'video tho.mp4';padded=work/'loi doc co khoang lang.wav'
+ run([FFMPEG,'-v','error','-y','-i',str(voice),'-af','adelay=1500|1500,apad=pad_dur=2','-ar','48000',str(padded)])
+ run([FFMPEG,'-v','error','-y','-f','lavfi','-i','testsrc2=s=1280x720:r=30','-i',str(padded),'-shortest','-pix_fmt','yuv420p','-c:a','aac',str(raw)])
+ tj=dict(video=str(raw),projectDir=str(work/'talk'),cacheFolder=str(out/'.studio-cache'),broll=False,outputFolder=str(out),aspects=['9:16','16:9'],
+         exportShorts=False,punchIn=True,denoise=True,highlightKeywords=True,title='THỬ',subtitle='Video chia sẻ',titleStyle='pop',subStyle='sweep')
+ (work/'talk.json').write_text(json.dumps(tj,ensure_ascii=False),encoding='utf-8')
+ env=dict(os.environ,PYTHONUTF8='1',GHEPVIDEO_AI=os.environ.get('GHEPVIDEO_AI','none'))
+ run([sys.executable,'-u',str(HERE/'talk.py'),'analyze',str(work/'talk.json')],env=env)
+ project=json.loads((work/'talk'/'project.json').read_text(encoding='utf-8'))
+ assert project['words'],'talk: no words recognised' if spoken else True
+ log=run([sys.executable,'-u',str(HERE/'talk.py'),'render',str(work/'talk.json')],env=env)
+ folder=Path([json.loads(l) for l in log.splitlines() if l.startswith('{')][-1]['folder'])
+ for name,(W,H) in (('9x16',(1080,1920)),('16x9',(1920,1080))):
+  f=next(folder.glob(f'* {name}.mp4'));info=json.loads(run([FFPROBE,'-v','error','-show_entries','stream=width,height:format=duration','-of','json',str(f)]))
+  raw_len=float(json.loads(run([FFPROBE,'-v','error','-show_entries','format=duration','-of','json',str(raw)]))['format']['duration'])
+  assert (info['streams'][0]['width'],info['streams'][0]['height'])==(W,H),f'talk {name}: wrong size'
+  assert float(info['format']['duration'])<raw_len-2,f'talk {name}: silence was not cut'
+ print(f'✓ Video chia sẻ: thô {raw_len:.1f}s → {float(info["format"]["duration"]):.1f}s, 2 tỉ lệ ({time.time()-t:.0f}s)',flush=True)
  print('SMOKE TEST OK')
 
 if __name__=='__main__':main()

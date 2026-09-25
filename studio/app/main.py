@@ -7,7 +7,7 @@ run as separate processes (renderer.py / analyzer.py) that report progress as JS
   python main.py            open the app window
   python main.py --browser  serve the UI and open it in the default browser (no pywebview needed)
 """
-import json, mimetypes, os, re, secrets, subprocess, sys, threading, time, unicodedata, uuid, webbrowser
+import hashlib, json, mimetypes, os, re, secrets, subprocess, sys, threading, time, unicodedata, uuid, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse, parse_qs
@@ -37,7 +37,11 @@ def first_audio():
 DEFAULTS=dict(mediaFolder=str(find_child(ROOT,'Video - ảnh')),audio=first_audio(),music='',outputFolder=str(ROOT/'output'),
  title='VỢ CHỒNG',subtitle='Ai làm việc nhà?',titleStyle='pop',subStyle='sweep',musicVolume=.15,voiceVolume=1.0,normalizeVoice=True,
  shotSeconds=2.5,removeSilence=True,faceAwareFill=True,resolution='1080',fixesText='xòng => sòng\nđận => đần',
- matchScenes=True,stockEnabled=False,stockSource='auto',pexelsKey='',pixabayKey='',updateManifest='',captionY=.73,aiProvider='auto')
+ matchScenes=True,stockEnabled=False,stockSource='auto',pexelsKey='',pixabayKey='',updateManifest='',captionY=.73,aiProvider='auto',
+ # Video chia sẻ (talking-video editor)
+ talkVideo='',talkBrollFolder=str(find_child(ROOT,'Video - ảnh')),talkBroll=True,talkDensity='vua',talkAspects='9:16',
+ talkPunchIn=True,talkDenoise=True,talkRetakes=True,talkKeywords=True,talkShorts=True)
+TALK_DENSITY={'it':.18,'vua':.3,'nhieu':.45}
 SECRET_KEYS={'pexelsKey','pixabayKey'}
 
 def check_key(source,key):
@@ -60,6 +64,7 @@ class Studio:
   for k in ('mediaFolder','outputFolder'):
    if not Path(self.settings[k]).is_dir():self.settings[k]=DEFAULTS[k]
   if self.settings['audio'] and not Path(self.settings['audio']).is_file():self.settings['audio']=DEFAULTS['audio']
+  if self.settings['talkVideo'] and not Path(self.settings['talkVideo']).is_file():self.settings['talkVideo']=''
   # A fresh copy on a new computer: create the project's media and output folders.
   for k in ('mediaFolder','outputFolder'):
    if self.settings[k]==DEFAULTS[k]:Path(self.settings[k]).mkdir(parents=True,exist_ok=True)
@@ -116,16 +121,17 @@ class Studio:
  def choose(self,kind):
   if not self.window:return dict(error='Hộp thoại chọn file chỉ có trong cửa sổ app. Hãy dán đường dẫn vào ô.')
   import webview
-  folder=kind in ('media','output')
-  current=self.settings.get({'media':'mediaFolder','output':'outputFolder','audio':'audio','music':'music'}[kind]) or str(ROOT)
+  keys={'media':'mediaFolder','output':'outputFolder','audio':'audio','music':'music','talkVideo':'talkVideo','talkBroll':'talkBrollFolder'}
+  folder=kind in ('media','output','talkBroll')
+  current=self.settings.get(keys[kind]) or str(ROOT)
   start=current if Path(current).is_dir() else str(Path(current).parent) if Path(current).parent.is_dir() else str(ROOT)
   dialog=getattr(webview,'FileDialog',None)
   kind_folder=dialog.FOLDER if dialog else webview.FOLDER_DIALOG;kind_open=dialog.OPEN if dialog else webview.OPEN_DIALOG
-  types=() if folder else ('Âm thanh (*.m4a;*.mp3;*.wav;*.aac;*.flac;*.ogg)','Tất cả (*.*)')
+  types=() if folder else ('Video (*.mp4;*.mov;*.m4v;*.mkv;*.webm)','Tất cả (*.*)') if kind=='talkVideo' else ('Âm thanh (*.m4a;*.mp3;*.wav;*.aac;*.flac;*.ogg)','Tất cả (*.*)')
   picked=self.window.create_file_dialog(kind_folder if folder else kind_open,directory=start,file_types=types)
   if not picked:return self.state()
   path=picked[0] if isinstance(picked,(list,tuple)) else picked
-  return self.set({{'media':'mediaFolder','output':'outputFolder','audio':'audio','music':'music'}[kind]:path})
+  return self.set({keys[kind]:path})
 
  def reveal(self,path=None):
   path=path or self.job['result'] or self.settings['outputFolder']
@@ -162,8 +168,21 @@ class Studio:
  def start(self,task,preview=False):
   if self.job['running']:return dict(error='Đang có tác vụ chạy.')
   s=self.settings;names=self.media_names()
-  if not names:return self.fail('Hãy chọn thư mục có ảnh hoặc video.')
-  if task=='render':
+  if not names and task in ('render','analyze','undo'):return self.fail('Hãy chọn thư mục có ảnh hoặc video.')
+  if task in ('talk-analyze','talk-render'):
+   if not Path(s['talkVideo']).is_file():return self.fail('Hãy chọn video thô.')
+   if task=='talk-render' and not self.talk_project():return self.fail('Hãy bấm “Phân tích video” trước.')
+   job=dict(video=s['talkVideo'],projectDir=str(self.talk_dir()),cacheFolder=str(self.cache()),brollFolder=s['talkBrollFolder'],broll=s['talkBroll'],
+            brollDensity=TALK_DENSITY.get(s['talkDensity'],.3),stockEnabled=s['stockEnabled'],stockSource=s['stockSource'],cutRetakes=s['talkRetakes'],
+            fixesText=s['fixesText'],outputFolder=s['outputFolder'],titleStyle=s['titleStyle'],subStyle=s['subStyle'],captionY=s['captionY'],
+            aspects=[a for a in s['talkAspects'].split(',') if a],exportShorts=s['talkShorts'],punchIn=s['talkPunchIn'],denoise=s['talkDenoise'],
+            highlightKeywords=s['talkKeywords'],voiceVolume=s['voiceVolume'],normalizeVoice=s['normalizeVoice'],music=s['music'],musicVolume=s['musicVolume'],aiPython=sys.executable)
+   if task=='talk-render':
+    pick=(self.talk_project() or {}).get('title_choice') or {}
+    job.update(title=pick.get('dong1',''),subtitle=pick.get('dong2',''))
+   job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
+   args=[str(ENGINE/'talk.py'),task[5:],str(job_file)];log='talk.log';cleanup=lambda:job_file.unlink(missing_ok=True)
+  elif task=='render':
    if not Path(s['audio']).is_file():return self.fail('Hãy chọn file ghi âm.')
    if not Path(s['outputFolder']).is_dir():return self.fail('Hãy chọn thư mục lưu video.')
    analysed=len(self.analysis())>0
@@ -245,6 +264,37 @@ class Studio:
   p=subprocess.run(args+['-filter_complex',graph,'-map','[a]','-t',str(secs),'-c:a','aac','-b:a','160k',str(out)],capture_output=True,**NOWIN)
   if p.returncode:return dict(error='Không tạo được bản nghe thử: '+p.stderr.decode(errors='replace')[-300:])
   return dict(url=self.url(str(out))+f'?v={time.time():.0f}')
+
+ # ---- Video chia sẻ ----
+ def talk_dir(self):
+  v=Path(self.settings['talkVideo'])
+  key=hashlib.sha1(f'{v.resolve()}|{v.stat().st_size if v.exists() else 0}'.encode()).hexdigest()[:16]
+  return self.cache()/'talk'/key
+
+ def talk_project(self):
+  try:return json.loads((self.talk_dir()/'project.json').read_text(encoding='utf-8')) if self.settings['talkVideo'] else None
+  except Exception:return None
+
+ def talk_state(self):
+  p=self.talk_project()
+  return dict(project=p,videoUrl=self.url(self.settings['talkVideo']) if self.settings['talkVideo'] else None)
+
+ def talk_edit(self,b):
+  """Edits from the transcript editor: cut flags per word, chosen title, keywords, caption, shorts, B-roll on/off."""
+  p=self.talk_project()
+  if not p:return dict(error='Chưa có dự án.')
+  for i,reason in (b.get('cuts') or {}).items():
+   i=int(i)
+   if 0<=i<len(p['words']):p['words'][i]['cut']=reason or None
+  for k in ('title_choice','caption'):
+   if k in b:p[k]=b[k]
+  if 'hashtags' in b:p['hashtags']=[str(h) for h in b['hashtags']][:20]
+  if 'keywords' in b:p['keywords']=[str(k) for k in b['keywords'] if str(k).strip()][:30]
+  for key in ('shorts','broll'):
+   for i,on in (b.get(key) or {}).items():
+    if 0<=int(i)<len(p.get(key,[])):p[key][int(i)]['on']=bool(on)
+  f=self.talk_dir()/'project.json';tmp=f.with_suffix('.tmp');tmp.write_text(json.dumps(p,ensure_ascii=False,indent=1),encoding='utf-8');tmp.replace(f)
+  return dict(ok=True)
 
  # ---- thumbnails ----
  def thumb_job(self):
@@ -343,7 +393,7 @@ API={'state':lambda b:studio.state(),'set':lambda b:studio.set(b.get('values',{}
  'openNotes':lambda b:studio.open_notes(),'openLink':lambda b:studio.open_link(b.get('url','')),'clearError':lambda b:studio.clear_error(),
  'saveKey':lambda b:studio.save_key(b.get('source',''),b.get('value','')),'listen':lambda b:studio.listen(b.get('mode','mix')),
  'checkUpdate':lambda b:studio.check_update(),'applyUpdate':lambda b:studio.run_update('update'),'rollback':lambda b:studio.run_update('rollback'),
- 'restart':lambda b:studio.restart(),
+ 'restart':lambda b:studio.restart(),'talkState':lambda b:studio.talk_state(),'talkEdit':lambda b:studio.talk_edit(b),
  'thumbFind':lambda b:studio.thumb_find(),'thumbCompose':lambda b:studio.thumb_compose(b.get('ids',[]),b.get('text',True)),
  'thumbSave':lambda b:studio.thumb_save(b.get('ids',[]),b.get('text',True)),'thumbReveal':lambda b:studio.reveal(studio.thumb_saved)}
 

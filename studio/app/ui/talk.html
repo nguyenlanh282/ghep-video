@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ghép Video · Video chia sẻ</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h11a2 2 0 0 1 2 2v1.5l3.4-2.3a1 1 0 0 1 1.6.8v10a1 1 0 0 1-1.6.8L17 15.5V17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg>
+    <div><h1>GHÉP VIDEO</h1><p>Từ câu chuyện đến thước phim</p></div>
+  </div>
+  <nav class="modes" aria-label="Chế độ">
+    <a data-mode-link="index.html">Ghép ảnh + lời đọc</a>
+    <a class="on" aria-current="page">Video chia sẻ</a>
+  </nav>
+</header>
+
+<main id="main" class="talk">
+  <section class="panel" aria-labelledby="t1">
+    <h2 id="t1"><span class="num">01</span>Video thô</h2>
+    <button class="filebox" data-choose="talkVideo"><span class="ico">🎥</span><span class="fb-text"><b>Video người nói</b><small data-path="talkVideo">Chọn video chưa cắt</small></span><span class="fb-go">＋</span></button>
+    <p class="hint" id="aiLine"></p>
+    <label class="switch"><input type="checkbox" data-key="talkRetakes"><span></span>Cắt nói vấp, câu nói lại</label>
+    <p class="hint">Luôn tự cắt: im lặng, ngắt quãng, “ờ, ừm, à”. Xem và khôi phục ở bản chữ.</p>
+
+    <hr>
+    <h2><span class="num">02</span>Cảnh trám</h2>
+    <label class="switch"><input type="checkbox" data-key="talkBroll"><span></span>Chèn cảnh trám hợp với câu nói</label>
+    <button class="filebox" data-choose="talkBroll"><span class="ico">🗂</span><span class="fb-text"><b>Kho trám</b><small data-path="talkBrollFolder">Thư mục ảnh/video minh hoạ</small></span><span class="fb-go">＋</span></button>
+    <p class="hint">Kho cần được “Phân tích &amp; đặt tên” ở trang Ghép ảnh + lời đọc trước.</p>
+    <label class="switch"><input type="checkbox" data-key="stockEnabled"><span></span>Tìm thêm trên mạng (Pexels/Pixabay)</label>
+    <div class="row between"><span class="hint">Mức cảnh trám</span>
+      <div class="seg" data-seg="talkDensity"><button data-value="it">Ít</button><button data-value="vua">Vừa</button><button data-value="nhieu">Nhiều</button></div></div>
+
+    <hr>
+    <h2><span class="num">03</span>Xuất video</h2>
+    <div class="row gap checks" id="aspects">
+      <label><input type="checkbox" value="9:16"> 9:16 TikTok</label>
+      <label><input type="checkbox" value="1:1"> 1:1 Facebook</label>
+      <label><input type="checkbox" value="16:9"> 16:9 YouTube</label>
+    </div>
+    <label class="switch"><input type="checkbox" data-key="talkPunchIn"><span></span>Zoom nhẹ ở chỗ cắt</label>
+    <label class="switch"><input type="checkbox" data-key="talkDenoise"><span></span>Khử ồn giọng nói</label>
+    <label class="switch"><input type="checkbox" data-key="talkKeywords"><span></span>Tô màu từ khoá trong phụ đề</label>
+    <label class="switch"><input type="checkbox" data-key="talkShorts"><span></span>Xuất thêm các clip ngắn đã chọn</label>
+    <div class="styles compact" data-choice="subStyle">
+      <button data-value="sweep" style="--c:#ffd54a"><i>Aa</i><span><b>Karaoke vàng</b></span></button>
+      <button data-value="active" style="--c:var(--accent)"><i>Aa</i><span><b>Karaoke xanh</b></span></button>
+      <button data-value="pill" style="--c:#f37aa5"><i>Aa</i><span><b>Karaoke hồng</b></span></button>
+    </div>
+    <p class="hint">Nhạc nền, âm lượng, thư mục lưu, kiểu tiêu đề dùng chung với trang Ghép ảnh + lời đọc.</p>
+  </section>
+
+  <section class="panel editor" aria-labelledby="t2">
+    <div class="row between"><h2 id="t2"><span class="num">04</span>Sửa bằng chữ</h2><span class="hint" id="stats"></span></div>
+    <div id="emptyEditor" class="empty">
+      <p><b>Chưa có bản chữ.</b></p>
+      <p class="hint">Chọn video thô rồi bấm <b>Phân tích video</b>. App sẽ ghi lại lời nói, đánh dấu chỗ nên cắt, soát chính tả và gợi ý tiêu đề, cảnh trám, clip ngắn.</p>
+    </div>
+    <div id="editorBody" hidden>
+      <div class="legend">
+        <span class="lg keep">Giữ</span><span class="lg c-im-lang">Im lặng</span><span class="lg c-am-u">Ậm ừ</span><span class="lg c-lap">Nói vấp</span><span class="lg c-noi-lai">Nói lại</span><span class="lg c-tay">Bạn cắt</span><span class="lg kw">Từ khoá</span><span class="lg br">🎬 Cảnh trám</span>
+      </div>
+      <p class="hint">Bấm vào chữ để nghe đoạn đó. Bấm chữ bị gạch để khôi phục. Bôi đen một đoạn rồi bấm <kbd>Delete</kbd> (hoặc nút ✂) để cắt. Bấm 🎬 để bật/tắt cảnh trám.</p>
+      <div class="row gap tools">
+        <button class="btn small" id="cutSel">✂ Cắt đoạn đã chọn</button>
+        <button class="btn small" id="restoreSel">↺ Khôi phục đoạn đã chọn</button>
+        <button class="btn small" id="restoreAuto">Khôi phục mọi chỗ tự cắt</button>
+      </div>
+      <div class="transcript" id="transcript" tabindex="0" aria-label="Bản chữ lời nói"></div>
+
+      <h3>Tiêu đề mở đầu</h3>
+      <div id="titles" class="titles"></div>
+      <div class="row gap"><input type="text" id="t1in" placeholder="Dòng 1 (viết hoa)"><input type="text" id="t2in" placeholder="Dòng 2"></div>
+
+      <h3>Caption &amp; hashtag để đăng</h3>
+      <textarea id="caption" rows="4"></textarea>
+      <input type="text" id="hashtags" placeholder="#hashtag">
+      <button class="btn small" id="copyPost">📋 Sao chép caption + hashtag</button>
+
+      <h3>Từ khoá tô màu</h3>
+      <input type="text" id="keywords" placeholder="Cách nhau bằng dấu phẩy">
+
+      <h3>Clip ngắn AI gợi ý</h3>
+      <div id="shorts" class="shorts"></div>
+    </div>
+  </section>
+
+  <section class="panel preview" aria-labelledby="t3">
+    <div class="row between"><span class="eyebrow" id="t3">XEM TRƯỚC</span><label class="hint"><input type="checkbox" id="skipCuts" checked> Chỉ phát phần giữ lại</label></div>
+    <div class="frame talkframe"><video id="player" playsinline controls preload="metadata"></video></div>
+    <p class="hint">Phát thử bản thô và bỏ qua các chỗ đã cắt, để nghe câu có liền mạch không trước khi xuất.</p>
+    <div class="row gap" id="resultRow" hidden>
+      <button class="btn primary" id="openFolder">📁 Mở thư mục video đã xuất</button>
+    </div>
+  </section>
+</main>
+
+<footer class="bar">
+  <div class="error" id="error" hidden><span id="errorText"></span><button class="btn small" id="errorClose">Đóng</button></div>
+  <progress id="progress" max="1" value="0" hidden></progress>
+  <div class="row between">
+    <div><b id="status">Sẵn sàng</b><small id="substatus">Video thô → video hoàn thiện có phụ đề, tiêu đề, cảnh trám</small></div>
+    <div class="row gap" id="actions">
+      <button class="btn large" id="analyzeBtn">✨ Phân tích video</button>
+      <button class="btn large primary" id="exportBtn">Xuất video ↗</button>
+    </div>
+    <button class="btn large" id="cancelBtn" hidden>Dừng</button>
+  </div>
+</footer>
+<script src="talk.js"></script>
+</body>
+</html>

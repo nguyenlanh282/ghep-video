@@ -53,6 +53,19 @@ Trên máy mới chỉ cần làm như mục **Cài đặt: 1 file, bấm là c�
 
 Kết quả gồm MP4, phụ đề SRT và JSON lưu lựa chọn của lần dựng. Tên file có thời gian và mã riêng, không ghi đè tư liệu gốc. Có nút dừng khi đang xuất.
 
+## Video chia sẻ (tab ở đầu app)
+
+Biến 1 video thô quay người nói (chưa cắt, có ậm ừ, im lặng, nói vấp, nói lại) thành video hoàn thiện.
+
+1. **Chọn video thô** → bấm **✨ Phân tích video**. App ghi lại lời nói rồi:
+   - tự đánh dấu cắt: im lặng/ngắt quãng, “ờ, ừm, à”, nói vấp (“thứ ba thứ ba”), câu nói hỏng rồi nói lại (AI tìm, app kiểm tra lại: chỉ cắt khi câu sau lặp lại nội dung hoặc có “à không / nói lại”);
+   - AI (Claude/ChatGPT) soát chính tả phụ đề, gợi ý 3 tiêu đề, viết caption + hashtag, chọn từ khoá, gợi ý clip ngắn 20–90 giây, chọn cảnh trám từ **kho trám** (thư mục đã Phân tích) và/hoặc trên mạng.
+2. **Sửa bằng chữ** (cột giữa): chữ bị gạch là chỗ sẽ cắt, màu theo lý do. Bấm chữ để nghe đoạn đó; bấm chữ bị gạch để khôi phục; bôi đen rồi **Delete** (hoặc ✂) để cắt thêm. 🎬 là cảnh trám: bấm để bật/tắt. Chọn tiêu đề, sửa caption/hashtag/từ khoá, chọn clip ngắn. Mọi sửa đổi tự lưu.
+3. **Xem trước** (cột phải) phát bản thô và nhảy qua các chỗ cắt, để nghe câu có liền mạch không.
+4. **Xuất video**: chọn tỉ lệ 9:16 / 1:1 / 16:9; zoom nhẹ ở vết cắt, khử ồn, tô màu từ khoá, xuất thêm clip ngắn. Kết quả nằm trong thư mục `<tên video> - hoàn thiện <thời gian>` (trong thư mục lưu): các MP4, phụ đề SRT, `caption-hashtag.txt`.
+
+Ghi chú: video quay dọc khi xuất 16:9 giữ trọn người nói ở giữa trên nền mờ. Không có Claude/ChatGPT vẫn cắt và làm phụ đề được, nhưng không có soát chính tả, tiêu đề gợi ý, cảnh trám, clip ngắn.
+
 ## Ghi chú
 
 - Khung xem mẫu chữ sử dụng tư liệu mẫu đi kèm. Nút Dựng thử tạo video thật từ những file đang chọn.
@@ -85,10 +98,11 @@ Kết quả gồm MP4, phụ đề SRT và JSON lưu lựa chọn của lần d�
 - `analyzer.py`: phân tích ảnh/video, đổi tên, ghi chú, chọn cảnh cho từng câu, tìm ảnh miễn phí.
 - `FaceDetect.swift` → `face-detect`: bộ nhận diện mặt Apple Vision (Mac).
 - `setup-mac.command`, `setup-windows.ps1`, `requirements-*.txt`: cài đặt.
+- `talk.py`: Video chia sẻ (phân tích, cắt, xuất nhiều tỉ lệ và clip ngắn); giao diện `app/ui/talk.html` + `talk.js`.
 - `thumbnail.py`: tìm khung hình làm ảnh bìa và ghép 1–3 hình kèm tiêu đề.
 - `updater.py`: tạo gói phát hành, kiểm tra và cài bản mới, sao lưu / quay lại bản trước. `VERSION`: số phiên bản; `update.json`: link `latest.json` mặc định cho các máy mới.
 - `installers/`: bộ cài 1 file (`ghepvideo.iss` → .exe, `build-mac-pkg.sh` → .pkg, và bản script `.command`/`.bat`); `assets/`: biểu tượng app; `smoke_test.py`: bài thử dựng video + AI trên máy vừa cài; `.github/workflows/installers.yml`: quy trình đóng gói và thử tự động.
-- `test_renderer.py`, `test_updater.py`, `test_thumbnail.py`: kiểm thử (`python -m unittest test_renderer test_updater test_thumbnail`).
+- `test_renderer.py`, `test_updater.py`, `test_thumbnail.py`, `test_ai.py`, `test_talk.py`: kiểm thử (`python -m unittest test_renderer test_updater test_thumbnail`).
 - Bản cũ chỉ chạy trên Mac: `Ghép Video (bản cũ).app`, mã `VideoStudio.swift`, biên dịch bằng `build.command`. Giữ lại để dự phòng; bản mới đã có đủ chức năng.
 
 ## Cắt khoảng im lặng

@@ -141,6 +141,7 @@ def ai_status():
 def ai_provider():
  choice=os.environ.get('GHEPVIDEO_AI','auto')
  if choice in ('local','claude','codex'):return choice
+ if choice=='none':return None  # tests: behave as if no AI is installed
  return next((p for p in ('claude','codex') if cli_path(p)),None)
 
 def vlm_name():

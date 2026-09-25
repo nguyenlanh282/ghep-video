@@ -50,6 +50,7 @@ function buildValueControls() {
 }
 
 function wire() {
+  $$('[data-mode-link]').forEach(a => a.href = `${a.dataset.modeLink}?t=${TOKEN}`);
   buildValueControls();
   $$('input[type=checkbox][data-key]').forEach(cb => cb.addEventListener('change', () => set({[cb.dataset.key]: cb.checked})));
   $$('input[type=text][data-key], textarea[data-key]').forEach(inp => {

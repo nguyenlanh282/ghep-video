@@ -147,3 +147,42 @@ code{font:12px ui-monospace,Menlo,Consolas,monospace}
 .tprev-wrap{width:100%;max-width:330px;aspect-ratio:9/16;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#000}
 .tprev-wrap img{width:100%;height:100%;object-fit:cover;display:block}
 [hidden]{display:none!important}
+
+/* ---------- mode tabs (both pages) ---------- */
+.modes{display:flex;gap:4px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:11px;padding:3px}
+.modes a{padding:7px 14px;border-radius:8px;color:var(--muted);text-decoration:none;font-size:13px;font-weight:600;cursor:pointer}
+.modes a.on{background:var(--accent);color:var(--accent-ink)}
+.modes a:not(.on):hover{color:var(--text)}
+
+/* ---------- Video chia sẻ ---------- */
+main.talk{grid-template-columns:minmax(290px,320px) minmax(360px,1fr) minmax(280px,320px);max-width:1500px;margin:0 auto;width:100%}
+@media (max-width:1060px){main.talk{grid-template-columns:1fr 1fr}main.talk .editor{grid-column:1/-1;order:3}main.talk .preview{grid-column:auto;justify-self:stretch}}
+@media (max-width:700px){main.talk .preview{grid-column:1/-1}}
+@media (max-width:700px){main.talk{grid-template-columns:1fr}}
+.checks label{font-size:13px;display:flex;gap:6px;align-items:center}
+.styles.compact button{padding:6px}.styles.compact button i{width:36px;height:30px;font-size:16px}
+.editor .empty{border:1px dashed var(--line);border-radius:12px;padding:18px}
+.legend{display:flex;flex-wrap:wrap;gap:6px}
+.lg{font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--line)}
+.lg.keep{background:rgba(255,255,255,.06)}
+.c-im-lang{--cc:#6b7a90}.c-am-u{--cc:#ffb057}.c-lap{--cc:#f37aa5}.c-noi-lai{--cc:#ff6b6b}.c-tay{--cc:#8fa3ff}
+.lg[class*=" c-"]{background:color-mix(in srgb,var(--cc) 22%,transparent);border-color:color-mix(in srgb,var(--cc) 60%,transparent)}
+.lg.kw{color:#ff9f43;border-color:rgba(255,159,67,.5)}
+.lg.br{border-style:dashed}
+.transcript{font-size:16px;line-height:2.05;background:#0f141c;border:1px solid var(--line);border-radius:12px;padding:14px 16px;max-height:52vh;overflow:auto;user-select:text}
+.transcript .w{cursor:pointer;border-radius:4px;padding:1px 1px}
+.transcript .w:hover{background:rgba(255,255,255,.08)}
+.transcript .w.kw{color:#ff9f43;font-weight:600}
+.transcript .w.cut{text-decoration:line-through;text-decoration-thickness:2px;color:color-mix(in srgb,var(--cc) 80%,#fff 20%);background:color-mix(in srgb,var(--cc) 18%,transparent);opacity:.85}
+.transcript .w.now{outline:2px solid var(--accent);background:rgba(186,242,94,.15)}
+.transcript .brmark{border:1px dashed rgba(255,255,255,.35);background:rgba(255,255,255,.06);border-radius:6px;padding:0 4px;margin-right:3px;font-size:13px;line-height:1.4;cursor:pointer}
+.transcript .brmark.off{opacity:.35;text-decoration:line-through}
+.tools{margin:2px 0}
+kbd{font:11px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.1);border-radius:4px;padding:1px 5px}
+.titles{display:flex;flex-direction:column;gap:6px}
+.tchoice,.short{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.03);cursor:pointer}
+.tchoice span,.short span{display:flex;flex-direction:column;flex:1;min-width:0}
+.tchoice small,.short small{color:var(--muted);font-size:12px}
+.shorts{display:flex;flex-direction:column;gap:6px}
+.frame.talkframe{aspect-ratio:auto;max-width:none;background:#000}
+.frame.talkframe video{max-height:60vh;object-fit:contain}
