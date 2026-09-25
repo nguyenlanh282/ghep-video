@@ -36,7 +36,7 @@ async function saveLead(request, env) {
   let body;
   try { body = await request.json(); } catch { return json({ ok: false, error: 'Dữ liệu không hợp lệ.' }, 400); }
   // Honeypot: a hidden field real people never fill.
-  if (body.website) return json({ ok: true, token: 'x' });
+  if (body.website) return json({ ok: true, token: 'x', zalo: '' });
 
   const name = clean(body.name, 80);
   const phone = normalisePhone(body.phone);
@@ -69,7 +69,9 @@ async function saveLead(request, env) {
     id = r.meta.last_row_id;
   }
   const token = await sign(env, `${id}.${Math.floor(Date.now() / 1000) + DAY}`);
-  return json({ ok: true, token }, 200, { 'Set-Cookie': `${COOKIE}=${token}; Path=/; Max-Age=${DAY}; HttpOnly; Secure; SameSite=Lax` });
+  // Invite to the Zalo group (set ZALO_GROUP in wrangler.jsonc vars); shown only after the form is filled.
+  const zalo = /^https:\/\/zalo\.me\//.test(env.ZALO_GROUP || '') ? env.ZALO_GROUP : '';
+  return json({ ok: true, token, zalo }, 200, { 'Set-Cookie': `${COOKIE}=${token}; Path=/; Max-Age=${DAY}; HttpOnly; Secure; SameSite=Lax` });
 }
 
 function clean(v, max) { return String(v ?? '').replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max); }

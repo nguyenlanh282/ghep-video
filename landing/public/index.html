@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ghép Video · Dựng video dọc từ lời kể</title>
-<meta name="description" content="Ghép Video: thả ảnh, video và file ghi âm vào, app tự ghép cảnh khớp lời đọc, làm phụ đề karaoke, cân bằng giọng và tạo ảnh bìa. Chạy trên máy, miễn phí.">
-<meta property="og:title" content="Ghép Video · Dựng video dọc từ lời kể">
-<meta property="og:description" content="Tự ghép cảnh khớp lời đọc, phụ đề karaoke, ảnh bìa rõ mặt. Chạy trên Mac và Windows.">
-<meta property="og:image" content="/icon.png">
+<title>Ghép Video · Từ video thô đến video hoàn thiện</title>
+<meta name="description" content="Ghép Video: edit video nói chuyện tự cắt im lặng và “ờ, ừm”, thêm tiêu đề, phụ đề karaoke, cảnh trám; hoặc thả ảnh và ghi âm để ghép thành video dọc. Chạy trên Mac và Windows, miễn phí.">
+<meta property="og:title" content="Ghép Video · Từ video thô đến video hoàn thiện">
+<meta property="og:description" content="Từ video thô đến video hoàn thiện: tự cắt, phụ đề karaoke, tiêu đề nổi bật, xuất mọi tỉ lệ. Chạy trên Mac và Windows.">
+<meta property="og:image" content="/gioi-thieu.jpg">
 <link rel="icon" href="/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -48,6 +48,11 @@ h1 em{font-style:normal;color:var(--accent)}
 .phone .cap span.on{color:var(--yellow)}
 
 section{padding:64px 0}
+.intro{padding-top:8px}
+.intro video{display:block;width:100%;aspect-ratio:16/9;border-radius:22px;border:1px solid var(--line);background:#000;box-shadow:0 30px 80px rgba(0,0,0,.45)}
+.zalo{margin-top:18px;background:linear-gradient(135deg,rgba(0,104,255,.16),rgba(186,242,94,.08));border:1px solid rgba(0,136,255,.35);border-radius:16px;padding:18px}
+.zalo p{margin:0 0 14px;font-size:15px}
+.zalo .btn{width:100%;background:#0068ff;color:#fff;border-color:transparent;padding:15px}
 h2{font-size:clamp(26px,3.4vw,36px);margin:0 0 10px;letter-spacing:-.01em}
 .sub{color:var(--muted);margin:0 0 32px;max-width:640px}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
@@ -107,11 +112,11 @@ footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 <section class="hero"><div class="wrap">
   <div>
     <span class="eyebrow">Miễn phí · Chạy trên máy của bạn</span>
-    <h1>Thả ghi âm vào,<br>nhận <em>video dọc hoàn chỉnh</em>.</h1>
-    <p class="lead">Ghép Video tự chọn cảnh khớp từng câu bạn nói, làm phụ đề karaoke, cân bằng giọng đọc và tạo ảnh bìa rõ mặt. Sẵn sàng đăng TikTok, Reels, Shorts.</p>
+    <h1>Từ video thô<br>đến <em>video hoàn thiện</em>.</h1>
+    <p class="lead">Quay một lần, Ghép Video tự cắt chỗ im lặng và “ờ, ừm”, thêm tiêu đề nổi bật, phụ đề karaoke và cảnh trám. Hoặc thả ảnh và file ghi âm vào để nhận video dọc hoàn chỉnh. Sẵn sàng đăng TikTok, Reels, Shorts, YouTube.</p>
     <div class="cta">
       <a class="btn primary" href="#tai-ve">⬇ Tải về cho&nbsp;<span class="os-name">máy của bạn</span></a>
-      <a class="btn" href="#tinh-nang">Xem tính năng</a>
+      <a class="btn" href="#gioi-thieu">▶ Xem video giới thiệu</a>
     </div>
     <p class="os-note">Có bản cho <b>Windows 10/11</b> và <b>Mac chip Apple (M1 trở lên)</b>.</p>
   </div>
@@ -121,16 +126,22 @@ footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
   </div>
 </div></section>
 
+<section id="gioi-thieu" class="intro"><div class="wrap">
+  <h2>Xem Ghép Video làm việc trong 50 giây</h2>
+  <p class="sub">Giao diện thật, video thật do app xuất ra.</p>
+  <video id="introVideo" src="/gioi-thieu.mp4" poster="/gioi-thieu.jpg" controls muted playsinline loop preload="metadata" aria-label="Video giới thiệu Ghép Video"></video>
+</div></section>
+
 <section id="tinh-nang"><div class="wrap">
-  <h2>Làm video kể chuyện nhanh gấp nhiều lần</h2>
-  <p class="sub">Bạn lo câu chuyện, phần dựng để app lo. Mọi xử lý diễn ra ngay trên máy: ảnh, video và giọng nói của bạn không bị gửi đi đâu.</p>
+  <h2>Làm video nhanh gấp nhiều lần</h2>
+  <p class="sub">Bạn lo nội dung, phần dựng để app lo. Nhận dạng giọng nói và dựng video chạy ngay trên máy của bạn.</p>
   <div class="grid">
-    <div class="card"><div class="ic">🎬</div><h3>Ghép cảnh khớp lời đọc</h3><p>AI xem từng ảnh, từng đoạn video rồi chọn cảnh hợp với từng câu. Đổi cảnh đúng lúc sang câu mới.</p></div>
-    <div class="card"><div class="ic">💬</div><h3>Phụ đề karaoke tiếng Việt</h3><p>Nhận dạng lời đọc, chữ đứng yên trên một hàng, chỉ đổi màu từ đang nói. Sửa chữ sai trong 1 ô.</p></div>
-    <div class="card"><div class="ic">🔊</div><h3>Giọng to, rõ, chuẩn mạng xã hội</h3><p>Tự cân bằng giọng về −14 LUFS, trộn nhạc nền, cắt khoảng lặng. Không rè, không lúc to lúc nhỏ.</p></div>
-    <div class="card"><div class="ic">🖼</div><h3>Ảnh bìa rõ mặt</h3><p>Tự tìm khung hình nét, không nghiêng, vừa khung. Chọn 1–3 hình, chèn tiêu đề, lưu 1080×1920.</p></div>
-    <div class="card"><div class="ic">✨</div><h3>Tự đặt tên tư liệu</h3><p>AI mô tả và đặt tên từng file theo nội dung, ghi chú từng đoạn cảnh để dễ tìm lại.</p></div>
-    <div class="card"><div class="ic">🔄</div><h3>Cập nhật 1 nút bấm</h3><p>Có tính năng mới là nút cập nhật trong app chuyển xanh. Bấm là lên bản mới, giữ nguyên tư liệu.</p></div>
+    <div class="card"><div class="ic">✂</div><h3>Edit video chia sẻ</h3><p>Tự cắt im lặng, “ờ, ừm”, câu nói vấp và câu nói lại. Sửa video bằng cách sửa chữ, bấm chữ để khôi phục.</p></div>
+    <div class="card"><div class="ic">✨</div><h3>Tiêu đề nổi bật</h3><p>4 kiểu tiêu đề, 6 hiệu ứng xuất hiện, chỉnh cỡ và thời gian hiện. AI gợi ý tiêu đề, caption và hashtag.</p></div>
+    <div class="card"><div class="ic">💬</div><h3>Phụ đề karaoke tiếng Việt</h3><p>Đúng chính tả, chữ đứng yên một hàng, chỉ đổi màu từ đang nói. Tô màu từ khoá, chọn cỡ và kiểu chữ.</p></div>
+    <div class="card"><div class="ic">🎬</div><h3>Ghép cảnh khớp lời đọc</h3><p>AI xem và đặt tên từng ảnh, video rồi chọn cảnh hợp với từng câu. Thiếu cảnh thì tìm thêm trên Pexels/Pixabay.</p></div>
+    <div class="card"><div class="ic">📤</div><h3>Xuất mọi nền tảng</h3><p>9:16 TikTok, 1:1 Facebook, 16:9 YouTube cùng lúc, kèm clip ngắn AI gợi ý và ảnh bìa rõ mặt.</p></div>
+    <div class="card"><div class="ic">🔊</div><h3>Giọng to, rõ, chuẩn mạng xã hội</h3><p>Khử ồn, cân bằng giọng về −14 LUFS, trộn nhạc nền. Có tính năng mới là cập nhật bằng 1 nút bấm.</p></div>
   </div>
 </div></section>
 
@@ -192,6 +203,10 @@ footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
       <div class="warn" id="warnWin"><b>Windows:</b> nếu hiện “Windows protected your PC”, bấm <b>More info → Run anyway</b>.</div>
       <div class="warn" id="warnMac"><b>Mac:</b> nếu báo không mở được, vào <b>Cài đặt hệ thống → Quyền riêng tư &amp; Bảo mật → Vẫn mở</b>.</div>
       <p class="privacy">Sau trình cài, một cửa sổ sẽ tải phần còn lại (~2 GB). <b>Đừng đóng</b> cho tới khi app tự mở. Link tải dùng được trong 24 giờ.</p>
+      <div class="zalo" id="zalo" hidden>
+        <p>Phần mềm này rất xịn và mình muốn tổ chức một buổi <b>Zoom</b> để hướng dẫn bạn dùng nó, và quan trọng hơn là <b>tư duy để thiết kế ra nó</b>. Mời bạn vào nhóm để chúng ta cùng trao đổi!</p>
+        <a class="btn" id="zaloBtn" href="#" target="_blank" rel="noopener">💬 Vào nhóm Zalo</a>
+      </div>
     </div>
   </div>
 </div></section>
@@ -229,6 +244,16 @@ if (!matchMedia('(prefers-reduced-motion: reduce)').matches) tick(); else $('#de
 
 $('#purpose').addEventListener('change', e => { $('#purposeOther').hidden = e.target.value !== 'khac'; });
 
+function showZalo(link) {
+  if (!/^https:\/\/zalo\.me\//.test(link || '')) return;
+  $('#zaloBtn').href = link; $('#zalo').hidden = false;
+}
+// The intro plays (muted) while it is on screen.
+if ('IntersectionObserver' in window && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  const v = $('#introVideo');
+  new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) v.play().catch(() => {}); else v.pause(); }), {threshold: .5}).observe(v);
+}
+
 function showReady(name) {
   $('#leadForm').style.display = 'none';
   $('#who').textContent = name || 'bạn';
@@ -237,7 +262,7 @@ function showReady(name) {
   if (os === 'mac') $('#warnMac').parentElement.insertBefore($('#warnMac'), $('#warnWin'));
   $('#ready').classList.add('show'); $('#ready').focus();
 }
-try { const saved = localStorage.getItem('gv_name'); if (saved && document.cookie.includes('gv_ok=1')) showReady(saved); } catch (e) {}
+try { const saved = localStorage.getItem('gv_name'); if (saved && document.cookie.includes('gv_ok=1')) { showReady(saved); showZalo(localStorage.getItem('gv_zalo')); } } catch (e) {}
 
 $('#leadForm').addEventListener('submit', async e => {
   e.preventDefault();
@@ -250,9 +275,9 @@ $('#leadForm').addEventListener('submit', async e => {
     const r = await fetch('/api/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     const out = await r.json();
     if (out.ok) {
-      try { localStorage.setItem('gv_name', data.name.trim()); } catch (e) {}
+      try { localStorage.setItem('gv_name', data.name.trim()); localStorage.setItem('gv_zalo', out.zalo || ''); } catch (e) {}
       document.cookie = 'gv_ok=1; path=/; max-age=86400; samesite=lax';
-      showReady(data.name.trim());
+      showReady(data.name.trim()); showZalo(out.zalo);
     } else if (out.errors) {
       for (const [k, v] of Object.entries(out.errors)) { const el = document.querySelector(`.err[data-for="${k}"]`); if (el) el.textContent = v; }
       const firstBad = f.querySelector(`[name="${Object.keys(out.errors)[0]}"]`); if (firstBad) firstBad.focus();

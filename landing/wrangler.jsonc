@@ -12,6 +12,8 @@
   "d1_databases": [
     { "binding": "DB", "database_name": "ghepvideo-leads", "database_id": "56226761-21c0-4ee0-ab39-102da657d3cd", "migrations_dir": "migrations" }
   ],
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // Zalo group link shown after the download form (https://zalo.me/g/...). Empty = the invite box stays hidden.
+  "vars": { "ZALO_GROUP": "" }
   // Secrets (not in this file): ADMIN_PASSWORD, SECRET  →  npx wrangler secret put <NAME>
 }
