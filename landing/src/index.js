@@ -5,12 +5,12 @@
 // Static files (the page itself) come from ./public.
 
 const REPO = 'nguyenlanh282/ghep-video';
-// Installer files of the latest GitHub release, matched by name.
+// Installer file names in each release, from its version number (latest.json on the release download URL).
 const KINDS = {
-  windows: /^GhepVideo-Setup-.*\.exe$/,
-  mac: /^GhepVideo-.*\.pkg$/,
-  'windows-script': /^Cai-dat-Ghep-Video-Windows\.bat$/,
-  'mac-script': /^Cai-dat-Ghep-Video-Mac\.command$/,
+  windows: v => `GhepVideo-Setup-${v}.exe`,
+  mac: v => `GhepVideo-${v}.pkg`,
+  'windows-script': () => 'Cai-dat-Ghep-Video-Windows.bat',
+  'mac-script': () => 'Cai-dat-Ghep-Video-Mac.command',
 };
 const COOKIE = 'gv_dl';
 const DAY = 86400;
@@ -92,22 +92,21 @@ async function download(request, env, ctx, kind) {
   return Response.redirect(asset.url, 302);
 }
 
-async function latestAsset(ctx, pattern, fresh = false) {
-  // Cached for 5 minutes so every download does not hit the GitHub API. A file missing from the cached list
-  // (e.g. an installer attached after the list was cached) triggers one fresh lookup.
-  const cacheKey = new Request('https://cache.ghepvideo/latest-release');
-  let res = fresh ? null : await caches.default.match(cacheKey);
+async function latestAsset(ctx, nameFor) {
+  // latest.json comes from the release *download* URL, which has no API rate limit (the GitHub API allows only
+  // 60 requests/hour per IP, and Cloudflare shares IPs). Cached for 5 minutes.
+  const cacheKey = new Request('https://cache.ghepvideo/latest-json');
+  let res = await caches.default.match(cacheKey);
   if (!res) {
-    const gh = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, { headers: { 'User-Agent': 'ghepvideo-landing', Accept: 'application/vnd.github+json' } });
-    if (!gh.ok) return null;
-    res = new Response(await gh.text(), { headers: { 'Cache-Control': 'max-age=300', 'Content-Type': 'application/json' } });
+    const r = await fetch(`https://github.com/${REPO}/releases/latest/download/latest.json`, { headers: { 'User-Agent': 'ghepvideo-landing' } });
+    if (!r.ok) return null;
+    res = new Response(await r.text(), { headers: { 'Cache-Control': 'max-age=300', 'Content-Type': 'application/json' } });
     ctx.waitUntil(caches.default.put(cacheKey, res.clone()));
-    fresh = true;
   }
-  const release = await res.json();
-  const a = (release.assets || []).find(x => pattern.test(x.name));
-  if (!a && !fresh) return latestAsset(ctx, pattern, true);
-  return a ? { name: a.name, url: a.browser_download_url } : null;
+  const { version } = await res.json();
+  if (!version) return null;
+  const name = nameFor(version);
+  return { name, url: `https://github.com/${REPO}/releases/download/v${version}/${name}` };
 }
 
 // ---------------- admin ----------------
