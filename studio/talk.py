@@ -337,14 +337,14 @@ def render_variant(project, job, aspect, first, last, title, dest, tmp, progress
                 # Upright footage in a wide frame: keep the whole speaker in the middle over a blurred copy, not a huge zoom.
                 fh = round(H * p['zoom']); fw = round(fh * W0 / H0 / 2) * 2
                 vf = (f'split=2[bg][fg];[bg]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},gblur=sigma=30[b];'
-                      f'[fg]scale={fw}:{fh}[f];[b][f]overlay=(W-w)/2:(H-h)*0.4,setsar=1,fps={FPS}')
+                      f'[fg]scale={fw}:{fh}[f];[b][f]overlay=(W-w)/2:(H-h)*0.4,setsar=1,fps={FPS},tpad=stop_mode=clone:stop_duration=5')
             else:
                 x, y, cw, ch = speaker_crop(W0, H0, face, W, H, p['zoom'])
-                vf = f'crop={cw}:{ch}:{x}:{y},scale={W}:{H},setsar=1,fps={FPS}'
+                vf = f'crop={cw}:{ch}:{x}:{y},scale={W}:{H},setsar=1,fps={FPS},tpad=stop_mode=clone:stop_duration=5'
             cmd = [FFMPEG, '-v', 'error', '-y', '-ss', f'{p["src"]:.3f}', '-i', str(src), '-vf', vf]
         else:
             br = p['br']; bp = Path(br['path'])
-            vf = f'scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},setsar=1,fps={FPS}'
+            vf = f'scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},setsar=1,fps={FPS},tpad=stop_mode=clone:stop_duration=5'
             if br['d']: cmd = [FFMPEG, '-v', 'error', '-y', '-stream_loop', '-1', '-ss', f'{min(max(0, br["d"] - 4), br["a"] + p["off"]):.3f}', '-i', str(bp), '-vf', vf]
             else: cmd = [FFMPEG, '-v', 'error', '-y', '-loop', '1', '-i', str(bp), '-vf', vf]
         R.run(cmd + ['-frames:v', str(frames), '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '19', '-pix_fmt', 'yuv420p', str(out)])
@@ -371,11 +371,14 @@ def render_variant(project, job, aspect, first, last, title, dest, tmp, progress
     positions = [R.caption_layout(g, font, W, H, cy) for g in groups]; top, bh = R.caption_band(font, H, cy)
     tw = min(W, 1080); tjob = dict(job, title=title[0], subtitle=title[1])
     title_img = R.make_title(tjob, tw, H) if job.get('titleStyle', 'pop') != 'none' and (title[0] or title[1]) else None
-    ty = round(H * (.21875 if aspect == '9:16' else .12)); style = job.get('subStyle', 'sweep'); gi = 0; key = None; cap = None
+    ty = round(H * (.21875 if aspect == '9:16' else .12)); style = job.get('subStyle', 'sweep'); gi = 0; key = None; cap = None; last_frame = None
     try:
         for n in range(nframes):
             data = dec.stdout.read(W * H * 3)
-            if len(data) != W * H * 3: raise RuntimeError(f'Video dừng ở khung {n}/{nframes}.')
+            if len(data) != W * H * 3:
+                if last_frame is None or n < nframes - FPS: raise RuntimeError(f'Video dừng ở khung {n}/{nframes}.')
+                data = last_frame  # a frame or two short at the very end: hold the last picture
+            last_frame = data
             im = Image.frombytes('RGB', (W, H), data); t = n / FPS
             if title_img and t < 3.4:
                 z = .86 + .14 * min(1, t / .22); ov = title_img if z >= 1 else title_img.resize((round(tw * z), round(title_img.height * z)))
@@ -413,12 +416,18 @@ def render(job):
     tasks = [(a, 0, len(words) - 1, title, folder / f'{stem} {a.replace(":", "x")}.mp4') for a in aspects]
     tasks += [('9:16', s['first'], s['last'], (s['title'].upper()[:40], ''), folder / f'Clip {k + 1} - {re.sub(r"[^\w ]+", "", s["title"])[:40].strip() or k + 1}.mp4') for k, s in enumerate(shorts)]
     results = []
-    with tempfile.TemporaryDirectory(prefix='talk-render-') as tmp:
-        for n, (aspect, a, b, ttl, dest) in enumerate(tasks):
-            label = f'clip ngắn {n - len(aspects) + 1}' if n >= len(aspects) else f'video {aspect}'
-            base = 100 * n / len(tasks); step = 100 / len(tasks)
-            emit(base, f'Đang xuất {label}…')
-            results.append(dict(render_variant(project, job, aspect, a, b, ttl, dest, Path(tmp), lambda f: emit(base + step * f, f'Đang xuất {label} · {int(f * 100)}%')), kind=label))
+    try:
+        with tempfile.TemporaryDirectory(prefix='talk-render-') as tmp:
+            for n, (aspect, a, b, ttl, dest) in enumerate(tasks):
+                label = f'clip ngắn {n - len(aspects) + 1}' if n >= len(aspects) else f'video {aspect}'
+                base = 100 * n / len(tasks); step = 100 / len(tasks)
+                emit(base, f'Đang xuất {label}…')
+                try: results.append(dict(render_variant(project, job, aspect, a, b, ttl, dest, Path(tmp), lambda f: emit(base + step * f, f'Đang xuất {label} · {int(f * 100)}%')), kind=label))
+                except Exception as exc: raise RuntimeError(f'Xuất {label} chưa được: {exc}') from exc
+    except BaseException:
+        # Leave no empty result folder behind when nothing was produced.
+        if folder.exists() and not any(folder.iterdir()): folder.rmdir()
+        raise
     post = (project.get('caption', '') + '\n\n' + ' '.join(project.get('hashtags', []))).strip()
     if post: (folder / 'caption-hashtag.txt').write_text(post + '\n', encoding='utf-8')
     (folder / 'ket-qua.json').write_text(json.dumps(dict(results=results, job={k: v for k, v in job.items() if 'Key' not in k}), ensure_ascii=False, indent=1), encoding='utf-8')

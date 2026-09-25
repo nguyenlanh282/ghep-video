@@ -14,7 +14,7 @@
   </div>
   <nav class="modes" aria-label="Chế độ">
     <a data-mode-link="index.html">Ghép ảnh + lời đọc</a>
-    <a class="on" aria-current="page">Video chia sẻ</a>
+    <a class="on" aria-current="page">✂ Edit video chia sẻ</a>
   </nav>
 </header>
 
@@ -58,7 +58,7 @@
     <div class="row between"><h2 id="t2"><span class="num">04</span>Sửa bằng chữ</h2><span class="hint" id="stats"></span></div>
     <div id="emptyEditor" class="empty">
       <p><b>Chưa có bản chữ.</b></p>
-      <p class="hint">Chọn video thô rồi bấm <b>Phân tích video</b>. App sẽ ghi lại lời nói, đánh dấu chỗ nên cắt, soát chính tả và gợi ý tiêu đề, cảnh trám, clip ngắn.</p>
+      <p class="hint">Chọn video thô ở cột trái, rồi bấm <b>⚡ Edit &amp; xuất ngay</b> (tự làm hết) hoặc <b>✨ Phân tích để sửa</b> (xem và sửa bản chữ ở đây trước khi xuất).</p>
     </div>
     <div id="editorBody" hidden>
       <div class="legend">
@@ -105,8 +105,9 @@
   <div class="row between">
     <div><b id="status">Sẵn sàng</b><small id="substatus">Video thô → video hoàn thiện có phụ đề, tiêu đề, cảnh trám</small></div>
     <div class="row gap" id="actions">
-      <button class="btn large" id="analyzeBtn">✨ Phân tích video</button>
-      <button class="btn large primary" id="exportBtn">Xuất video ↗</button>
+      <button class="btn large" id="analyzeBtn" title="Phân tích rồi dừng để bạn xem và sửa bản chữ trước khi xuất">✨ Phân tích để sửa</button>
+      <button class="btn large" id="exportBtn" title="Xuất theo bản chữ đã sửa">Xuất video ↗</button>
+      <button class="btn large primary" id="autoBtn" title="Tự phân tích, cắt và xuất luôn, không cần sửa">⚡ Edit &amp; xuất ngay</button>
     </div>
     <button class="btn large" id="cancelBtn" hidden>Dừng</button>
   </div>

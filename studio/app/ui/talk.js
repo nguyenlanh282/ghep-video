@@ -10,6 +10,7 @@ const base = p => p ? p.split(/[\\/]/).pop() : '';
 const fmt = s => { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 const REASON = {'im-lang': 'Im lặng', 'am-u': 'Ậm ừ', 'lap': 'Nói vấp', 'noi-lai': 'Nói lại', 'tay': 'Bạn cắt'};
 let S = null, P = null, videoUrl = null, keep = [];
+let autoExport = false;  // “Edit & xuất ngay”: export as soon as the analysis finishes
 
 async function api(name, body = {}) {
   const r = await fetch('/api/' + name, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Token': TOKEN}, body: JSON.stringify(body)});
@@ -58,8 +59,9 @@ function renderState(st) {
   $('#error').hidden = !job.error; $('#errorText').textContent = job.error || '';
   $('#exportBtn').disabled = !P;
   if (prev && prev.running && !job.running) {
-    if (job.task === 'talk-analyze' && !job.error) loadProject();
-    if (job.task === 'talk-render' && job.result) $('#resultRow').hidden = false;
+    if (job.task === 'talk-analyze' && !job.error) loadProject().then(() => { if (autoExport) { autoExport = false; startExport(); } });
+    if (job.task === 'talk-analyze' && job.error) autoExport = false;
+    if (job.task === 'talk-render' && job.result && !job.error) { $('#resultRow').hidden = false; $('#status').textContent = '✓ ' + job.status; }
   }
 }
 
@@ -163,6 +165,11 @@ function followPlayer() {
   requestAnimationFrame(followPlayer);
 }
 
+async function startExport() {
+  $('#player').pause(); $('#resultRow').hidden = true;
+  const out = await api('start', {task: 'talk-render'}); if (out.job && out.job.running) poll();
+}
+
 /* ---------- wiring ---------- */
 function wire() {
   $$('[data-mode-link]').forEach(a => a.href = `${a.dataset.modeLink}?t=${TOKEN}`);
@@ -186,9 +193,12 @@ function wire() {
     if (P && !confirm('Phân tích lại sẽ thay bản chữ hiện tại (các chỗ bạn đã sửa sẽ mất). Tiếp tục?')) return;
     const out = await api('start', {task: 'talk-analyze'}); if (out.job && out.job.running) poll();
   });
-  $('#exportBtn').addEventListener('click', async () => {
-    $('#player').pause(); $('#resultRow').hidden = true;
-    const out = await api('start', {task: 'talk-render'}); if (out.job && out.job.running) poll();
+  $('#exportBtn').addEventListener('click', startExport);
+  $('#autoBtn').addEventListener('click', async () => {
+    if (!S.settings.talkVideo) { alert('Hãy chọn video thô trước.'); return; }
+    if (P && !confirm('Edit lại từ đầu sẽ thay bản chữ hiện tại (các chỗ bạn đã sửa sẽ mất). Tiếp tục?')) return;
+    autoExport = true; $('#resultRow').hidden = true;
+    const out = await api('start', {task: 'talk-analyze'}); if (out.job && out.job.running) poll(); else autoExport = false;
   });
   $('#cancelBtn').addEventListener('click', () => api('cancel'));
   $('#errorClose').addEventListener('click', () => api('clearError'));
