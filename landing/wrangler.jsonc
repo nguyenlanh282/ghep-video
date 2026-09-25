@@ -14,6 +14,6 @@
   ],
   "observability": { "enabled": true },
   // Zalo group link shown after the download form (https://zalo.me/g/...). Empty = the invite box stays hidden.
-  "vars": { "ZALO_GROUP": "" }
+  "vars": { "ZALO_GROUP": "https://zalo.me/g/gimz1uxcifvaydqar800" }
   // Secrets (not in this file): ADMIN_PASSWORD, SECRET  →  npx wrangler secret put <NAME>
 }
