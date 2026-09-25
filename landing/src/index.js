@@ -2,7 +2,10 @@
 //   POST /api/lead        save the sign-up form and answer with the Zalo group link
 //   GET  /d/<kind>        old download links: back to the sign-up form (the software is shared in the Zalo group)
 //   GET  /admin           password-protected list of leads;  /admin/leads.csv  Excel-friendly export
+//   POST /admin/sync-lark push leads not yet in Lark Base (every new lead is also pushed right after the form)
 // Static files (the page itself) come from ./public.
+
+import { larkReady, pushLead, pushMany } from './lark.js';
 
 const COOKIE = 'gv_dl';
 const DAY = 86400;
@@ -11,10 +14,11 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     try {
-      if (url.pathname === '/api/lead' && request.method === 'POST') return await saveLead(request, env);
+      if (url.pathname === '/api/lead' && request.method === 'POST') return await saveLead(request, env, ctx);
+      if (url.pathname === '/admin/sync-lark' && request.method === 'POST') return await syncLark(request, env);
       // Downloads are no longer offered on the page: the software is shared inside the Zalo group.
       if (url.pathname.startsWith('/d/')) return Response.redirect(new URL('/#dang-ky', request.url).toString(), 302);
-      if (url.pathname === '/admin' || url.pathname === '/admin/leads.csv') return await admin(request, env, url.pathname.endsWith('.csv'));
+      if (url.pathname === '/admin' || url.pathname === '/admin/leads.csv') return await admin(request, env, url.pathname.endsWith('.csv'), url);
       return env.ASSETS.fetch(request);
     } catch (err) {
       console.error(err);
@@ -25,7 +29,7 @@ export default {
 
 // ---------------- form ----------------
 
-async function saveLead(request, env) {
+async function saveLead(request, env, ctx) {
   let body;
   try { body = await request.json(); } catch { return json({ ok: false, error: 'Dữ liệu không hợp lệ.' }, 400); }
   // Honeypot: a hidden field real people never fill.
@@ -61,6 +65,7 @@ async function saveLead(request, env) {
       .bind(name, phone, email || null, purpose, os, ipHash, clean(request.headers.get('User-Agent'), 300)).run();
     id = r.meta.last_row_id;
   }
+  ctx.waitUntil(syncOne(env, id));  // to Lark Base, after the answer is sent
   const token = await sign(env, `${id}.${Math.floor(Date.now() / 1000) + DAY}`);
   // Invite to the Zalo group (set ZALO_GROUP in wrangler.jsonc vars); shown only after the form is filled.
   const zalo = /^https:\/\/zalo\.me\//.test(env.ZALO_GROUP || '') ? env.ZALO_GROUP : '';
@@ -75,15 +80,48 @@ function normalisePhone(v) {
   return /^0[35789]\d{8}$/.test(d) ? d : '';
 }
 
+// ---------------- Lark Base ----------------
+
+async function syncOne(env, id) {
+  if (!larkReady(env)) return;
+  const lead = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(id).first();
+  try {
+    const rec = await pushLead(env, lead);
+    await env.DB.prepare('UPDATE leads SET lark_record = ?, lark_error = NULL WHERE id = ?').bind(rec, id).run();
+  } catch (e) {
+    console.error('lark', e.message);
+    await env.DB.prepare('UPDATE leads SET lark_error = ? WHERE id = ?').bind(String(e.message).slice(0, 300), id).run();
+  }
+}
+
+async function syncLark(request, env) {
+  if (!(await isAdmin(request, env))) return needLogin();
+  if (!larkReady(env)) return new Response('Chưa cấu hình Lark (LARK_APP_ID, LARK_APP_SECRET).', { status: 400, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  const { results } = await env.DB.prepare('SELECT * FROM leads WHERE lark_record IS NULL ORDER BY id LIMIT 500').all();
+  let note = `Đã đẩy ${results.length} khách lên Lark.`;
+  try {
+    for (let i = 0; i < results.length; i += 100) {
+      const chunk = results.slice(i, i + 100), ids = await pushMany(env, chunk);
+      await env.DB.batch(chunk.map((l, k) => env.DB.prepare('UPDATE leads SET lark_record = ?, lark_error = NULL WHERE id = ?').bind(ids[k], l.id)));
+    }
+  } catch (e) { note = 'Lỗi khi đẩy lên Lark: ' + e.message; }
+  return Response.redirect(new URL('/admin?note=' + encodeURIComponent(note), request.url).toString(), 303);
+}
+
 // ---------------- admin ----------------
 
-async function admin(request, env, csv) {
+async function isAdmin(request, env) {
   const auth = request.headers.get('Authorization') || '';
   const [user, pass] = auth.startsWith('Basic ') ? atob(auth.slice(6)).split(/:(.*)/s) : [];
-  if (!env.ADMIN_PASSWORD || user !== 'admin' || !(await same(pass || '', env.ADMIN_PASSWORD))) {
-    return new Response('Cần đăng nhập.', { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Ghep Video admin", charset="UTF-8"' } });
-  }
-  const { results } = await env.DB.prepare('SELECT id, created_at, name, phone, email, purpose, os, downloads, last_download FROM leads ORDER BY id DESC LIMIT 5000').all();
+  return !!env.ADMIN_PASSWORD && user === 'admin' && (await same(pass || '', env.ADMIN_PASSWORD));
+}
+function needLogin() {
+  return new Response('Cần đăng nhập.', { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Ghep Video admin", charset="UTF-8"' } });
+}
+
+async function admin(request, env, csv, url) {
+  if (!(await isAdmin(request, env))) return needLogin();
+  const { results } = await env.DB.prepare('SELECT id, created_at, name, phone, email, purpose, os, downloads, last_download, lark_record, lark_error FROM leads ORDER BY id DESC LIMIT 5000').all();
   if (csv) {
     const cols = ['id', 'created_at', 'name', 'phone', 'email', 'purpose', 'os', 'downloads', 'last_download'];
     const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
@@ -91,11 +129,12 @@ async function admin(request, env, csv) {
     return new Response(body, { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="khach-ghep-video.csv"' } });
   }
   const h = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const rows = results.map(r => `<tr><td>${r.id}</td><td>${h(r.created_at)}</td><td>${h(r.name)}</td><td><a href="https://zalo.me/${h(r.phone)}">${h(r.phone)}</a></td><td>${h(r.email)}</td><td>${h(r.purpose)}</td><td>${h(r.os)}</td><td>${r.downloads}</td></tr>`).join('');
-  return new Response(`<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Khách tải Ghép Video</title>
+  const rows = results.map(r => `<tr><td>${r.id}</td><td>${h(r.created_at)}</td><td>${h(r.name)}</td><td><a href="https://zalo.me/${h(r.phone)}">${h(r.phone)}</a></td><td>${h(r.email)}</td><td>${h(r.purpose)}</td><td>${h(r.os)}</td><td>${r.lark_record ? '✓' : r.lark_error ? `<span title="${h(r.lark_error)}" style="color:#ffb057">lỗi</span>` : '–'}</td></tr>`).join('');
+  return new Response(`<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Khách đăng ký Ghép Video</title>
 <style>body{font:14px system-ui,sans-serif;margin:24px;background:#0b0f14;color:#eef1f5}a{color:#baf25e}table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #2a3140;padding:8px;text-align:left;vertical-align:top}th{color:#9ca8ba;font-weight:600}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.btn{background:#baf25e;color:#0b0f14;padding:8px 14px;border-radius:8px;text-decoration:none;font-weight:600}.wrap{overflow-x:auto}</style></head>
-<body><div class="top"><h1>Khách tải Ghép Video · ${results.length}</h1><a class="btn" href="/admin/leads.csv">Tải file Excel (CSV)</a></div>
-<div class="wrap"><table><tr><th>#</th><th>Thời gian (UTC)</th><th>Họ tên</th><th>Điện thoại / Zalo</th><th>Email</th><th>Mục đích</th><th>Máy</th><th>Lượt tải</th></tr>${rows || '<tr><td colspan="8">Chưa có ai điền form.</td></tr>'}</table></div></body></html>`,
+<body><div class="top"><h1>Khách đăng ký Ghép Video · ${results.length}</h1><div style="display:flex;gap:8px;flex-wrap:wrap">${larkReady(env) ? '<form method="post" action="/admin/sync-lark" style="margin:0"><button class="btn" style="border:0;cursor:pointer;font:inherit;font-weight:600">Đẩy khách còn thiếu lên Lark</button></form>' : ''}<a class="btn" href="/admin/leads.csv">Tải file Excel (CSV)</a></div></div>
+${url.searchParams.get('note') ? `<p style="background:#1a2230;padding:10px 14px;border-radius:8px">${h(url.searchParams.get('note'))}</p>` : ''}
+<div class="wrap"><table><tr><th>#</th><th>Thời gian (UTC)</th><th>Họ tên</th><th>Điện thoại / Zalo</th><th>Email</th><th>Mục đích</th><th>Máy</th><th>Lark</th></tr>${rows || '<tr><td colspan="8">Chưa có ai điền form.</td></tr>'}</table></div></body></html>`,
     { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' } });
 }
 

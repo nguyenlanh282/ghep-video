@@ -14,6 +14,11 @@
   ],
   "observability": { "enabled": true },
   // Zalo group link shown after the download form (https://zalo.me/g/...). Empty = the invite box stays hidden.
-  "vars": { "ZALO_GROUP": "https://zalo.me/g/gimz1uxcifvaydqar800" }
-  // Secrets (not in this file): ADMIN_PASSWORD, SECRET  →  npx wrangler secret put <NAME>
+  "vars": {
+    "ZALO_GROUP": "https://zalo.me/g/gimz1uxcifvaydqar800",
+    // Lark Base the leads are pushed into (from the base URL: /base/<LARK_BASE>?table=<LARK_TABLE>)
+    "LARK_BASE": "US0XbuVfeav2GEs53NQllS2egju",
+    "LARK_TABLE": "tblFRPU74mQ1LAiy"
+  }
+  // Secrets (not in this file): ADMIN_PASSWORD, SECRET, LARK_APP_ID, LARK_APP_SECRET  →  npx wrangler secret put <NAME>
 }
