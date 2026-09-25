@@ -25,6 +25,8 @@ export default {
       return json({ ok: false, error: 'Có lỗi máy chủ, vui lòng thử lại sau ít phút.' }, 500);
     }
   },
+  // Every 15 minutes: push leads that are not in Lark yet (older sign-ups, or a push that failed).
+  async scheduled(event, env, ctx) { if (larkReady(env)) ctx.waitUntil(syncPending(env).catch(e => console.error('lark cron', e.message))); },
 };
 
 // ---------------- form ----------------
@@ -94,17 +96,20 @@ async function syncOne(env, id) {
   }
 }
 
+async function syncPending(env) {
+  const { results } = await env.DB.prepare('SELECT * FROM leads WHERE lark_record IS NULL ORDER BY id LIMIT 500').all();
+  for (let i = 0; i < results.length; i += 100) {
+    const chunk = results.slice(i, i + 100), ids = await pushMany(env, chunk);
+    await env.DB.batch(chunk.map((l, k) => env.DB.prepare('UPDATE leads SET lark_record = ?, lark_error = NULL WHERE id = ?').bind(ids[k], l.id)));
+  }
+  return results.length;
+}
+
 async function syncLark(request, env) {
   if (!(await isAdmin(request, env))) return needLogin();
   if (!larkReady(env)) return new Response('Chưa cấu hình Lark (LARK_APP_ID, LARK_APP_SECRET).', { status: 400, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
-  const { results } = await env.DB.prepare('SELECT * FROM leads WHERE lark_record IS NULL ORDER BY id LIMIT 500').all();
-  let note = `Đã đẩy ${results.length} khách lên Lark.`;
-  try {
-    for (let i = 0; i < results.length; i += 100) {
-      const chunk = results.slice(i, i + 100), ids = await pushMany(env, chunk);
-      await env.DB.batch(chunk.map((l, k) => env.DB.prepare('UPDATE leads SET lark_record = ?, lark_error = NULL WHERE id = ?').bind(ids[k], l.id)));
-    }
-  } catch (e) { note = 'Lỗi khi đẩy lên Lark: ' + e.message; }
+  let note;
+  try { note = `Đã đẩy ${await syncPending(env)} khách lên Lark.`; } catch (e) { note = 'Lỗi khi đẩy lên Lark: ' + e.message; }
   return Response.redirect(new URL('/admin?note=' + encodeURIComponent(note), request.url).toString(), 303);
 }
 

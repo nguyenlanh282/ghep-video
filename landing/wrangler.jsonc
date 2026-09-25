@@ -13,6 +13,8 @@
     { "binding": "DB", "database_name": "ghepvideo-leads", "database_id": "56226761-21c0-4ee0-ab39-102da657d3cd", "migrations_dir": "migrations" }
   ],
   "observability": { "enabled": true },
+  // Push leads still missing from Lark Base every 15 minutes.
+  "triggers": { "crons": ["*/15 * * * *"] },
   // Zalo group link shown after the download form (https://zalo.me/g/...). Empty = the invite box stays hidden.
   "vars": {
     "ZALO_GROUP": "https://zalo.me/g/gimz1uxcifvaydqar800",
