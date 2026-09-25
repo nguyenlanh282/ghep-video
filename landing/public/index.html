@@ -91,6 +91,9 @@ h2 em{font-style:normal;color:var(--accent)}
 .tag.good{background:var(--accent);color:var(--ink)}
 
 /* intro video */
+.introbox{position:relative}
+.unmute{position:absolute;left:50%;bottom:74px;transform:translateX(-50%);box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.unmute:hover{transform:translateX(-50%) translateY(-2px)}
 .intro video{display:block;width:100%;aspect-ratio:16/9;border-radius:24px;border:1px solid var(--line);background:#000;box-shadow:0 30px 90px rgba(0,0,0,.5)}
 
 /* features */
@@ -181,7 +184,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
     <p class="lead">Ghép Video <b>tự cắt chỗ im lặng, “ờ, ừm”, câu nói lại</b>, thêm <b>tiêu đề nổi bật</b>, <b>phụ đề karaoke</b> đúng chính tả và cảnh minh hoạ. Một lần bấm, đủ video cho TikTok, Reels, Facebook, YouTube.</p>
     <div class="cta">
       <a class="btn zalo big" href="#dang-ky"><span class="zicon">Z</span>Tham gia nhóm Zalo</a>
-      <a class="btn big" href="#gioi-thieu">▶ Xem 50 giây</a>
+      <a class="btn big" href="#gioi-thieu">▶ Xem 1 phút</a>
     </div>
     <div class="trust"><span>Mac &amp; Windows</span><span>Tiếng Việt chuẩn dấu</span><span>Dùng gói Claude / ChatGPT sẵn có</span></div>
   </div>
@@ -228,11 +231,12 @@ footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 
 <section id="gioi-thieu" class="intro" style="padding-top:20px"><div class="wrap">
   <div class="center reveal">
-    <span class="kicker">XEM TRONG 50 GIÂY</span>
+    <span class="kicker">XEM TRONG 1 PHÚT</span>
     <h2>Ghép Video làm việc thế nào</h2>
-    <p class="sub">Giao diện thật, video thật do app xuất ra.</p>
+    <p class="sub">Giao diện thật, video thật do app xuất ra. Bật tiếng để nghe giới thiệu.</p>
   </div>
-  <video class="reveal" id="introVideo" src="/gioi-thieu.mp4" poster="/gioi-thieu.jpg" controls muted playsinline loop preload="metadata" aria-label="Video giới thiệu Ghép Video"></video>
+  <div class="introbox reveal"><video id="introVideo" src="/gioi-thieu.mp4" poster="/gioi-thieu.jpg" controls muted playsinline loop preload="metadata" aria-label="Video giới thiệu Ghép Video"></video>
+  <button class="btn primary unmute" id="unmute" type="button">🔊 Bật tiếng, xem từ đầu</button></div>
 </div></section>
 
 <section id="tinh-nang"><div class="wrap">
@@ -290,14 +294,19 @@ footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
       <label for="email">Email <small>(không bắt buộc)</small></label>
       <input id="email" name="email" type="email" autocomplete="email">
       <div class="err" data-for="email"></div>
-      <label for="purpose">Bạn làm nghề gì / dùng để làm gì?</label>
+      <label for="purpose">Bạn đang là</label>
       <select id="purpose" name="purpose" required>
         <option value="">Chọn một mục</option>
-        <option>Bán hàng online</option><option>Làm nội dung / KOC / KOL</option><option>Chủ doanh nghiệp</option>
-        <option>Giáo viên / đào tạo</option><option>Quay video gia đình</option><option value="khac">Khác (ghi rõ)</option>
+        <option>Chủ doanh nghiệp / Chủ shop</option><option>Nhân viên Marketing</option><option>Bán hàng online</option>
+        <option>Freelancer / Editor video</option><option>Học sinh / Sinh viên</option><option>Khác</option>
       </select>
-      <input id="purposeOther" name="purposeOther" placeholder="Ghi rõ nghề nghiệp / mục đích" hidden style="margin-top:8px">
       <div class="err" data-for="purpose"></div>
+      <label for="os">Máy đang dùng</label>
+      <select id="os" name="os">
+        <option value="windows">Windows</option><option value="mac">MacOS</option><option value="both">Cả hai</option><option value="unknown">Chưa rõ</option>
+      </select>
+      <label for="niche">Làm video cho lĩnh vực nào? <small>(không bắt buộc)</small></label>
+      <input id="niche" name="niche" placeholder="vd: mỹ phẩm, bất động sản, nông nghiệp, giáo dục…" maxlength="200">
       <div class="hp" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
       <button class="btn zalo big" type="submit" id="submitBtn"><span class="zicon">Z</span>Đăng ký vào nhóm</button>
       <div class="err" id="formErr" role="alert"></div>
@@ -344,7 +353,9 @@ if ('IntersectionObserver' in window) {
   document.querySelectorAll('video[muted], video').forEach(v => vo.observe(v));
 } else document.querySelectorAll('.reveal').forEach(el => el.classList.add('in'));
 
-$('#purpose').addEventListener('change', e => { $('#purposeOther').hidden = e.target.value !== 'khac'; });
+$('#os').value = os === 'other' ? 'unknown' : os;
+$('#unmute').addEventListener('click', () => { const v = $('#introVideo'); v.muted = false; v.currentTime = 0; v.play().catch(() => {}); $('#unmute').hidden = true; });
+$('#introVideo').addEventListener('volumechange', e => { if (!e.target.muted) $('#unmute').hidden = true; });  // guessed from this computer, the visitor can change it
 
 function showReady(name, zalo, phone) {
   $('#leadForm').style.display = 'none';
@@ -362,8 +373,7 @@ $('#leadForm').addEventListener('submit', async e => {
   e.preventDefault();
   document.querySelectorAll('.err').forEach(x => x.textContent = '');
   const f = e.target, btn = $('#submitBtn'), label = btn.innerHTML;
-  const purpose = f.purpose.value === 'khac' ? f.purposeOther.value.trim() : f.purpose.value;
-  const data = { name: f.name.value, phone: f.phone.value, email: f.email.value, purpose, os, website: f.website.value };
+  const data = { name: f.name.value, phone: f.phone.value, email: f.email.value, purpose: f.purpose.value, os: f.os.value, niche: f.niche.value, website: f.website.value };
   btn.disabled = true; btn.textContent = 'Đang gửi…';
   try {
     const r = await fetch('/api/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });

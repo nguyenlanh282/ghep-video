@@ -7,11 +7,15 @@
 
 const DEFAULT_API = 'https://open.larksuite.com/open-apis';
 const api = env => env.LARK_API || DEFAULT_API;  // LARK_API only for local tests
+// Column names of the leads table in Lark (table "Đăng ký Ghép Video").
 const FIELD_NAMES = {
-  name: 'Họ tên', phone: 'Số điện thoại / Zalo', email: 'Email', purpose: 'Nghề nghiệp / Mục đích',
-  os: 'Máy tính', created: 'Thời gian đăng ký', source: 'Nguồn',
+  name: 'Họ và tên', phone: 'Số điện thoại / Zalo', email: 'Email', role: 'Bạn đang là', os: 'Máy đang dùng',
+  niche: 'Làm video cho lĩnh vực nào', created: 'Thời gian đăng ký', source: 'Nguồn', status: 'Trạng thái',
 };
-const OS_LABEL = { windows: 'Windows', mac: 'Mac', other: 'Khác' };
+// Choices of the single-select columns, exactly as in Lark (the form offers the same ones).
+export const ROLES = ['Chủ doanh nghiệp / Chủ shop', 'Nhân viên Marketing', 'Bán hàng online', 'Freelancer / Editor video', 'Học sinh / Sinh viên', 'Khác'];
+const OS_LABEL = { windows: 'Windows', mac: 'MacOS', both: 'Cả hai' };
+const OLD_ROLES = { 'Chủ doanh nghiệp': 'Chủ doanh nghiệp / Chủ shop' };  // answers from the earlier form
 const READ_ONLY = new Set([19, 20, 1001, 1002, 1003, 1004, 1005]);  // lookup, formula, created/modified time & user, auto number
 
 let tokenCache = { value: '', until: 0 };
@@ -73,13 +77,20 @@ function format(type, value, when) {
   }
 }
 
-function fieldsFor(lead, types, env) {
+function fieldsFor(lead, types, env, isNew = true) {
   const n = names(env);
   const when = Date.parse(String(lead.created_at).replace(' ', 'T') + 'Z') || Date.now();
-  const local = new Date(when).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour12: false });
+  // "25/09/2026 22:22", Vietnam time
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Ho_Chi_Minh', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date(when)).map(x => [x.type, x.value]));
+  const local = `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}`;
+  const purpose = lead.purpose || '';
+  const role = ROLES.includes(purpose) ? purpose : OLD_ROLES[purpose] || 'Khác';
+  // An older free-text answer that is not one of the choices is kept in the "lĩnh vực" column.
+  const niche = lead.niche || (role === 'Khác' && purpose && purpose !== 'Khác' ? purpose : '');
   const values = {
-    name: lead.name, phone: lead.phone, email: lead.email || '', purpose: lead.purpose || '',
-    os: OS_LABEL[lead.os] || lead.os || '', created: local, source: 'Landing Ghép Video',
+    name: lead.name, phone: lead.phone, email: lead.email || '', role, os: OS_LABEL[lead.os] || 'Chưa rõ', niche,
+    created: local, source: 'Landing Ghép Video',
+    status: isNew ? 'Mới đăng ký' : '',  // set once; later changes are yours in Lark
   };
   const fields = {};
   for (const [k, v] of Object.entries(values)) {
@@ -95,7 +106,7 @@ export async function pushLead(env, lead) {
   const base = `/bitable/v1/apps/${env.LARK_BASE}/tables/${env.LARK_TABLE}/records`;
   const fields = fieldsFor(lead, types, env);
   if (lead.lark_record) {
-    try { await call(env, `${base}/${lead.lark_record}`, { method: 'PUT', body: JSON.stringify({ fields }) }); return lead.lark_record; }
+    try { await call(env, `${base}/${lead.lark_record}`, { method: 'PUT', body: JSON.stringify({ fields: fieldsFor(lead, types, env, false) }) }); return lead.lark_record; }
     catch (e) { if (!/RecordIdNotFound|1254043/.test(e.message)) throw e; }  // row deleted in Lark: add it again
   }
   const d = await call(env, base, { method: 'POST', body: JSON.stringify({ fields }) });
@@ -110,3 +121,4 @@ export async function pushMany(env, leads) {
   });
   return (d.records || []).map(r => r.record_id);
 }
+
