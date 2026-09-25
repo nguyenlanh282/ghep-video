@@ -168,10 +168,14 @@ def draw_title(canvas,title,subtitle,style,center_y):
   band=Image.new('L',(1,256));band.putdata([int(150*math.sin(math.pi*i/255)) for i in range(256)])
   shade=Image.new('RGBA',(W,int(h1+gap+h2+220)),(0,0,0,255));shade.putalpha(band.resize(shade.size))
   layer.alpha_composite(shade,(0,int(top-110)));colors=('white','#9cfa68');stroke=9
+ if style=='box':
+  if big:w=big.getlength(title);d.rounded_rectangle((W/2-w/2-40,top-10,W/2+w/2+40,top+h1+6),radius=28,fill='#ffd54a')
+  if small:w=small.getlength(subtitle);d.rounded_rectangle((W/2-w/2-32,top+h1+gap-8,W/2+w/2+32,top+h1+gap+h2+4),radius=24,fill=(20,22,30,235))
+  colors=('#151a22','white');stroke=0
  if style=='ribbon' and small:
   d.rounded_rectangle((W*.04,top+h1+gap-12,W*.96,top+h1+gap+h2+8),radius=26,fill='#e94d79');colors=('white','white')
  if big:d.text((W/2,top+h1/2),title,font=big,anchor='mm',fill=colors[0],stroke_width=stroke,stroke_fill='#11151c')
- if small:d.text((W/2,top+h1+gap+h2/2),subtitle,font=small,anchor='mm',fill=colors[1],stroke_width=0 if style=='ribbon' else round(stroke*.8),stroke_fill='#11151c')
+ if small:d.text((W/2,top+h1+gap+h2/2),subtitle,font=small,anchor='mm',fill=colors[1],stroke_width=0 if style in ('ribbon','box') else round(stroke*.8),stroke_fill='#11151c')
  canvas.alpha_composite(layer)
 
 def compose(chosen,dest,title='',subtitle='',style='pop',text=True,size=SIZE):

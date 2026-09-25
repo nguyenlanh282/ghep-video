@@ -41,6 +41,8 @@ function buildValueControls() {
       v = +v.toFixed(3); range.value = v; out.textContent = formatValue(fmt, v);
       $$('.step', el).forEach(b => b.disabled = (+b.dataset.d < 0 ? v <= min : v >= max));
       if (key === 'captionY') $('#frame').style.setProperty('--cap-y', (v * 100) + '%');
+      if (key === 'titleScale') $('#frame').style.setProperty('--ts', v);
+      if (key === 'subScale') $('#frame').style.setProperty('--ss', v);
       return v;
     };
     range.addEventListener('input', () => commit(apply(+range.value)));
@@ -379,6 +381,28 @@ function paintTitle() {
   const st = S.settings.titleStyle, ov = $('#titleOv');
   $('#t1').textContent = S.settings.title; $('#t2').textContent = S.settings.subtitle;
   ov.className = 'title-ov ' + st;
+  $('#frame').style.setProperty('--sf', FONT_CSS[S.settings.subFont] || 'Arial');
+}
+const FONT_CSS = {arial: 'Arial', tahoma: 'Tahoma', verdana: 'Verdana', georgia: 'Georgia', times: "'Times New Roman'"};
+// Same entrance effects as the export (renderer.title_overlay).
+const backOut = (p, c = 1.9) => 1 + (c + 1) * (p - 1) ** 3 + c * (p - 1) ** 2;
+function bounceOut(p) {
+  const n = 7.5625, d = 2.75;
+  if (p < 1 / d) return n * p * p;
+  if (p < 2 / d) return n * (p -= 1.5 / d) * p + .75;
+  if (p < 2.5 / d) return n * (p -= 2.25 / d) * p + .9375;
+  return n * (p -= 2.625 / d) * p + .984375;
+}
+function titleMotion(effect, t, secs) {
+  let z = 1, x = 0, y = 0, k = 1, clip = '';
+  if (effect === 'bounce' || effect === 'pulse') {
+    z = .35 + .65 * backOut(Math.min(1, t / .45)); k = Math.min(1, t / .12);
+    if (effect === 'pulse' && t > .45) z = 1 + .045 * Math.sin(2 * Math.PI * 1.4 * (t - .45));
+  } else if (effect === 'slide') x = -100 * (1 - Math.min(1, t / .35)) ** 3;
+  else if (effect === 'drop') { y = -130 * (1 - bounceOut(Math.min(1, t / .7))); k = Math.min(1, t / .15); }
+  else if (effect === 'wipe') { const p = Math.min(1, t / .6); clip = p < 1 ? `inset(0 ${100 - 100 * (.15 + .85 * p)}% 0 0)` : ''; }
+  else k = Math.min(1, t / .25);
+  return {transform: `translate(${x}%, ${y}%) scale(${z})`, opacity: Math.max(0, Math.min(k, (secs - t) / .3)), clip};
 }
 
 let capKey = '';
@@ -387,11 +411,11 @@ function tick() {
   $('#time').textContent = String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(Math.floor(t % 60)).padStart(2, '0');
   if (S && !showingResult) {
     const st = S.settings.titleStyle, ov = $('#titleOv');
-    ov.hidden = st === 'none' || t >= 3.4;
+    const secs = +S.settings.titleSeconds || 3;
+    ov.hidden = st === 'none' || t >= secs;
     if (!ov.hidden) {
-      if (st === 'pop') ov.style.transform = `scale(${0.86 + 0.14 * Math.min(1, t / 0.22)})`;
-      else if (st === 'card') ov.style.transform = `translateX(${-100 * Math.pow(1 - Math.min(1, t / 0.26), 3)}%)`;
-      else ov.style.transform = '';
+      const m = titleMotion(S.settings.titleEffect || 'bounce', t, secs);
+      ov.style.transform = m.transform; ov.style.opacity = m.opacity; ov.style.clipPath = m.clip;
     }
     // The line holds until the next one starts (max 1.5 s after its last word): no blinking between phrases.
     let g = null;

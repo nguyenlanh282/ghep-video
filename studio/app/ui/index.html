@@ -126,10 +126,14 @@
     <input type="text" data-key="title" placeholder="Tiêu đề chính">
     <input type="text" data-key="subtitle" placeholder="Dòng thứ hai">
     <div class="styles" data-choice="titleStyle">
-      <button data-value="pop" style="--c:var(--accent)"><i>Aa</i><span><b>Nổi bật</b><small>Chữ đậm • phóng nhẹ</small></span></button>
-      <button data-value="card" style="--c:#ffd54a"><i>Aa</i><span><b>Khung tối</b><small>Nền tối • trượt vào</small></span></button>
+      <button data-value="pop" style="--c:var(--accent)"><i>Aa</i><span><b>Nổi bật</b><small>Chữ trắng viền đậm</small></span></button>
+      <button data-value="card" style="--c:#ffd54a"><i>Aa</i><span><b>Khung tối</b><small>Khung tối viền vàng</small></span></button>
       <button data-value="ribbon" style="--c:#f37aa5"><i>Aa</i><span><b>Dải màu</b><small>Nhấn dòng thứ hai</small></span></button>
+      <button data-value="box" style="--c:#ffd54a"><i>Aa</i><span><b>Nền vàng</b><small>Chữ đen trên nền vàng</small></span></button>
     </div>
+    <span class="hint">Hiệu ứng xuất hiện</span>
+    <div class="seg wide effects" data-seg="titleEffect"><button data-value="bounce">Nảy</button><button data-value="slide">Trượt</button><button data-value="drop">Rơi</button><button data-value="wipe">Quét</button><button data-value="pulse">Nhịp đập</button><button data-value="fade">Hiện dần</button></div>
+    <div class="value" data-value-key="titleScale" data-min="0.6" data-max="1.6" data-step="0.1" data-format="percent">Cỡ tiêu đề</div>
     <label class="switch"><input type="checkbox" id="showTitle"><span></span>Hiện tiêu đề</label>
     <div class="value" data-value-key="titleSeconds" data-min="1" data-max="5" data-step="0.5" data-format="seconds">Tiêu đề hiện trong</div>
 
@@ -142,6 +146,9 @@
       <button data-value="pill" style="--c:#f37aa5"><i>Aa</i><span><b>Karaoke hồng</b><small>Chữ cố định • đổi màu từng từ</small></span></button>
     </div>
     <div class="seg wide" data-seg="subStyle"><button data-value="plain">Chữ trắng</button><button data-value="none">Không phụ đề</button></div>
+    <div class="value" data-value-key="subScale" data-min="0.6" data-max="1.6" data-step="0.1" data-format="percent">Cỡ chữ phụ đề</div>
+    <span class="hint">Kiểu chữ phụ đề</span>
+    <div class="seg wide fonts" data-seg="subFont"><button data-value="arial" style="font-family:Arial">Arial</button><button data-value="tahoma" style="font-family:Tahoma">Tahoma</button><button data-value="verdana" style="font-family:Verdana">Verdana</button><button data-value="georgia" style="font-family:Georgia">Georgia</button><button data-value="times" style="font-family:'Times New Roman'">Times</button></div>
     <div class="value" data-value-key="captionY" data-min="0.5" data-max="0.9" data-step="0.01" data-format="height">Vị trí phụ đề</div>
     <p class="hint">Số càng nhỏ chữ càng cao. Khoảng 70–75% để không bị phần mô tả của TikTok/Reels che.</p>
 

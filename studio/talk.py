@@ -365,13 +365,14 @@ def render_variant(project, job, aspect, first, last, title, dest, tmp, progress
     dec = subprocess.Popen([FFMPEG, '-v', 'error', '-f', 'concat', '-safe', '0', '-i', str(concat), '-frames:v', str(nframes), '-fps_mode', 'passthrough', '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'], stdout=subprocess.PIPE, **NOWIN)
     enc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE, **NOWIN); R.CHILDREN.extend([dec, enc])
     # Captions: same steady karaoke line as the main mode, sized to the shorter side so every aspect reads alike.
-    size = round(60 * min(W, H) / 1080); font = ImageFont.truetype(R.FONT, size)
-    groups = R.groups_for(out_words, max_width=min(.83 * W, 1150) * 40 / size)
+    sub_scale = max(.6, min(1.6, float(job.get('subScale', 1) or 1))); sub_font = R.font_path(job.get('subFont', 'arial'))
+    size = round(60 * min(W, H) / 1080 * sub_scale); font = ImageFont.truetype(sub_font, size)
+    groups = R.groups_for(out_words, max_width=min(.83 * W, 1150) * 40 / size, font_file=sub_font)
     cy = CAPTION_Y[aspect] or float(job.get('captionY', .73))
     positions = [R.caption_layout(g, font, W, H, cy) for g in groups]; top, bh = R.caption_band(font, H, cy)
     tw = min(W, 1080); tjob = dict(job, title=title[0], subtitle=title[1])
     title_img = R.make_title(tjob, tw, H) if job.get('titleStyle', 'pop') != 'none' and (title[0] or title[1]) else None
-    ty = round(H * (.21875 if aspect == '9:16' else .12)); title_secs = max(.5, min(6, float(job.get('titleSeconds', 3)))); style = job.get('subStyle', 'sweep'); gi = 0; key = None; cap = None; last_frame = None
+    ty = round(H * (.21875 if aspect == '9:16' else .12)); title_secs = max(.5, min(6, float(job.get('titleSeconds', 3)))); effect = R.title_effect(job); style = job.get('subStyle', 'sweep'); gi = 0; key = None; cap = None; last_frame = None
     try:
         for n in range(nframes):
             data = dec.stdout.read(W * H * 3)
@@ -380,8 +381,8 @@ def render_variant(project, job, aspect, first, last, title, dest, tmp, progress
                 data = last_frame  # a frame or two short at the very end: hold the last picture
             last_frame = data
             im = Image.frombytes('RGB', (W, H), data); t = n / FPS
-            shown = R.title_overlay(title_img, job.get('titleStyle', 'pop'), t, title_secs, W) if title_img else None
-            if shown: im.paste(shown[0], (shown[1], ty), shown[0])
+            shown = R.title_overlay(title_img, effect, t, title_secs, W) if title_img else None
+            if shown: im.paste(shown[0], (shown[1], ty + shown[2]), shown[0])
             if style != 'none' and groups:
                 while gi + 1 < len(groups) and groups[gi + 1][0]['start'] <= t: gi += 1
                 g = groups[gi]

@@ -3,7 +3,7 @@ import wave
 import numpy as np
 import hashlib, json, math, os, re, shutil, subprocess, sys, tempfile, time, unicodedata
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFont
 
 from platform_tools import FFMPEG, FFPROBE, NOWIN, font_path, transcribe, utf8_stdio
 import platform_tools
@@ -160,10 +160,10 @@ def phrases_for(words):
  if current:phrases.append(current)
  return phrases
 
-def groups_for(words,max_width=600,max_words=7):
+def groups_for(words,max_width=600,max_words=7,font_file=None):
  """One steady line per phrase. A phrase ends at punctuation or a pause; a long phrase is split
  into lines of near-equal length so no line is left with a lone trailing word."""
- font=ImageFont.truetype(FONT,40);fits=lambda g:len(g)<=max_words and font.getlength(' '.join(w['text'] for w in g))<=max_width
+ font=ImageFont.truetype(font_file or FONT,40);fits=lambda g:len(g)<=max_words and font.getlength(' '.join(w['text'] for w in g))<=max_width
  groups=[]
  for phrase in phrases_for(words):
   for parts in range(1,len(phrase)+1):
@@ -349,37 +349,85 @@ def caption_layout(group,font,W,H,y=CAPTION_Y):
   positions[j]=(x,H*y);x+=font.getlength(w['text'])+space
  return positions
 
+TITLE_EFFECTS=('bounce','slide','drop','wipe','pulse','fade')
+
+def title_scale(job):return max(.6,min(1.6,float(job.get('titleScale',1) or 1)))
+
+def title_effect(job):
+ """Chosen entrance effect; older settings had it tied to the look (pop zoomed, card slid in)."""
+ e=job.get('titleEffect','')
+ return e if e in TITLE_EFFECTS else {'pop':'bounce','card':'slide'}.get(job.get('titleStyle','pop'),'fade')
+
 def make_title(job,W,H):
- scale=W/720;layer=Image.new('RGBA',(W,round(270*scale)));d=ImageDraw.Draw(layer)
+ """Opening title layer, full frame width. Heavy outline plus a soft drop shadow so it stands out on any picture."""
+ scale=W/720*title_scale(job)
  title=job.get('title','VỢ CHỒNG').strip();subtitle=job.get('subtitle','Ai làm việc nhà?').strip();style=job.get('titleStyle','pop')
+ layer=Image.new('RGBA',(W,round(290*scale)));d=ImageDraw.Draw(layer)
  if style=='none' or not (title or subtitle):return layer
  def fit(text,size):
   f=ImageFont.truetype(FONT,round(size*scale))
-  while f.getlength(text)>W*.84 and f.size>14*scale:f=ImageFont.truetype(FONT,f.size-1)
+  while f.getlength(text)>W*.86 and f.size>14:f=ImageFont.truetype(FONT,f.size-1)
   return f
- big=fit(title,62);small=fit(subtitle,45)
+ big=fit(title,64);small=fit(subtitle,46);y1,y2=70*scale,156*scale
+ def box(text,font,y,fill,pad=1):
+  w=font.getlength(text);h=font.size
+  d.rounded_rectangle((W/2-w/2-22*scale*pad,y-h*.72,W/2+w/2+22*scale*pad,y+h*.68),radius=14*scale,fill=fill)
  if style=='card':
-  d.rounded_rectangle((W*.07,12*scale,W*.93,213*scale),radius=24*scale,fill=(15,18,26,225));colors=['white','#ffd54a'];stroke=0
+  d.rounded_rectangle((W*.05,12*scale,W*.95,215*scale),radius=24*scale,fill=(15,18,26,235))
+  d.rounded_rectangle((W*.05,12*scale,W*.05+10*scale,215*scale),radius=5*scale,fill='#ffd54a')
+  colors=['white','#ffd54a'];strokes=[0,0]
  elif style=='ribbon':
-  d.rounded_rectangle((W*.04,113*scale,W*.96,193*scale),radius=15*scale,fill='#e94d79');colors=['white','white'];stroke=round(4*scale)
- else:colors=['white','#9cfa68'];stroke=round(4*scale)
- d.text((W/2,68*scale),title,font=big,anchor='mm',fill=colors[0],stroke_width=stroke,stroke_fill='#151a22')
- d.text((W/2,152*scale),subtitle,font=small,anchor='mm',fill=colors[1],stroke_width=0 if style=='ribbon' else stroke,stroke_fill='#151a22')
- return layer
+  d.rounded_rectangle((W*.04,113*scale,W*.96,197*scale),radius=15*scale,fill='#e94d79');colors=['white','white'];strokes=[round(5*scale),0]
+ elif style=='box':
+  if title:box(title,big,y1,'#ffd54a')
+  if subtitle:box(subtitle,small,y2,(20,22,30,235),.8)
+  colors=['#151a22','white'];strokes=[0,0]
+ else:colors=['white','#9cfa68'];strokes=[round(6*scale),round(5*scale)]
+ text=Image.new('RGBA',layer.size);t=ImageDraw.Draw(text)
+ t.text((W/2,y1),title,font=big,anchor='mm',fill=colors[0],stroke_width=strokes[0],stroke_fill='#151a22')
+ t.text((W/2,y2),subtitle,font=small,anchor='mm',fill=colors[1],stroke_width=strokes[1],stroke_fill='#151a22')
+ layer.alpha_composite(text)
+ # Drop shadow of the whole block (boxes and letters), offset down, blurred.
+ from PIL import ImageFilter
+ shadow=Image.new('RGBA',layer.size,(0,0,0,0));alpha=layer.getchannel('A').point(lambda v:int(v*.65)).filter(ImageFilter.GaussianBlur(7*scale))
+ shadow.putalpha(alpha);out=Image.new('RGBA',layer.size);out.alpha_composite(shadow,(0,round(6*scale)));out.alpha_composite(layer)
+ return out
 
-def title_overlay(title,style,t,secs,frame_w):
- """(image, x) of the opening title at time t, or None once its time is up. Pop zooms in, card slides in; all fade out
- over the last 0.3 s instead of vanishing."""
+def _back(p,c=1.9):return 1+(c+1)*(p-1)**3+c*(p-1)**2  # ease-out with a small overshoot
+def _bounce(p):
+ n,dd=7.5625,2.75
+ if p<1/dd:return n*p*p
+ if p<2/dd:p-=1.5/dd;return n*p*p+.75
+ if p<2.5/dd:p-=2.25/dd;return n*p*p+.9375
+ p-=2.625/dd;return n*p*p+.984375
+
+def _alpha(img,k):
+ if k>=1:return img
+ img=img.copy();img.putalpha(img.getchannel('A').point(lambda v:int(v*k)));return img
+
+def title_overlay(title,effect,t,secs,frame_w):
+ """(image, x, dy) of the opening title at time t, or None once its time is up.
+ bounce: pops in with an overshoot · slide: slides in from the left · drop: falls in and bounces · wipe: revealed
+ left to right · pulse: pops in then beats gently · fade: fades in. Every effect fades out over the last 0.3 s."""
  if t>=secs:return None
- if style=='pop':
-  z=.86+.14*min(1,t/.22);ov=title if z>=1 else title.resize((round(title.width*z),round(title.height*z)),Image.Resampling.LANCZOS)
-  x=(frame_w-ov.width)//2
- elif style=='card':ov=title;x=round((frame_w-title.width)/2-frame_w*(1-min(1,t/.26))**3)
- else:ov=title;x=(frame_w-title.width)//2
- fade=min(1,(secs-t)/.3)
- if fade<1:
-  ov=ov.copy();ov.putalpha(ov.getchannel('A').point(lambda v:int(v*fade)))
- return ov,x
+ ov=title;x=(frame_w-title.width)//2;dy=0;k=1
+ def zoom(z):
+  nonlocal ov,x,dy
+  if abs(z-1)<.004:return
+  ov=title.resize((max(1,round(title.width*z)),max(1,round(title.height*z))),Image.Resampling.BICUBIC)
+  x=(frame_w-ov.width)//2;dy=(title.height-ov.height)//2
+ if effect in ('bounce','pulse'):
+  p=min(1,t/.45);zoom(.35+.65*_back(p));k=min(1,t/.12)
+  if effect=='pulse' and t>.45:zoom(1+.045*math.sin(2*math.pi*1.4*(t-.45)))
+ elif effect=='slide':x=round(x-frame_w*(1-min(1,t/.35))**3)
+ elif effect=='drop':p=min(1,t/.7);dy=round(-title.height*1.3*(1-_bounce(p)));k=min(1,t/.15)
+ elif effect=='wipe':
+  p=min(1,t/.6)
+  if p<1:
+   edge=round(title.width*(.15+.85*p));mask=Image.new('L',title.size,0);ImageDraw.Draw(mask).rectangle((0,0,edge,title.height),fill=255)
+   ov=title.copy();ov.putalpha(ImageChops.multiply(title.getchannel('A'),mask))
+ else:k=min(1,t/.25)
+ return _alpha(ov,min(k,(secs-t)/.3)),x,dy
 
 HIGHLIGHT={'active':'#9cfa68','sweep':'#ffd54a','pill':'#f37aa5'}
 
@@ -389,7 +437,7 @@ def caption_band(font,H,y=CAPTION_Y):
 
 def caption_image(group,positions,font,style,active,W,top,height):
  """Words never move: same position and size every frame, only the spoken word changes colour."""
- layer=Image.new('RGBA',(W,height));d=ImageDraw.Draw(layer);sw=max(2,round(W/240));highlight=HIGHLIGHT.get(style)
+ layer=Image.new('RGBA',(W,height));d=ImageDraw.Draw(layer);sw=max(2,round(font.size/13));highlight=HIGHLIGHT.get(style)
  for j,w in enumerate(group):
   x,y=positions[j]
   d.text((x,y-top),w['text'],font=font,anchor='ls',fill=highlight if highlight and j==active else 'white',stroke_width=sw,stroke_fill='#171717')
@@ -413,7 +461,8 @@ def render(job):
  audio_duration=float(probe(audio)['format']['duration']);duration=min(audio_duration,20) if job.get('preview') else audio_duration
  # Spelling fixes come from the app (Sửa chữ nhận dạng sai); applied before grouping so line widths are measured on the final text.
  fixes=parse_fixes(job.get('fixesText',''));apply_fixes(words,fixes)
- groups=[g for g in groups_for(words) if g[0]['start']<duration]
+ sub_scale=max(.6,min(1.6,float(job.get('subScale',1) or 1)));sub_font=font_path(job.get('subFont','arial'))
+ groups=[g for g in groups_for(words,max_width=600/sub_scale,font_file=sub_font) if g[0]['start']<duration]
  job=dict(job,removeSilence=job.get('removeSilence',True),faceAwareFill=face_aware,originalDuration=original_duration,editedDuration=audio_duration,keptAudioRanges=keep,spellingFixes=fixes)
  emit(8,'Đang chuẩn bị cảnh quay…')
  details=[]
@@ -487,15 +536,15 @@ def render(job):
    else:cmd+=['-filter_complex',f'{voice}[voice]alimiter=limit=0.79:level=0[a]','-map','0:v','-map','[a]']
    cmd+=['-t',str(duration),'-c:v','libx264','-preset','fast','-crf','20','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','-movflags','+faststart',str(movie)]
    enc=subprocess.Popen(cmd,stdin=subprocess.PIPE,stderr=enc_log,**NOWIN);CHILDREN.append(enc)
-   style=job.get('subStyle','active');title_style=job.get('titleStyle','pop')
-   font=ImageFont.truetype(FONT,round(40*W/720));cap_y=max(.5,min(.9,float(job.get('captionY',CAPTION_Y))));positions=[caption_layout(g,font,W,H,cap_y) for g in groups];band_top,band_h=caption_band(font,H,cap_y)
+   style=job.get('subStyle','active');title_style=job.get('titleStyle','pop');effect=title_effect(job)
+   font=ImageFont.truetype(sub_font,round(40*W/720*sub_scale));cap_y=max(.5,min(.9,float(job.get('captionY',CAPTION_Y))));positions=[caption_layout(g,font,W,H,cap_y) for g in groups];band_top,band_h=caption_band(font,H,cap_y)
    title=make_title(job,W,H);title_y=round(H*.21875);title_secs=max(.5,min(6,float(job.get('titleSeconds',3))));gi=0;nframes=round(duration*fps);cached_key=None;cached=None
    for n in range(nframes):
     data=dec.stdout.read(W*H*3)
     if len(data)!=W*H*3:raise RuntimeError(f'Video nguồn kết thúc ở khung {n}/{nframes} ({len(data)} byte).')
     im=Image.frombytes('RGB',(W,H),data);t=n/fps
-    shown=title_overlay(title,title_style,t,title_secs,W) if title_style!='none' else None
-    if shown:im.paste(shown[0],(shown[1],title_y),shown[0])
+    shown=title_overlay(title,effect,t,title_secs,W) if title_style!='none' else None
+    if shown:im.paste(shown[0],(shown[1],title_y+shown[2]),shown[0])
     if style!='none' and groups:
      while gi+1<len(groups) and groups[gi+1][0]['start']<=t:gi+=1
      g=groups[gi]

@@ -41,16 +41,30 @@ function keepRanges(words, duration) {
 }
 
 /* ---------- settings panel ---------- */
+// − / slider / + rows (same control as the Ghép ảnh page): <div class="value" data-value-key data-min data-max data-step data-format>Label</div>
+function buildValueControls() {
+  const fmt = (f, v) => f === 'percent' ? Math.round(v * 100) + '%' : f === 'seconds' ? v.toFixed(1).replace('.', ',') + ' giây' : String(v);
+  for (const el of $$('.value[data-value-key]')) {
+    const key = el.dataset.valueKey, min = +el.dataset.min, max = +el.dataset.max, step = +el.dataset.step, label = el.textContent.trim();
+    el.innerHTML = `<span class="label">${label}</span><span class="out"></span><div class="ctl"><button class="step" data-d="-1" aria-label="Giảm ${label.toLowerCase()}">−</button><input type="range" min="${min}" max="${max}" step="${step}" aria-label="${label}"><button class="step" data-d="1" aria-label="Tăng ${label.toLowerCase()}">+</button></div>`;
+    const range = $('input', el), commit = debounce(v => set({[key]: v}), 250);
+    const apply = v => {
+      v = +Math.min(max, Math.max(min, Math.round(v / step) * step)).toFixed(3); range.value = v; $('.out', el).textContent = fmt(el.dataset.format, v);
+      $$('.step', el).forEach(b => b.disabled = +b.dataset.d < 0 ? v <= min : v >= max); return v;
+    };
+    range.addEventListener('input', () => commit(apply(+range.value)));
+    $$('.step', el).forEach(b => b.addEventListener('click', () => commit(apply(+range.value + (+b.dataset.d) * step))));
+    el._apply = apply;
+  }
+}
+
 function renderState(st) {
   const prev = S && S.job; S = st; const s = st.settings, job = st.job;
   $$('input[type=checkbox][data-key]').forEach(cb => cb.checked = !!s[cb.dataset.key]);
   $$('[data-seg]').forEach(seg => $$('button', seg).forEach(b => b.classList.toggle('on', s[seg.dataset.seg] === b.dataset.value)));
   $$('[data-choice]').forEach(box => $$('button', box).forEach(b => b.classList.toggle('on', s[box.dataset.choice] === b.dataset.value)));
   $$('[data-path]').forEach(el => { const p = s[el.dataset.path]; if (p) { el.textContent = base(p); el.closest('button').title = p; } });
-  const secs = +s.titleSeconds || 3; const tr = $('#titleSecs input');
-  if (document.activeElement !== tr) tr.value = secs;
-  $('#titleSecsOut').textContent = secs.toFixed(1).replace('.', ',') + ' giây';
-  $$('#titleSecs .step').forEach(b => b.disabled = +b.dataset.d < 0 ? secs <= 1 : secs >= 5);
+  $$('.value[data-value-key]').forEach(el => { if (el._apply && !el.contains(document.activeElement)) el._apply(+s[el.dataset.valueKey]); });
   const aspects = (s.talkAspects || '9:16').split(',');
   $$('#aspects input').forEach(i => i.checked = aspects.includes(i.value));
   const ai = st.ai;
@@ -225,10 +239,7 @@ function wire() {
   $('#cancelBtn').addEventListener('click', () => api('cancel'));
   $('#viewSeg').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b && !b.disabled) { preferRaw = b.dataset.view === 'raw'; setView(b.dataset.view, true); } });
   $('#editedPick').addEventListener('click', e => { const b = e.target.closest('[data-export]'); if (b) { currentExport = +b.dataset.export; setView('edited', true); } });
-  const titleSet = debounce(v => set({titleSeconds: v}), 250);
-  const titleApply = v => { v = Math.min(5, Math.max(1, Math.round(v * 2) / 2)); $('#titleSecs input').value = v; $('#titleSecsOut').textContent = v.toFixed(1).replace('.', ',') + ' giây'; titleSet(v); };
-  $('#titleSecs input').addEventListener('input', e => titleApply(+e.target.value));
-  $$('#titleSecs .step').forEach(b => b.addEventListener('click', () => titleApply(+$('#titleSecs input').value + (+b.dataset.d) * .5)));
+  buildValueControls();
   $('#errorClose').addEventListener('click', () => api('clearError'));
   $('#openFolder').addEventListener('click', () => api('reveal'));
 

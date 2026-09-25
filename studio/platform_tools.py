@@ -27,10 +27,17 @@ def tool(name):
 
 FFMPEG=tool('ffmpeg');FFPROBE=tool('ffprobe')
 
-def font_path():
- for p in ('/System/Library/Fonts/Supplemental/Arial Bold.ttf',
-           os.path.join(os.environ.get('WINDIR','C:\\Windows'),'Fonts','arialbd.ttf'),
-           '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',str(HERE/'fonts'/'Arial Bold.ttf')):
+# Caption fonts: bold faces that ship with both macOS and Windows and cover every Vietnamese letter
+# (Arial Black / Narrow / Rounded, Trebuchet and Comic Sans lack the stacked diacritics, so they are not offered).
+FONTS={'arial':('Arial Bold.ttf','arialbd.ttf'),'tahoma':('Tahoma Bold.ttf','tahomabd.ttf'),'verdana':('Verdana Bold.ttf','verdanab.ttf'),
+       'georgia':('Georgia Bold.ttf','georgiab.ttf'),'times':('Times New Roman Bold.ttf','timesbd.ttf')}
+
+def font_path(name='arial'):
+ mac,win=FONTS.get(name,FONTS['arial'])
+ for p in ('/System/Library/Fonts/Supplemental/'+mac,os.path.join(os.environ.get('WINDIR','C:\\Windows'),'Fonts',win),str(HERE/'fonts'/mac)):
+  if Path(p).exists():return p
+ if name!='arial':return font_path()
+ for p in ('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',):
   if Path(p).exists():return p
  raise RuntimeError('Không tìm thấy font Arial Bold trên máy.')
 
