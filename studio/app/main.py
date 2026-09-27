@@ -39,8 +39,10 @@ DEFAULTS=dict(mediaFolder=str(find_child(ROOT,'Video - ảnh')),audio=first_audi
  shotSeconds=2.5,removeSilence=True,faceAwareFill=True,resolution='1080',fixesText='xòng => sòng\nđận => đần',
  matchScenes=True,stockEnabled=False,stockSource='auto',pexelsKey='',pixabayKey='',updateManifest='',captionY=.73,aiProvider='auto',titleSeconds=3.0,
  titleScale=1.0,titleEffect='bounce',subScale=1.0,subFont='arial',
+ # colour grade of both modes (JSON: slider values + chosen look) and the user's saved grades (JSON list)
+ grade='{}',gradePresets='[]',
  # Video chia sẻ (talking-video editor)
- talkVideo='',talkBrollFolder=str(find_child(ROOT,'Video - ảnh')),talkBroll=True,talkDensity='vua',talkAspects='9:16',
+ talkVideo='',talkVideos='[]',talkBrollFolder=str(find_child(ROOT,'Video - ảnh')),talkBroll=True,talkDensity='vua',talkAspects='9:16',
  talkPunchIn=True,talkDenoise=True,talkRetakes=True,talkKeywords=True,talkShorts=True)
 TALK_DENSITY={'it':.18,'vua':.3,'nhieu':.45}
 SECRET_KEYS={'pexelsKey','pixabayKey'}
@@ -65,7 +67,8 @@ class Studio:
   for k in ('mediaFolder','outputFolder'):
    if not Path(self.settings[k]).is_dir():self.settings[k]=DEFAULTS[k]
   if self.settings['audio'] and not Path(self.settings['audio']).is_file():self.settings['audio']=DEFAULTS['audio']
-  if self.settings['talkVideo'] and not Path(self.settings['talkVideo']).is_file():self.settings['talkVideo']=''
+  vids=self.talk_videos()  # drops raw videos that are gone
+  self.settings['talkVideos']=json.dumps(vids,ensure_ascii=False);self.settings['talkVideo']=vids[0] if vids else ''
   # A fresh copy on a new computer: create the project's media and output folders.
   for k in ('mediaFolder','outputFolder'):
    if self.settings[k]==DEFAULTS[k]:Path(self.settings[k]).mkdir(parents=True,exist_ok=True)
@@ -86,6 +89,7 @@ class Studio:
    elif want is bool:v=bool(v)
    else:v=str(v)
    self.settings[k]=v
+  if 'talkVideos' in values:vids=self.talk_videos();self.settings['talkVideos']=json.dumps(vids,ensure_ascii=False);self.settings['talkVideo']=vids[0] if vids else ''
   self.save();return self.state()
 
  # ---- state for the UI ----
@@ -106,7 +110,9 @@ class Studio:
   # Only the last 4 characters ever reach the UI, so the saved key can be recognised without exposing it.
   s.update({k+'Hint':('••••'+self.settings[k][-4:]) if self.settings[k] else '' for k in SECRET_KEYS})
   notes=self.analysis()
-  return dict(settings=s,mediaCount=len(self.media_names()),notes=notes,analyzedCount=len(notes),sceneCount=sum(n['scenes'] for n in notes),
+  import renderer
+  looks=[dict(id=k,name=n,grade=g) for k,(n,g) in renderer.LOOKS.items()]
+  return dict(grade=dict(looks=looks,presets=self.grade_presets()),settings=s,mediaCount=len(self.media_names()),notes=notes,analyzedCount=len(notes),sceneCount=sum(n['scenes'] for n in notes),
    job=dict(self.job),platform='windows' if WINDOWS else 'mac' if MAC else 'linux',version=updater.current_version(),ai=self.ai_state(),
    update=self.update_info,thumbs=[dict(id=c['id'],preview=self.url(c['preview']),fits=c.get('fits',True),tilt=c.get('tilt',0),
     source=c['source'],time=c.get('time'),upload=c.get('upload',False)) for c in self.thumbs],thumbSaved=self.thumb_saved,backups=[p.stem for p in updater.backups(DATA)][:3],updateConfigured=bool(updater.manifest_url(self.settings)),
@@ -129,8 +135,11 @@ class Studio:
   dialog=getattr(webview,'FileDialog',None)
   kind_folder=dialog.FOLDER if dialog else webview.FOLDER_DIALOG;kind_open=dialog.OPEN if dialog else webview.OPEN_DIALOG
   types=() if folder else ('Video (*.mp4;*.mov;*.m4v;*.mkv;*.webm)','Tất cả (*.*)') if kind=='talkVideo' else ('Âm thanh (*.m4a;*.mp3;*.wav;*.aac;*.flac;*.ogg)','Tất cả (*.*)')
-  picked=self.window.create_file_dialog(kind_folder if folder else kind_open,directory=start,file_types=types)
+  picked=self.window.create_file_dialog(kind_folder if folder else kind_open,directory=start,file_types=types,allow_multiple=kind=='talkVideo')
   if not picked:return self.state()
+  if kind=='talkVideo':  # several raw videos, added after the ones already chosen, numbered in that order
+   paths=list(picked) if isinstance(picked,(list,tuple)) else [picked]
+   return self.set_talk_videos(self.talk_videos()+[p for p in paths if p not in self.talk_videos()])
   path=picked[0] if isinstance(picked,(list,tuple)) else picked
   return self.set({keys[kind]:path})
 
@@ -171,9 +180,9 @@ class Studio:
   s=self.settings;names=self.media_names()
   if not names and task in ('render','analyze','undo'):return self.fail('Hãy chọn thư mục có ảnh hoặc video.')
   if task in ('talk-analyze','talk-render'):
-   if not Path(s['talkVideo']).is_file():return self.fail('Hãy chọn video thô.')
+   if not self.talk_videos():return self.fail('Hãy chọn video thô.')
    if task=='talk-render' and not self.talk_project():return self.fail('Hãy bấm “Phân tích video” trước.')
-   job=dict(video=s['talkVideo'],projectDir=str(self.talk_dir()),cacheFolder=str(self.cache()),brollFolder=s['talkBrollFolder'],broll=s['talkBroll'],
+   job=dict(video=self.talk_videos()[0],videos=self.talk_videos(),grade=self.grade(),projectDir=str(self.talk_dir()),cacheFolder=str(self.cache()),brollFolder=s['talkBrollFolder'],broll=s['talkBroll'],
             brollDensity=TALK_DENSITY.get(s['talkDensity'],.3),stockEnabled=s['stockEnabled'],stockSource=s['stockSource'],cutRetakes=s['talkRetakes'],
             fixesText=s['fixesText'],outputFolder=s['outputFolder'],titleStyle=s['titleStyle'],titleSeconds=s['titleSeconds'],titleScale=s['titleScale'],titleEffect=s['titleEffect'],subScale=s['subScale'],subFont=s['subFont'],subStyle=s['subStyle'],captionY=s['captionY'],
             aspects=[a for a in s['talkAspects'].split(',') if a],exportShorts=s['talkShorts'],punchIn=s['talkPunchIn'],denoise=s['talkDenoise'],
@@ -188,7 +197,7 @@ class Studio:
    if not Path(s['outputFolder']).is_dir():return self.fail('Hãy chọn thư mục lưu video.')
    analysed=len(self.analysis())>0
    job={k:s[k] for k in ('mediaFolder','audio','music','outputFolder','title','subtitle','titleStyle','subStyle','musicVolume','shotSeconds','resolution','removeSilence','faceAwareFill','fixesText','voiceVolume','normalizeVoice','stockSource','captionY','titleSeconds','titleScale','titleEffect','subScale','subFont')}
-   job.update(preview=bool(preview),cacheFolder=str(self.cache()),matchScenes=s['matchScenes'] and analysed,stockEnabled=s['stockEnabled'] and s['matchScenes'] and analysed,aiPython=sys.executable)
+   job.update(preview=bool(preview),grade=self.grade(),cacheFolder=str(self.cache()),matchScenes=s['matchScenes'] and analysed,stockEnabled=s['stockEnabled'] and s['matchScenes'] and analysed,aiPython=sys.executable)
    job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
    args=[str(ENGINE/'renderer.py'),str(job_file)];log='render.log';cleanup=lambda:job_file.unlink(missing_ok=True)
   elif task in ('analyze','undo'):
@@ -268,9 +277,78 @@ class Studio:
 
  # ---- Video chia sẻ ----
  def talk_dir(self):
-  v=Path(self.settings['talkVideo'])
-  key=hashlib.sha1(f'{v.resolve()}|{v.stat().st_size if v.exists() else 0}'.encode()).hexdigest()[:16]
-  return self.cache()/'talk'/key
+  vids=[Path(v) for v in self.talk_videos()]
+  sig='|'.join(f'{v.resolve()}|{v.stat().st_size if v.exists() else 0}' for v in vids)  # one video: same key as before
+  return self.cache()/'talk'/hashlib.sha1(sig.encode()).hexdigest()[:16]
+
+ def talk_videos(self):
+  try:vids=[str(v) for v in json.loads(self.settings['talkVideos'] or '[]')]
+  except Exception:vids=[]
+  if not vids and self.settings['talkVideo']:vids=[self.settings['talkVideo']]
+  return [v for v in vids if Path(v).is_file()]
+
+ def set_talk_videos(self,vids):
+  vids=[str(v) for v in vids][:50]
+  self.settings['talkVideos']=json.dumps(vids,ensure_ascii=False);self.settings['talkVideo']=vids[0] if vids else ''
+  self.save();return self.state()
+
+ def talk_videos_op(self,b):
+  vids=self.talk_videos();op=b.get('op');i=int(b.get('index',-1))
+  if op=='remove' and 0<=i<len(vids):vids.pop(i)
+  elif op=='move' and 0<=i<len(vids):
+   j=i+(1 if b.get('dir',1)>0 else -1)
+   if 0<=j<len(vids):vids[i],vids[j]=vids[j],vids[i]
+  elif op=='sort':
+   natural=lambda p:[int(x) if x.isdigit() else x.lower() for x in re.split(r'(\d+)',Path(p).name)]
+   vids.sort(key=natural)
+  elif op=='clear':vids=[]
+  return self.set_talk_videos(vids)
+
+ # ---- colour grading ----
+ def grade(self):
+  try:g=json.loads(self.settings['grade'] or '{}')
+  except Exception:g={}
+  return g if isinstance(g,dict) else {}
+
+ def grade_presets(self):
+  try:p=json.loads(self.settings['gradePresets'] or '[]')
+  except Exception:p=[]
+  return [x for x in p if isinstance(x,dict) and x.get('name')]
+
+ def grade_save(self,name):
+  name=str(name).strip()[:40]
+  if not name:return dict(error='Hãy đặt tên cho mẫu màu.')
+  g={k:v for k,v in self.grade().items() if k!='look'}
+  presets=[x for x in self.grade_presets() if x['name']!=name]+[dict(name=name,grade=g)]
+  return self.set({'gradePresets':json.dumps(presets[-30:],ensure_ascii=False),'grade':json.dumps(dict(g,look='mau:'+name),ensure_ascii=False)})
+
+ def grade_delete(self,name):
+  return self.set({'gradePresets':json.dumps([x for x in self.grade_presets() if x['name']!=name],ensure_ascii=False)})
+
+ def grade_preview(self,mode):
+  """Before/after stills of the current grade on a frame of the user's own footage."""
+  import renderer
+  src=None
+  if mode=='talk':src=next(iter(self.talk_videos()),None)
+  else:
+   try:
+    files=sorted(p for p in Path(self.settings['mediaFolder']).iterdir() if p.is_file() and not p.name.startswith(('.','_')) and p.suffix.lower() in MEDIA_EXT)
+    src=str(next((p for p in files if p.suffix.lower() in renderer.PHOTO),files[0])) if files else None
+   except OSError:src=None
+  demo=ENGINE/'app'/'ui'/'assets'/'demo.mp4'
+  if not src and demo.is_file():src=str(demo)
+  if not src:return dict(error='Chưa có ảnh hoặc video để xem thử màu.')
+  folder=self.cache()/'grade';folder.mkdir(parents=True,exist_ok=True)
+  before=folder/f'truoc-{hashlib.sha1(src.encode()).hexdigest()[:10]}.jpg'
+  if not before.is_file():
+   seek=[] if Path(src).suffix.lower() in renderer.PHOTO else ['-ss',str(min(3,max(0,float(renderer.probe(src)['format']['duration'])*.3)))]
+   p=subprocess.run([renderer.FFMPEG,'-v','error','-y',*seek,'-i',src,'-frames:v','1','-vf','scale=720:720:force_original_aspect_ratio=decrease','-q:v','3',str(before)],capture_output=True,**NOWIN)
+   if p.returncode or not before.is_file():return dict(error='Không lấy được khung hình để xem thử màu.')
+  after=folder/'sau.jpg';vf=renderer.grade_filter(self.grade()) or 'null'
+  p=subprocess.run([renderer.FFMPEG,'-v','error','-y','-i',str(before),'-vf',vf,'-q:v','3',str(after)],capture_output=True,**NOWIN)
+  if p.returncode:return dict(error='Chỉnh màu chưa được: '+p.stderr.decode(errors='replace')[-200:])
+  v=f'?v={time.time():.3f}'
+  return dict(before=self.url(str(before))+v,after=self.url(str(after))+v,source=Path(src).name)
 
  def talk_project(self):
   try:return json.loads((self.talk_dir()/'project.json').read_text(encoding='utf-8')) if self.settings['talkVideo'] else None
@@ -282,7 +360,10 @@ class Studio:
   exports=[]
   for r in ((p or {}).get('last_export') or {}).get('results',[]):
    if Path(r['path']).is_file():exports.append(dict(kind=r['kind'],name=Path(r['path']).name,duration=r.get('duration'),url=self.url(r['path'])))
-  return dict(project=p,videoUrl=self.url(self.settings['talkVideo']) if self.settings['talkVideo'] else None,exports=exports,
+  vids=self.talk_videos();src=(p or {}).get('source')
+  video=src if src and Path(src).is_file() else (vids[0] if vids else None)
+  return dict(project=p,videoUrl=self.url(video) if video else None,exports=exports,
+              videos=[dict(name=Path(v).name,path=v,url=self.url(v)) for v in vids],
               exportFolder=((p or {}).get('last_export') or {}).get('folder'))
 
  def talk_edit(self,b):
@@ -399,7 +480,9 @@ API={'state':lambda b:studio.state(),'set':lambda b:studio.set(b.get('values',{}
  'openNotes':lambda b:studio.open_notes(),'openLink':lambda b:studio.open_link(b.get('url','')),'clearError':lambda b:studio.clear_error(),
  'saveKey':lambda b:studio.save_key(b.get('source',''),b.get('value','')),'listen':lambda b:studio.listen(b.get('mode','mix')),
  'checkUpdate':lambda b:studio.check_update(),'applyUpdate':lambda b:studio.run_update('update'),'rollback':lambda b:studio.run_update('rollback'),
- 'restart':lambda b:studio.restart(),'talkState':lambda b:studio.talk_state(),'talkEdit':lambda b:studio.talk_edit(b),
+ 'restart':lambda b:studio.restart(),'talkVideos':lambda b:studio.talk_videos_op(b),
+ 'gradePreview':lambda b:studio.grade_preview(b.get('mode','story')),'gradeSave':lambda b:studio.grade_save(b.get('name','')),
+ 'gradeDelete':lambda b:studio.grade_delete(b.get('name','')),'talkState':lambda b:studio.talk_state(),'talkEdit':lambda b:studio.talk_edit(b),
  'thumbFind':lambda b:studio.thumb_find(),'thumbCompose':lambda b:studio.thumb_compose(b.get('ids',[]),b.get('text',True)),
  'thumbSave':lambda b:studio.thumb_save(b.get('ids',[]),b.get('text',True)),'thumbReveal':lambda b:studio.reveal(studio.thumb_saved)}
 

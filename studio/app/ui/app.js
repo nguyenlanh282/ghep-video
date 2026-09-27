@@ -69,6 +69,7 @@ function wire() {
   }));
   $('#showTitle').addEventListener('change', e => set({titleStyle: e.target.checked ? 'pop' : 'none'}).then(replaySample));
   $$('[data-choose]').forEach(b => b.addEventListener('click', () => choose(b.dataset.choose)));
+  if (window.Grade) Grade.init($('#gradeBox'), api);
 
   $('#analyzeBtn').addEventListener('click', () => api('start', {task: 'analyze'}).then(poll));
   $('#undoBtn').addEventListener('click', () => { if (confirm('Trả lại tên gốc cho tất cả tư liệu đã đổi tên?')) api('start', {task: 'undo'}).then(poll); });
@@ -261,6 +262,7 @@ async function startRender(preview) {
 /* ---------- state → DOM ---------- */
 function render(state) {
   const prevJob = S && S.job; S = state; const s = state.settings, job = state.job;
+  if (window.Grade) Grade.update(state);
   $$('input[type=checkbox][data-key]').forEach(cb => cb.checked = !!s[cb.dataset.key]);
   $$('input[type=text][data-key], textarea[data-key]').forEach(inp => { if (document.activeElement !== inp) inp.value = s[inp.dataset.key] ?? ''; });
   $$('.value').forEach(el => { if (!el.contains(document.activeElement) || el._apply) el._apply(+s[el.dataset.valueKey]); });

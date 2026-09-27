@@ -429,6 +429,54 @@ def title_overlay(title,effect,t,secs,frame_w):
  else:k=min(1,t/.25)
  return _alpha(ov,min(k,(secs-t)/.3)),x,dy
 
+# ---------- colour grading (both modes) ----------
+# A grade is a dict of sliders, each -1…1 (0 = untouched) except sharpen/vignette/grain/fade/split (0…1) and bw (0/1).
+GRADE_KEYS=('exposure','contrast','saturation','vibrance','temperature','tint','highlights','shadows','fade','split','sharpen','vignette','grain','bw')
+LOOKS={
+ 'goc':('Gốc',{}),
+ 'tu-nhien':('Tự nhiên',dict(contrast=.1,vibrance=.2,sharpen=.2)),
+ 'tuoi-sang':('Tươi sáng',dict(exposure=.12,contrast=.18,saturation=.15,vibrance=.35,shadows=.1)),
+ 'am-ap':('Ấm áp',dict(temperature=.45,vibrance=.15,contrast=.08,highlights=-.1)),
+ 'dien-anh':('Điện ảnh',dict(contrast=.22,saturation=-.12,split=.95,shadows=-.15,vignette=.5,fade=.1)),
+ 'mat-lanh':('Mát lạnh',dict(temperature=-.4,contrast=.12,saturation=-.05,highlights=.05)),
+ 'mon-an':('Món ăn',dict(saturation=.2,vibrance=.35,temperature=.2,contrast=.12,sharpen=.3)),
+ 'phim-co':('Phim cổ điển',dict(fade=.45,temperature=.2,saturation=-.25,grain=.4,contrast=-.05,vignette=.3)),
+ 'trang-den':('Trắng đen',dict(bw=1,contrast=.3,grain=.2)),
+}
+
+def grade_values(grade):
+ g=grade if isinstance(grade,dict) else {}
+ out={}
+ for k in GRADE_KEYS:
+  try:v=float(g.get(k,0) or 0)
+  except (TypeError,ValueError):v=0
+  lo=0 if k in ('fade','split','sharpen','vignette','grain','bw') else -1
+  out[k]=max(lo,min(1,v))
+ return out
+
+def grade_filter(grade):
+ """FFmpeg filter chain for a grade, or '' when it changes nothing. Applied to the picture before titles/captions."""
+ g=grade_values(grade);f=[];r=lambda x:f'{x:.3f}'
+ if g['exposure'] or g['contrast'] or g['saturation']:
+  f.append(f"eq=brightness={r(g['exposure']*.12)}:contrast={r(1+g['contrast']*.45)}:saturation={r(max(0,1+g['saturation']*.9))}")
+ if g['shadows'] or g['highlights'] or g['fade']:
+  y0=g['fade']*.1;y1=min(1,max(y0,.25+g['shadows']*.08));y2=min(1,max(y1,.75+g['highlights']*.08));y3=max(y2,1-g['fade']*.04)
+  f.append(f"curves=all='0/{r(y0)} 0.25/{r(y1)} 0.75/{r(y2)} 1/{r(y3)}'")
+ t,n,sp=g['temperature'],g['tint'],g['split']
+ if t or n or sp:
+  # warm = more red, less blue; tint + = magenta; split = teal shadows / orange highlights (the "film" look)
+  cb=dict(rs=t*.06-sp*.08,gs=-n*.04+sp*.02,bs=-t*.06+sp*.1,rm=t*.08,gm=-n*.07,bm=-t*.08,rh=t*.05+sp*.08,gh=-n*.04+sp*.02,bh=-t*.05-sp*.08)
+  f.append('colorbalance='+':'.join(f'{k}={r(max(-1,min(1,v)))}' for k,v in cb.items()))
+ if g['vibrance']:f.append(f"vibrance=intensity={r(g['vibrance']*.6)}")
+ if g['bw']>=.5:f.append('hue=s=0')
+ if g['sharpen']:f.append(f"unsharp=5:5:{r(g['sharpen']*1.5)}:5:5:0")
+ if g['vignette']:f.append(f"vignette=angle={r(.15+g['vignette']*.55)}")
+ if g['grain']:f.append(f"noise=alls={round(g['grain']*14)}:allf=t+u")
+ return ','.join(f)
+
+def grade_args(grade):
+ vf=grade_filter(grade);return ['-vf',vf] if vf else []
+
 HIGHLIGHT={'active':'#9cfa68','sweep':'#ffd54a','pill':'#f37aa5'}
 
 def caption_band(font,H,y=CAPTION_Y):
@@ -527,7 +575,7 @@ def render(job):
   concat=tmp/'clips.txt';concat.write_text(''.join(f"file '{p.name}'\n" for p in clips),encoding='utf-8')
   dec_log=open(tmp/'decode.log','wb');enc_log=open(tmp/'encode.log','wb');dec=enc=None
   try:
-   dec=subprocess.Popen([FFMPEG,'-v','error','-f','concat','-safe','0','-i',str(concat),'-frames:v',str(round(duration*fps)),'-fps_mode','passthrough','-f','rawvideo','-pix_fmt','rgb24','pipe:1'],stdout=subprocess.PIPE,stderr=dec_log,**NOWIN);CHILDREN.append(dec)
+   dec=subprocess.Popen([FFMPEG,'-v','error','-f','concat','-safe','0','-i',str(concat),'-frames:v',str(round(duration*fps)),'-fps_mode','passthrough',*grade_args(job.get('grade')),'-f','rawvideo','-pix_fmt','rgb24','pipe:1'],stdout=subprocess.PIPE,stderr=dec_log,**NOWIN);CHILDREN.append(dec)
    movie=tmp/'movie.mp4';cmd=[FFMPEG,'-v','error','-y','-f','rawvideo','-pix_fmt','rgb24','-s',f'{W}x{H}','-r',str(fps),'-i','pipe:0','-i',str(audio)]
    voice='[1:a]asetpts=PTS-STARTPTS'+f',volume={voice_gain_db(audio,job,cache):.2f}dB[voice];'
    if music:

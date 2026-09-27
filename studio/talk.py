@@ -5,7 +5,8 @@
   render  <job.json>   cut + punch-in zoom + denoise + keyword captions + title + B-roll, in every chosen aspect ratio,
                        plus the chosen short clips
 
-Every word keeps its original timing; a cut is just a flag on words (reason: im-lang/am-u/lap/noi-lai/tay), so the
+Several raw videos (numbered 1, 2, 3…) are first joined, in that order, into one source; the transcript marks where
+each one starts. Every word keeps its original timing; a cut is just a flag on words (reason: im-lang/am-u/lap/noi-lai/tay), so the
 transcript editor can restore or cut anything and subtitles stay in sync.
 """
 import hashlib, json, math, os, re, shutil, subprocess, sys, tempfile, time, unicodedata, wave
@@ -127,12 +128,12 @@ Hãy trả về đúng một JSON tiếng Việt có dấu:
  "tu_khoa": ["5-12 từ hoặc cụm từ quan trọng nhất đúng như trong lời nói (số liệu, tên sản phẩm, ý chính) để tô màu trong phụ đề"],
  "clip": [{{"tu": số đoạn bắt đầu, "den": số đoạn kết thúc, "tieu_de": "tiêu đề clip", "ly_do": "vì sao hay"}} (các đoạn hay nhất dài 20-90 giây, tự trọn ý; tối đa 5; bỏ trống nếu video ngắn hơn 40 giây)]}}''', fallback={})
 
-def face_track(src, duration, tmp):
+def face_track(src, duration, tmp, start=0.0):
     """Where the speaker's face usually is (normalised centre and height), from frames across the video."""
     frames = []
     for k in range(8):
-        f = tmp / f'face-{k}.jpg'
-        t = duration * (k + .5) / 8
+        f = tmp / f'face-{start:.0f}-{k}.jpg'
+        t = start + duration * (k + .5) / 8
         subprocess.run([FFMPEG, '-v', 'error', '-y', '-ss', f'{t:.2f}', '-i', str(src), '-frames:v', '1', '-vf', 'scale=720:-2', '-q:v', '4', str(f)], capture_output=True, **NOWIN)
         if f.exists(): frames.append(f)
     try:
@@ -175,10 +176,55 @@ def pick_broll(phrases, words, choices, units, density):
         used += dur; last = k; used_units.add(uid)
     return picked
 
+def display_size(path):
+    info = R.probe(path); vs = next((s for s in info['streams'] if s['codec_type'] == 'video'), None)
+    if not vs: raise ValueError(f'“{Path(path).name}” không có hình.')
+    rot = abs(int(float((vs.get('side_data_list') or [{}])[0].get('rotation', 0) or 0))) % 180 == 90
+    has_audio = any(s['codec_type'] == 'audio' for s in info['streams'])
+    return ((vs['height'], vs['width']) if rot else (vs['width'], vs['height'])), float(info['format']['duration']), has_audio
+
+def join_videos(paths, dest, progress):
+    """Join raw videos in order into one file: the first video's frame shape (long side up to 1920), others fitted
+    inside it over a blurred copy; 30 fps, 48 kHz stereo. Returns [{name, start, end}] of each video in the result."""
+    sizes = [display_size(p) for p in paths]
+    (w0, h0), _, _ = sizes[0]; k = min(1, 1920 / max(w0, h0)); W, H = round(w0 * k / 2) * 2, round(h0 * k / 2) * 2
+    cmd = [FFMPEG, '-v', 'error', '-y']; graph = []; t = 0.0; clips = []
+    for i, (p, ((w, h), dur, audio)) in enumerate(zip(paths, sizes)):
+        cmd += ['-i', str(p)]
+        clips.append(dict(name=Path(p).name, start=round(t, 3), end=round(t + dur, 3))); t += dur
+    for i, (p, ((w, h), dur, audio)) in enumerate(zip(paths, sizes)):
+        if (w, h) == (W, H) or abs(w / h - W / H) < .01:
+            graph.append(f'[{i}:v]scale={W}:{H},setsar=1,fps={FPS},format=yuv420p[v{i}]')
+        else:
+            graph.append(f'[{i}:v]split=2[b{i}][f{i}];[b{i}]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},gblur=sigma=30[bb{i}];'
+                         f'[f{i}]scale={W}:{H}:force_original_aspect_ratio=decrease[ff{i}];[bb{i}][ff{i}]overlay=(W-w)/2:(H-h)/2,setsar=1,fps={FPS},format=yuv420p[v{i}]')
+        if audio: graph.append(f'[{i}:a]aresample=48000,aformat=channel_layouts=stereo,apad=whole_dur={dur:.3f},atrim=0:{dur:.3f}[a{i}]')
+        else: graph.append(f'anullsrc=r=48000:cl=stereo,atrim=0:{dur:.3f}[a{i}]')
+    graph.append(''.join(f'[v{i}][a{i}]' for i in range(len(paths))) + f'concat=n={len(paths)}:v=1:a=1[v][a]')
+    part = dest.with_suffix('.part.mp4')
+    proc = subprocess.Popen(cmd + ['-filter_complex', ';'.join(graph), '-map', '[v]', '-map', '[a]', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18',
+                                   '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', '-progress', 'pipe:1', '-nostats', str(part)],
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, **NOWIN); R.CHILDREN.append(proc)
+    for line in proc.stdout:
+        if line.startswith('out_time_us='):
+            try: progress(min(1, int(line.split('=')[1]) / 1e6 / max(1, t)))
+            except ValueError: pass
+    if proc.wait() != 0: raise RuntimeError('Ghép các video chưa được: ' + proc.stderr.read()[-400:])
+    part.replace(dest); return clips
+
 def analyze(job):
-    src = Path(job['video']).expanduser().resolve()
-    if not src.is_file(): raise ValueError('Chưa chọn video thô.')
+    videos = [Path(v).expanduser().resolve() for v in (job.get('videos') or [job['video']])]
+    missing = [v.name for v in videos if not v.is_file()]
+    if missing: raise ValueError('Không tìm thấy video: ' + ', '.join(missing))
     work = Path(job['projectDir']); work.mkdir(parents=True, exist_ok=True); cache = Path(job['cacheFolder']); cache.mkdir(parents=True, exist_ok=True)
+    clips = []
+    if len(videos) > 1:
+        src = work / 'ghep-cac-video.mp4'
+        if not src.is_file() or not (work / 'clips.json').is_file():
+            clips = join_videos(videos, src, lambda f: emit(1 + 7 * f, f'Đang nối {len(videos)} video theo thứ tự… {int(f * 100)}%'))
+            (work / 'clips.json').write_text(json.dumps(clips, ensure_ascii=False), encoding='utf-8')
+        else: clips = json.loads((work / 'clips.json').read_text(encoding='utf-8'))
+    else: src = videos[0]
     duration = float(R.probe(src)['format']['duration'])
     emit(3, 'Đang nghe và ghi lại lời nói (lần đầu hơi lâu)…')
     words = R.get_words(src, cache)
@@ -197,7 +243,10 @@ def analyze(job):
     if ai:
         emit(55, 'AI đang viết tiêu đề, caption, hashtag, chọn từ khoá và clip ngắn…'); pack = ai_package(phrases)
     emit(68, 'Đang tìm khuôn mặt người nói…')
-    with tempfile.TemporaryDirectory(prefix='talk-face-') as tmp: face = face_track(src, duration, Path(tmp))
+    with tempfile.TemporaryDirectory(prefix='talk-face-') as tmp:
+        face = face_track(src, duration, Path(tmp))
+        # Each joined video has its own framing: find the face in each one.
+        for c in clips: c['face'] = face_track(src, c['end'] - c['start'], Path(tmp), c['start']) or face
     broll = []
     kho = job.get('brollFolder')
     if job.get('broll', True) and ai:
@@ -220,7 +269,8 @@ def analyze(job):
         if a and b and b['end'] - a['start'] >= 15:
             shorts.append(dict(first=a['first'], last=b['last'], title=str(c.get('tieu_de', ''))[:60], reason=str(c.get('ly_do', ''))[:160], on=True))
     titles = [dict(dong1=str(t.get('dong1', ''))[:40], dong2=str(t.get('dong2', ''))[:60]) for t in (pack.get('tieu_de') or []) if isinstance(t, dict)][:3]
-    project = dict(version=1, source=str(src), duration=duration, created=time.strftime('%Y-%m-%d %H:%M'), words=words, face=face,
+    name = videos[0].stem + (f' + {len(videos) - 1} video' if len(videos) > 1 else '')
+    project = dict(version=1, source=str(src), name=name, videos=[str(v) for v in videos], clips=clips, duration=duration, created=time.strftime('%Y-%m-%d %H:%M'), words=words, face=face,
                    titles=titles, caption=str(pack.get('caption', '')), hashtags=[str(h) for h in (pack.get('hashtag') or [])][:12],
                    keywords=[str(k) for k in (pack.get('tu_khoa') or [])][:15], shorts=shorts, broll=broll, info=info)
     (work / 'project.json').write_text(json.dumps(project, ensure_ascii=False, indent=1), encoding='utf-8')
@@ -268,6 +318,10 @@ def cut_audio(wav, keep, dest):
         parts.append(part.astype('<i2').tobytes())
     with wave.open(str(dest), 'wb') as f: f.setnchannels(2); f.setsampwidth(2); f.setframerate(48000); f.writeframes(b''.join(parts))
     return dest
+
+def face_at(project, t):
+    """Face of the joined video playing at source time t (each has its own framing)."""
+    return next((c.get('face') for c in project.get('clips') or [] if c['start'] <= t < c['end']), None)
 
 def speaker_crop(W0, H0, face, W, H, zoom):
     """Cover-crop of the speaker for the output aspect: face centred horizontally, eyes near the upper third."""
@@ -339,7 +393,7 @@ def render_variant(project, job, aspect, first, last, title, dest, tmp, progress
                 vf = (f'split=2[bg][fg];[bg]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},gblur=sigma=30[b];'
                       f'[fg]scale={fw}:{fh}[f];[b][f]overlay=(W-w)/2:(H-h)*0.4,setsar=1,fps={FPS},tpad=stop_mode=clone:stop_duration=5')
             else:
-                x, y, cw, ch = speaker_crop(W0, H0, face, W, H, p['zoom'])
+                x, y, cw, ch = speaker_crop(W0, H0, face_at(project, p['src']) or face, W, H, p['zoom'])
                 vf = f'crop={cw}:{ch}:{x}:{y},scale={W}:{H},setsar=1,fps={FPS},tpad=stop_mode=clone:stop_duration=5'
             cmd = [FFMPEG, '-v', 'error', '-y', '-ss', f'{p["src"]:.3f}', '-i', str(src), '-vf', vf]
         else:
@@ -362,7 +416,7 @@ def render_variant(project, job, aspect, first, last, title, dest, tmp, progress
         cmd += ['-stream_loop', '-1', '-i', str(music), '-filter_complex', vchain + f'[2:a]asetpts=PTS-STARTPTS,volume={vol},afade=t=out:st={max(0, total - 1.2)}:d=1.2[music];[voice][music]amix=inputs=2:duration=first:dropout_transition=0:normalize=0,alimiter=limit=0.79:level=0[a]']
     else: cmd += ['-filter_complex', vchain + '[voice]alimiter=limit=0.79:level=0[a]']
     cmd += ['-map', '0:v', '-map', '[a]', '-t', f'{total:.3f}', '-c:v', 'libx264', '-preset', 'fast', '-crf', '20', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', str(movie)]
-    dec = subprocess.Popen([FFMPEG, '-v', 'error', '-f', 'concat', '-safe', '0', '-i', str(concat), '-frames:v', str(nframes), '-fps_mode', 'passthrough', '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'], stdout=subprocess.PIPE, **NOWIN)
+    dec = subprocess.Popen([FFMPEG, '-v', 'error', '-f', 'concat', '-safe', '0', '-i', str(concat), '-frames:v', str(nframes), '-fps_mode', 'passthrough', *R.grade_args(job.get('grade')), '-f', 'rawvideo', '-pix_fmt', 'rgb24', 'pipe:1'], stdout=subprocess.PIPE, **NOWIN)
     enc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE, **NOWIN); R.CHILDREN.extend([dec, enc])
     # Captions: same steady karaoke line as the main mode, sized to the shorter side so every aspect reads alike.
     sub_scale = max(.6, min(1.6, float(job.get('subScale', 1) or 1))); sub_font = R.font_path(job.get('subFont', 'arial'))
@@ -410,7 +464,7 @@ def render(job):
     if job.get('highlightKeywords', True): mark_keywords(words, project.get('keywords', []))
     aspects = [a for a in job.get('aspects', ['9:16']) if a in ASPECTS] or ['9:16']
     shorts = [s for s in project.get('shorts', []) if s.get('on')] if job.get('exportShorts', True) else []
-    stem = re.sub(r'[\\/:*?"<>|]+', ' ', Path(project['source']).stem).strip()[:50]
+    stem = re.sub(r'[\\/:*?"<>|]+', ' ', project.get('name') or Path(project['source']).stem).strip()[:50]
     folder = Path(job['outputFolder']) / f'{stem} - hoàn thiện {time.strftime("%Y%m%d-%H%M")}'; folder.mkdir(parents=True, exist_ok=True)
     title = (job.get('title', ''), job.get('subtitle', ''))
     tasks = [(a, 0, len(words) - 1, title, folder / f'{stem} {a.replace(":", "x")}.mp4') for a in aspects]

@@ -194,3 +194,36 @@ kbd{font:11px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.1);borde
 .exports button{display:flex;justify-content:space-between;gap:8px;text-align:left;padding:8px 10px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.04);font-size:12px}
 .exports button.on{border-color:var(--accent);background:rgba(186,242,94,.08)}
 .exports button small{color:var(--muted)}
+
+/* ---------- raw video list (Video chia sẻ) ---------- */
+.vlist{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:6px}
+.vitem{display:flex;align-items:center;gap:8px;padding:8px 8px 8px 10px;border-radius:10px;background:var(--soft);border:1px solid var(--line)}
+.vitem .vn{flex:none;width:26px;height:26px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:800;font-size:13px}
+.vitem .vname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.vbtn{flex:none;width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:none;color:inherit;cursor:pointer}
+.vbtn:disabled{opacity:.3;cursor:default}
+.vbtn.del:hover{border-color:#ff7a7a;color:#ff7a7a}
+.vempty{color:var(--muted);font-size:13px;padding:10px;border:1px dashed var(--line);border-radius:10px}
+.transcript .clipsep{display:block;margin:10px 0 4px;font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--accent);border-top:1px dashed rgba(186,242,94,.35);padding-top:8px}
+.transcript .clipsep:first-child{margin-top:0;border-top:0;padding-top:0}
+
+/* ---------- colour grading ---------- */
+.gcompare{--split:50%;position:relative;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:16/10;margin-bottom:6px}
+.gcompare img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
+.gcompare .gaw{position:absolute;inset:0;clip-path:inset(0 0 0 var(--split))}
+.gcompare .gline{position:absolute;top:0;bottom:0;left:var(--split);width:2px;background:#fff;box-shadow:0 0 6px rgba(0,0,0,.6);pointer-events:none}
+.gcompare .gsplit{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:ew-resize;margin:0}
+.gtag{position:absolute;top:8px;font-size:11px;font-weight:700;background:rgba(0,0,0,.55);padding:2px 8px;border-radius:6px;pointer-events:none}
+.gtag.l{left:8px}.gtag.r{right:8px}
+.glooks{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 4px}
+.glook{position:relative;border:1px solid var(--line);background:var(--soft);color:inherit;border-radius:999px;padding:6px 12px;font-size:12px;cursor:pointer}
+.glook.on{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:700}
+.glook.mine{padding-right:28px}
+.glook .gdel{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-size:10px;opacity:.6}
+.glook .gdel:hover{opacity:1;background:rgba(0,0,0,.3)}
+.gh{margin:14px 0 4px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.grow{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;font-size:13px;margin:4px 0}
+.grow output{color:var(--accent);font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
+.grow input{grid-column:1/3;width:100%}
+.grow .gends{grid-column:1/3;display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:-4px}
+.gact{margin-top:10px}

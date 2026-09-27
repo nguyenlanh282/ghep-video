@@ -64,6 +64,8 @@ function renderState(st) {
   $$('[data-seg]').forEach(seg => $$('button', seg).forEach(b => b.classList.toggle('on', s[seg.dataset.seg] === b.dataset.value)));
   $$('[data-choice]').forEach(box => $$('button', box).forEach(b => b.classList.toggle('on', s[box.dataset.choice] === b.dataset.value)));
   $$('[data-path]').forEach(el => { const p = s[el.dataset.path]; if (p) { el.textContent = base(p); el.closest('button').title = p; } });
+  renderVideos(s.talkVideos);
+  if (window.Grade) Grade.update(st);
   $$('.value[data-value-key]').forEach(el => { if (el._apply && !el.contains(document.activeElement)) el._apply(+s[el.dataset.valueKey]); });
   const aspects = (s.talkAspects || '9:16').split(',');
   $$('#aspects input').forEach(i => i.checked = aspects.includes(i.value));
@@ -85,6 +87,20 @@ function renderState(st) {
       preferRaw = false; loadProject().then(() => { if (exportsList.length) { currentExport = 0; setView('edited', true); } });
     }
   }
+}
+
+/* Raw videos, joined in this order. Changing the list is a new project (its own transcript). */
+let videosKey = null;
+function renderVideos(json) {
+  let vids = []; try { vids = JSON.parse(json || '[]'); } catch (e) {}
+  $('#vlist').innerHTML = vids.length ? vids.map((p, i) => `<li class="vitem" title="${esc(p)}"><span class="vn">${i + 1}</span><span class="vname">${esc(base(p))}</span>
+    <button class="vbtn" data-vop="move" data-i="${i}" data-dir="-1" aria-label="Lên trên" ${i ? '' : 'disabled'}>↑</button>
+    <button class="vbtn" data-vop="move" data-i="${i}" data-dir="1" aria-label="Xuống dưới" ${i < vids.length - 1 ? '' : 'disabled'}>↓</button>
+    <button class="vbtn del" data-vop="remove" data-i="${i}" aria-label="Bỏ video này">✕</button></li>`).join('')
+    : '<li class="vempty">Chưa có video. Bấm “＋ Thêm video”.</li>';
+  $('#vSort').hidden = vids.length < 2;
+  if (videosKey !== null && videosKey !== json) loadProject();
+  videosKey = json;
 }
 
 async function poll() {
@@ -116,9 +132,14 @@ function keywordIndices() {
 
 function buildTranscript() {
   const brAt = new Map((P.broll || []).map((b, k) => [b.first, k]));
+  // Where each joined video starts: first word at or after its start time.
+  const clipAt = new Map();
+  (P.clips || []).forEach((c, n) => { const i = P.words.findIndex(w => w.start >= c.start - .05); if (i >= 0 && !clipAt.has(i)) clipAt.set(i, {n: n + 1, name: c.name}); });
   $('#transcript').innerHTML = P.words.map((w, i) => {
+    const clip = clipAt.get(i);
+    const sep = clip ? `<span class="clipsep" data-i="${i}">▶ Video ${clip.n} · ${esc(clip.name)}</span>` : '';
     const br = brAt.has(i) ? `<button class="brmark" data-br="${brAt.get(i)}" title="${esc(P.broll[brAt.get(i)].source + ': ' + P.broll[brAt.get(i)].text)}">🎬</button>` : '';
-    return `${br}<span class="w" data-i="${i}">${esc(w.text)}</span> `;
+    return `${sep}${br}<span class="w" data-i="${i}">${esc(w.text)}</span> `;
   }).join('');
   paintWords();
 }
@@ -221,9 +242,10 @@ function wire() {
     const out = await api('choose', {kind: b.dataset.choose});
     if (out.error) {
       const key = b.dataset.choose === 'talkVideo' ? 'talkVideo' : 'talkBrollFolder';
-      const path = prompt('Dán đường dẫn đầy đủ:', S.settings[key] || ''); if (path) await set({[key]: path.trim()});
+      const path = prompt('Dán đường dẫn đầy đủ:', key === 'talkVideo' ? '' : S.settings[key] || '');
+      if (path && key === 'talkVideo') { let v = []; try { v = JSON.parse(S.settings.talkVideos || '[]'); } catch (e) {} await set({talkVideos: JSON.stringify([...v, path.trim()])}); }
+      else if (path) await set({[key]: path.trim()});
     }
-    if (b.dataset.choose === 'talkVideo') loadProject();
   }));
   $('#analyzeBtn').addEventListener('click', async () => {
     if (P && !confirm('Phân tích lại sẽ thay bản chữ hiện tại (các chỗ bạn đã sửa sẽ mất). Tiếp tục?')) return;
@@ -231,12 +253,15 @@ function wire() {
   });
   $('#exportBtn').addEventListener('click', startExport);
   $('#autoBtn').addEventListener('click', async () => {
-    if (!S.settings.talkVideo) { alert('Hãy chọn video thô trước.'); return; }
+    if (!S.settings.talkVideo) { alert('Hãy thêm video thô trước.'); return; }
     if (P && !confirm('Edit lại từ đầu sẽ thay bản chữ hiện tại (các chỗ bạn đã sửa sẽ mất). Tiếp tục?')) return;
     autoExport = true; $('#resultRow').hidden = true;
     const out = await api('start', {task: 'talk-analyze'}); if (out.job && out.job.running) poll(); else autoExport = false;
   });
   $('#cancelBtn').addEventListener('click', () => api('cancel'));
+  $('#vlist').addEventListener('click', e => { const b = e.target.closest('[data-vop]'); if (b) api('talkVideos', {op: b.dataset.vop, index: +b.dataset.i, dir: +b.dataset.dir || 1}); });
+  $('#vSort').addEventListener('click', () => api('talkVideos', {op: 'sort'}));
+  if (window.Grade) Grade.init($('#gradeBox'), api);
   $('#viewSeg').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b && !b.disabled) { preferRaw = b.dataset.view === 'raw'; setView(b.dataset.view, true); } });
   $('#editedPick').addEventListener('click', e => { const b = e.target.closest('[data-export]'); if (b) { currentExport = +b.dataset.export; setView('edited', true); } });
   buildValueControls();

@@ -21,7 +21,12 @@
 <main id="main" class="talk">
   <section class="panel" aria-labelledby="t1">
     <h2 id="t1"><span class="num">01</span>Video thô</h2>
-    <button class="filebox" data-choose="talkVideo"><span class="ico">🎥</span><span class="fb-text"><b>Video người nói</b><small data-path="talkVideo">Chọn video chưa cắt</small></span><span class="fb-go">＋</span></button>
+    <ol class="vlist" id="vlist" aria-label="Các video thô, theo thứ tự ghép"></ol>
+    <div class="row gap">
+      <button class="btn small primary" data-choose="talkVideo">＋ Thêm video</button>
+      <button class="btn small" id="vSort" title="Xếp theo tên file: video 1, video 2, … video 10">Sắp xếp theo tên</button>
+    </div>
+    <p class="hint">Chọn 1 hoặc nhiều video (giữ <kbd>⌘</kbd>/<kbd>Ctrl</kbd> để chọn nhiều). Các video được nối theo số thứ tự rồi mới cắt, làm phụ đề.</p>
     <p class="hint" id="aiLine"></p>
     <label class="switch"><input type="checkbox" data-key="talkRetakes"><span></span>Cắt nói vấp, câu nói lại</label>
     <p class="hint">Luôn tự cắt: im lặng, ngắt quãng, “ờ, ừm, à”. Xem và khôi phục ở bản chữ.</p>
@@ -62,7 +67,10 @@
     <div class="value" data-value-key="subScale" data-min="0.6" data-max="1.6" data-step="0.1" data-format="percent">Cỡ chữ phụ đề</div>
     <span class="hint">Kiểu chữ phụ đề</span>
     <div class="seg wide fonts" data-seg="subFont"><button data-value="arial" style="font-family:Arial">Arial</button><button data-value="tahoma" style="font-family:Tahoma">Tahoma</button><button data-value="verdana" style="font-family:Verdana">Verdana</button><button data-value="georgia" style="font-family:Georgia">Georgia</button><button data-value="times" style="font-family:'Times New Roman'">Times</button></div>
-    <p class="hint">Nhạc nền, âm lượng, thư mục lưu, tiêu đề và phụ đề dùng chung với trang Ghép ảnh + lời đọc.</p>
+    <hr>
+    <h2><span class="num">🎨</span>Màu sắc</h2>
+    <div class="gradebox" id="gradeBox" data-mode="talk"></div>
+    <p class="hint">Nhạc nền, âm lượng, thư mục lưu, tiêu đề, phụ đề và màu sắc dùng chung với trang Ghép ảnh + lời đọc.</p>
   </section>
 
   <section class="panel editor" aria-labelledby="t2">
@@ -126,6 +134,7 @@
     <button class="btn large" id="cancelBtn" hidden>Dừng</button>
   </div>
 </footer>
+<script src="grade.js"></script>
 <script src="talk.js"></script>
 </body>
 </html>

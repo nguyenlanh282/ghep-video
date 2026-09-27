@@ -69,4 +69,17 @@ class EditingTests(unittest.TestCase):
   src=[units[s['unit']-1]['source'] for s in shots]
   self.assertEqual(src,['bep','bep','com','bep','bep'])
 
+class GradeTests(unittest.TestCase):
+ def test_neutral_grade_changes_nothing(self):
+  import renderer
+  self.assertEqual(renderer.grade_filter({}),'');self.assertEqual(renderer.grade_filter(None),'');self.assertEqual(renderer.grade_filter({'look':'goc'}),'')
+ def test_values_are_clamped_and_every_look_builds(self):
+  import renderer
+  g=renderer.grade_values(dict(exposure=5,vignette=-3,grain='x'))
+  self.assertEqual((g['exposure'],g['vignette'],g['grain']),(1,0,0))
+  for key,(name,grade) in renderer.LOOKS.items():
+   f=renderer.grade_filter(grade)
+   if key!='goc':self.assertTrue(f,name)
+  self.assertIn('hue=s=0',renderer.grade_filter(renderer.LOOKS['trang-den'][1]))
+
 if __name__=='__main__':unittest.main()

@@ -53,4 +53,22 @@ class TalkTests(unittest.TestCase):
         self.assertTrue(all(b - a >= 2 for a, b in zip(ids, ids[1:])))
         self.assertTrue(all(p['dur'] <= 3.5 for p in picked))
 
+    def test_join_videos_keeps_order_and_times(self):
+        import subprocess, tempfile
+        from platform_tools import FFMPEG
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d); a, b = d / 'a.mp4', d / 'b.mp4'
+            subprocess.run([FFMPEG, '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=s=320x180:r=30', '-f', 'lavfi', '-i', 'sine=f=440', '-t', '1.5', '-pix_fmt', 'yuv420p', '-shortest', str(a)], check=True)
+            subprocess.run([FFMPEG, '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=s=180x320:r=25', '-t', '1', '-pix_fmt', 'yuv420p', str(b)], check=True)  # upright, no sound
+            clips = talk.join_videos([a, b], d / 'out.mp4', lambda f: None)
+            self.assertEqual([c['name'] for c in clips], ['a.mp4', 'b.mp4'])
+            self.assertAlmostEqual(clips[1]['start'], 1.5, places=1)
+            (w, h), dur, audio = talk.display_size(d / 'out.mp4')
+            self.assertEqual((w, h), (320, 180), "the first video's frame shape")
+            self.assertTrue(audio); self.assertAlmostEqual(dur, 2.5, delta=.15)
+
+    def test_face_of_each_joined_video(self):
+        p = dict(clips=[dict(start=0, end=5, face=dict(cx=.3)), dict(start=5, end=9, face=dict(cx=.7))])
+        self.assertEqual(talk.face_at(p, 2)['cx'], .3); self.assertEqual(talk.face_at(p, 6)['cx'], .7); self.assertIsNone(talk.face_at({}, 1))
+
 if __name__ == '__main__': unittest.main()
