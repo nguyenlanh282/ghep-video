@@ -65,6 +65,7 @@ function renderState(st) {
   $$('[data-choice]').forEach(box => $$('button', box).forEach(b => b.classList.toggle('on', s[box.dataset.choice] === b.dataset.value)));
   $$('[data-path]').forEach(el => { const p = s[el.dataset.path]; if (p) { el.textContent = base(p); el.closest('button').title = p; } });
   renderVideos(s.talkVideos);
+  $('#shorts').classList.toggle('off', !s.talkShorts); $('#shortsOff').hidden = !!s.talkShorts;
   if (window.Grade) Grade.update(st);
   $$('.value[data-value-key]').forEach(el => { if (el._apply && !el.contains(document.activeElement)) el._apply(+s[el.dataset.valueKey]); });
   const aspects = (s.talkAspects || '9:16').split(',');
@@ -109,16 +110,22 @@ async function poll() {
 
 /* ---------- transcript editor ---------- */
 const pending = {}; let pendingOther = {};
-const saveEdits = debounce(async () => {
+async function sendEdits() {
+  if (!Object.keys(pending).length && !Object.keys(pendingOther).length) return;
   const body = {cuts: {...pending}, ...pendingOther};
   for (const k in pending) delete pending[k]; pendingOther = {};
   await api('talkEdit', body);
-}, 500);
+}
+const saveEdits = debounce(sendEdits, 500);
 function setCut(indices, reason) {
   for (const i of indices) { P.words[i].cut = reason; pending[i] = reason; }
   paintWords(); saveEdits();
 }
-function editOther(obj) { Object.assign(pendingOther, obj); saveEdits(); }
+// Per-item toggles (clips, B-roll) are merged, so several quick clicks are all kept, not just the last one.
+function editOther(obj) {
+  for (const [k, v] of Object.entries(obj)) pendingOther[k] = (k === 'shorts' || k === 'broll') ? {...(pendingOther[k] || {}), ...v} : v;
+  saveEdits();
+}
 
 const norm = w => w.normalize('NFC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 function keywordIndices() {
@@ -224,6 +231,7 @@ function followPlayer() {
 
 async function startExport() {
   $('#player').pause(); $('#resultRow').hidden = true;
+  await sendEdits();  // edits made just before clicking are saved before the export reads them
   const out = await api('start', {task: 'talk-render'}); if (out.job && out.job.running) poll();
 }
 

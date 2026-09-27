@@ -227,3 +227,4 @@ kbd{font:11px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.1);borde
 .grow input{grid-column:1/3;width:100%}
 .grow .gends{grid-column:1/3;display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:-4px}
 .gact{margin-top:10px}
+.shorts.off{opacity:.45}
