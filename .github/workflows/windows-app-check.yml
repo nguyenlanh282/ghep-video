@@ -30,7 +30,7 @@ jobs:
           $tok = ($url -split 't=')[1]
           $r = Invoke-WebRequest -Uri 'http://127.0.0.1:8799/api/state' -Method Post -Body '{}' -ContentType 'application/json' -Headers @{'X-Token'=$tok} -UseBasicParsing
           "state: $($r.StatusCode) $($r.Content.Length) bytes"
-          foreach ($page in 'index.html','talk.html') { $x = Invoke-WebRequest -Uri "http://127.0.0.1:8799/$page" -UseBasicParsing; "$page $($x.StatusCode)" }
+          foreach ($page in 'index.html','talk.html') { $x = Invoke-WebRequest -Uri "http://127.0.0.1:8799/${page}?t=$tok" -UseBasicParsing; "$page $($x.StatusCode)" }
           Stop-Process $p -Force
       - name: Mở app có cửa sổ (như khách bấm biểu tượng), ghi lỗi nếu tắt ngay
         shell: pwsh
