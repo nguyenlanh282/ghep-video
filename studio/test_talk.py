@@ -72,4 +72,12 @@ class TalkTests(unittest.TestCase):
         p = dict(clips=[dict(start=0, end=5, face=dict(cx=.3)), dict(start=5, end=9, face=dict(cx=.7))])
         self.assertEqual(talk.face_at(p, 2)['cx'], .3); self.assertEqual(talk.face_at(p, 6)['cx'], .7); self.assertIsNone(talk.face_at({}, 1))
 
+    def test_tts_pieces_keep_all_text_in_order_and_under_the_limit(self):
+        import tts
+        for text in ['Câu một. ' * 400 + 'x' * 6000, 'Xin chào.', 'a, ' * 3000, 'Một. Hai! Ba?\nBốn…']:
+            ps = tts.pieces(text)
+            self.assertTrue(all(len(p) <= tts.PIECE for p in ps))
+            squash = lambda t: t.replace(' ', '').replace('\n', '')
+            self.assertEqual(squash(''.join(ps)), squash(text))
+
 if __name__ == '__main__': unittest.main()

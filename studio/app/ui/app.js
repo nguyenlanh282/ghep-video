@@ -23,6 +23,7 @@ function formatValue(fmt, v) {
   if (fmt === 'percent') return Math.round(v * 100) + '%';
   if (fmt === 'height') return Math.round(v * 100) + '% chiều cao';
   if (fmt === 'seconds') return v.toFixed(1).replace('.', ',') + ' giây';
+  if (fmt === 'speed') return v.toFixed(2).replace('.', ',') + '×';
   return String(v);
 }
 
@@ -56,8 +57,9 @@ function wire() {
   buildValueControls();
   $$('input[type=checkbox][data-key]').forEach(cb => cb.addEventListener('change', () => set({[cb.dataset.key]: cb.checked})));
   $$('input[type=text][data-key], textarea[data-key]').forEach(inp => {
-    const save = debounce(() => set({[inp.dataset.key]: inp.value}), 400);
-    inp.addEventListener('input', () => { save(); if (inp.dataset.key === 'title' || inp.dataset.key === 'subtitle') paintTitle(); });
+    // dirty: typed but not saved yet, so a state refresh from another request must not overwrite it
+    const save = debounce(() => set({[inp.dataset.key]: inp.value}).then(() => { delete inp.dataset.dirty; }), 400);
+    inp.addEventListener('input', () => { inp.dataset.dirty = '1'; save(); if (inp.dataset.key === 'title' || inp.dataset.key === 'subtitle') paintTitle(); });
   });
   $$('[data-seg]').forEach(seg => seg.addEventListener('click', e => {
     const b = e.target.closest('button[data-value]'); if (!b) return;
@@ -85,6 +87,11 @@ function wire() {
   $('#listenAudio').addEventListener('ended', stopListening);
 
   $$('.keyrow').forEach(wireKeyRow);
+  $('#ttsBtn').addEventListener('click', async () => {
+    await set({ttsText: $('#ttsText').value, minimaxVoice: $('#mmVoice').value.trim()});  // typed text not yet saved by the debounce
+    const out = await api('start', {task: 'tts'}); if (out.job && out.job.running) poll();
+  });
+  $('#ttsText').addEventListener('input', paintTtsCount);
   wireUpdates();
   wireThumbs();
   wireAI();
@@ -97,7 +104,7 @@ function wire() {
 }
 
 /* ---------- API keys: one row per platform, saved only when its own "Lưu" is pressed ---------- */
-const KEY_NAMES = {pixabay: 'Pixabay', pexels: 'Pexels'};
+const KEY_NAMES = {pixabay: 'Pixabay', pexels: 'Pexels', minimax: 'MiniMax'};
 function keyState(row, text, cls) { const el = $('.keystate', row); el.textContent = text; el.className = 'keystate ' + (cls || ''); }
 function wireKeyRow(row) {
   const src = row.dataset.source, input = $('input', row), save = $('.save', row);
@@ -115,7 +122,7 @@ function wireKeyRow(row) {
     if (out.check === 'busy') { keyState(row, `${KEY_NAMES[src]} đang tạm chặn vì gọi quá nhiều · chưa lưu, thử lại sau ít phút`, 'bad'); sync(); return; }
     if (out.check === 'offline') { keyState(row, `Không kết nối được ${KEY_NAMES[src]} · chưa lưu, thử lại sau`, 'bad'); sync(); return; }
     input.value = ''; sync();
-    keyState(row, `Đã lưu ✓ ${out.settings[src + 'KeyHint']}`, 'ok');
+    keyState(row, `Đã lưu ✓ ${out.settings[src + 'KeyHint']}` + (out.check === 'saved' ? ' · key được kiểm tra ở lần tạo giọng đầu' : ''), 'ok');
   });
   $('.clear', row).addEventListener('click', async () => {
     if (!S.settings[src + 'KeySet'] || !confirm(`Xoá key ${KEY_NAMES[src]} đã lưu?`)) return;
@@ -260,11 +267,15 @@ async function startRender(preview) {
 }
 
 /* ---------- state → DOM ---------- */
+function paintTtsCount() {
+  const n = $('#ttsText').value.length; $('#ttsCount').textContent = n ? `${n.toLocaleString('vi-VN')} ký tự` : '';
+}
+
 function render(state) {
   const prevJob = S && S.job; S = state; const s = state.settings, job = state.job;
   if (window.Grade) Grade.update(state);
   $$('input[type=checkbox][data-key]').forEach(cb => cb.checked = !!s[cb.dataset.key]);
-  $$('input[type=text][data-key], textarea[data-key]').forEach(inp => { if (document.activeElement !== inp) inp.value = s[inp.dataset.key] ?? ''; });
+  $$('input[type=text][data-key], textarea[data-key]').forEach(inp => { if (document.activeElement !== inp && !inp.dataset.dirty) inp.value = s[inp.dataset.key] ?? ''; });
   $$('.value').forEach(el => { if (!el.contains(document.activeElement) || el._apply) el._apply(+s[el.dataset.valueKey]); });
   $$('[data-seg]').forEach(seg => $$('button', seg).forEach(b => b.classList.toggle('on', s[seg.dataset.seg] === b.dataset.value)));
   $$('[data-choice]').forEach(box => $$('button', box).forEach(b => { b.classList.toggle('on', s[box.dataset.choice] === b.dataset.value); b.setAttribute('aria-pressed', s[box.dataset.choice] === b.dataset.value); }));
@@ -290,11 +301,11 @@ function render(state) {
   $('#stockBox').hidden = !(s.stockEnabled && s.matchScenes && analysed);
   const src = s.stockSource, needsKey = src === 'pexels' || src === 'pixabay', hasKey = needsKey && s[src + 'KeySet'];
   // Only the chosen site's key is shown; "Tự động" uses every saved key, so both rows are shown.
-  if (render.lastSource && render.lastSource !== src) $$('.keyrow').forEach(r => { $('input', r).value = ''; $('.save', r).disabled = true; $('.keystate', r).className = 'keystate'; });
+  if (render.lastSource && render.lastSource !== src) $$('.keys .keyrow').forEach(r => { $('input', r).value = ''; $('.save', r).disabled = true; $('.keystate', r).className = 'keystate'; });
   render.lastSource = src;
   for (const row of $$('.keyrow')) {
     const k = row.dataset.source, saved = s[k + 'KeySet'], input = $('input', row);
-    row.hidden = !(src === k || src === 'auto');
+    if (k !== 'minimax') row.hidden = !(src === k || src === 'auto');
     input.placeholder = saved ? `Đã lưu ${s[k + 'KeyHint']} · dán key mới để thay` : `Dán API key ${KEY_NAMES[k]}`;
     $('.clear', row).disabled = !saved;
     const st = $('.keystate', row);
@@ -318,13 +329,18 @@ function render(state) {
   $('#status').textContent = job.status;
   $('#substatus').textContent = job.running ? `${Math.round(job.progress * 100)}% · Bạn có thể dừng bất cứ lúc nào` : `Video dọc 9:16 · ${s.resolution}p · Giữ nguyên file gốc`;
   $('#actions').hidden = job.running; $('#cancelBtn').hidden = !job.running;
-  $('#cancelBtn').textContent = job.task === 'render' ? 'Dừng xuất' : 'Dừng phân tích';
+  $('#cancelBtn').textContent = {render: 'Dừng xuất', tts: 'Dừng tạo giọng'}[job.task] || 'Dừng phân tích';
   if (job.task === 'update' || job.task === 'thumbs') $('#cancelBtn').hidden = true;  // short in-app tasks: they finish on their own
   paintThumbs();
   $('#error').hidden = !job.error; $('#errorText').textContent = job.error || '';
   if (state.resultUrl && (!prevJob || prevJob.result !== job.result || !showingResult) && prevJob && prevJob.running && !job.running) showResult(state.resultUrl);
   $('#resultRow').hidden = !job.result;
-  if (window.Donate) Donate.show(!!job.result && !job.running && !job.error);
+  if (window.Donate) Donate.show(!!job.result && !job.running && !job.error && job.task === 'render');
+  const tts = s.voiceSource === 'minimax'; $('#voiceTts').hidden = !tts; $('#voiceFile').hidden = tts;
+  $('#ttsBtn').disabled = job.running || !s.minimaxKeySet;
+  $('#ttsFile').hidden = !(tts && /Giọng đọc - /.test(s.audio || ''));
+  $('#ttsFile').textContent = 'Đang dùng: ' + base(s.audio || '') + ' · bấm ▶ Nghe giọng đọc để nghe thử';
+  paintTtsCount();
   paintTitle();
 }
 const esc = (t) => String(t).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));

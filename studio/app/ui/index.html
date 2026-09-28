@@ -93,7 +93,36 @@
     </div>
 
     <hr>
-    <button class="filebox" data-choose="audio"><span class="ico">〰</span><span class="fb-text"><b>File ghi âm</b><small data-path="audio">M4A, MP3, WAV…</small></span><span class="fb-go">＋</span></button>
+    <div class="seg wide" data-seg="voiceSource"><button data-value="file">🎤 File ghi âm</button><button data-value="minimax">🗣 Tạo giọng MiniMax</button></div>
+    <div id="voiceFile">
+      <button class="filebox" data-choose="audio"><span class="ico">〰</span><span class="fb-text"><b>File ghi âm</b><small data-path="audio">M4A, MP3, WAV…</small></span><span class="fb-go">＋</span></button>
+    </div>
+    <div id="voiceTts" class="tts" hidden>
+      <label for="ttsText" class="tlabel">Nội dung đọc <small id="ttsCount"></small></label>
+      <textarea id="ttsText" data-key="ttsText" rows="7" placeholder="Dán kịch bản cần đọc vào đây. Xuống dòng hoặc dấu chấm để ngắt câu."></textarea>
+      <label for="mmVoice" class="tlabel">Voice ID <small>(giọng đã clone trên MiniMax)</small></label>
+      <input type="text" id="mmVoice" data-key="minimaxVoice" placeholder="vd: moss_audio_… hoặc tên bạn đặt khi clone" spellcheck="false" autocomplete="off">
+      <div class="row between"><span class="hint">Chất lượng</span>
+        <div class="seg" data-seg="minimaxModel"><button data-value="speech-2.8-hd">Cao (HD)</button><button data-value="speech-2.8-turbo">Nhanh, rẻ</button></div></div>
+      <div class="value" data-value-key="minimaxSpeed" data-min="0.5" data-max="2" data-step="0.05" data-format="speed">Tốc độ đọc</div>
+      <div class="row between"><span class="hint">Tài khoản MiniMax</span>
+        <div class="seg" data-seg="minimaxRegion"><button data-value="intl">Quốc tế (minimax.io)</button><button data-value="cn">Trung Quốc</button></div></div>
+      <div class="keyrow" data-source="minimax">
+        <div class="row between"><b>API key MiniMax</b><span class="keystate" aria-live="polite"></span></div>
+        <div class="keyinput">
+          <input type="password" autocomplete="off" spellcheck="false" aria-label="API key MiniMax">
+          <button class="eye" type="button" aria-label="Hiện key">👁</button>
+        </div>
+        <div class="row gap">
+          <button class="btn small primary save">Lưu</button>
+          <button class="btn small clear">Xoá key</button>
+          <button class="link getkey" data-url="https://platform.minimax.io/user-center/basic-information/interface-key">Lấy API key</button>
+        </div>
+      </div>
+      <button class="btn primary ttsgo" id="ttsBtn">🎙 Tạo giọng đọc</button>
+      <p class="hint" id="ttsNote">Mỗi lần tạo tính phí vào tài khoản MiniMax của bạn (theo số ký tự). Cùng nội dung và giọng thì app dùng lại file cũ, không tốn thêm. File lưu trong thư mục lưu video, mục “Giọng đọc MiniMax”.</p>
+      <p class="hint ttsfile" id="ttsFile" hidden></p>
+    </div>
     <button class="btn small" data-listen="voice">▶ Nghe giọng đọc</button>
     <div class="value" data-value-key="voiceVolume" data-min="0.5" data-max="3" data-step="0.1" data-format="percent">Âm lượng giọng đọc</div>
     <label class="switch"><input type="checkbox" data-key="normalizeVoice"><span></span>Tự cân bằng giọng đọc (chuẩn mạng xã hội)</label>

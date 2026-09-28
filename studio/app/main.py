@@ -41,11 +41,13 @@ DEFAULTS=dict(mediaFolder=str(find_child(ROOT,'Video - ảnh')),audio=first_audi
  titleScale=1.0,titleEffect='bounce',subScale=1.0,subFont='arial',
  # colour grade of both modes (JSON: slider values + chosen look) and the user's saved grades (JSON list)
  grade='{}',gradePresets='[]',
+ # voice-over: a recording ('file') or MiniMax Speech from text ('minimax', the user's own key and cloned voice)
+ voiceSource='file',ttsText='',minimaxVoice='',minimaxModel='speech-2.8-hd',minimaxSpeed=1.0,minimaxRegion='intl',minimaxKey='',
  # Video chia sẻ (talking-video editor)
  talkVideo='',talkVideos='[]',talkBrollFolder=str(find_child(ROOT,'Video - ảnh')),talkBroll=True,talkDensity='vua',talkAspects='9:16',
  talkPunchIn=True,talkDenoise=True,talkRetakes=True,talkKeywords=True,talkShorts=True)
 TALK_DENSITY={'it':.18,'vua':.3,'nhieu':.45}
-SECRET_KEYS={'pexelsKey','pixabayKey'}
+SECRET_KEYS={'pexelsKey','pixabayKey','minimaxKey'}
 
 def check_key(source,key):
  """One tiny search on the platform: 'ok', 'invalid', 'busy' (rate-limited / anti-bot page) or 'offline'."""
@@ -200,6 +202,14 @@ class Studio:
    job.update(preview=bool(preview),grade=self.grade(),cacheFolder=str(self.cache()),matchScenes=s['matchScenes'] and analysed,stockEnabled=s['stockEnabled'] and s['matchScenes'] and analysed,aiPython=sys.executable)
    job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
    args=[str(ENGINE/'renderer.py'),str(job_file)];log='render.log';cleanup=lambda:job_file.unlink(missing_ok=True)
+  elif task=='tts':
+   if not s['minimaxKey']:return self.fail('Hãy dán API key MiniMax rồi bấm Lưu.')
+   if not s['ttsText'].strip():return self.fail('Hãy nhập nội dung cần đọc.')
+   if not s['minimaxVoice'].strip():return self.fail('Hãy nhập Voice ID (giọng đã clone trên MiniMax).')
+   job=dict(text=s['ttsText'],voice=s['minimaxVoice'],model=s['minimaxModel'],speed=s['minimaxSpeed'],region=s['minimaxRegion'],
+            outDir=str(Path(s['outputFolder'])/'Giọng đọc MiniMax' if Path(s['outputFolder']).is_dir() else DATA/'giong-doc'))
+   job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
+   args=[str(ENGINE/'tts.py'),str(job_file)];log='tts.log';cleanup=lambda:job_file.unlink(missing_ok=True)
   elif task in ('analyze','undo'):
    args=[str(ENGINE/'analyzer.py'),task,s['mediaFolder']];log='analyze.log';cleanup=lambda:None
   else:return dict(error='Tác vụ không hợp lệ.')
@@ -208,6 +218,7 @@ class Studio:
   # API keys travel only through the environment, never into job or result files.
   if s['pexelsKey']:env['PEXELS_API_KEY']=s['pexelsKey']
   if s['pixabayKey']:env['PIXABAY_API_KEY']=s['pixabayKey']
+  if task=='tts':env['MINIMAX_API_KEY']=s['minimaxKey']
   logf=open(self.cache()/log,'wb')
   self.proc=subprocess.Popen([sys.executable,'-u',*args],stdout=subprocess.PIPE,stderr=logf,env=env,cwd=str(ENGINE),**NOWIN)
   self.job=dict(running=True,task=task,progress=0,status='Đang chuẩn bị…',error=None,result=None if task=='render' else self.job.get('result'),cancelled=False,log=log)
@@ -226,10 +237,11 @@ class Studio:
     if msg.get('message'):self.job['status']=msg['message']
     if msg.get('error'):self.job['error']=msg['message']
     if msg.get('output'):self.job['result']=msg['output']
+    if msg.get('audio') and Path(msg['audio']).is_file():self.settings['audio']=msg['audio'];self.save()  # the new voice-over becomes the recording
   code=proc.wait();logf.close();cleanup()
   with self.lock:
    self.job['running']=False
-   if self.job['cancelled']:self.job['status']='Đã dừng xuất video' if self.job['task']=='render' else 'Đã dừng phân tích'
+   if self.job['cancelled']:self.job['status']={'render':'Đã dừng xuất video','tts':'Đã dừng tạo giọng đọc'}.get(self.job['task'],'Đã dừng phân tích')
    elif code!=0 and not self.job['error']:self.job['error']=f"Chưa thành công. Xem chi tiết tại {self.cache()/self.job['log']}";self.job['status']='Cần kiểm tra lại'
 
  def cancel(self):
@@ -243,9 +255,11 @@ class Studio:
 
  def save_key(self,source,value):
   """Save (or clear, when empty) the API key of one platform, after checking it really works."""
-  if source not in ('pixabay','pexels'):return dict(error='Nguồn không hợp lệ.')
+  if source not in ('pixabay','pexels','minimax'):return dict(error='Nguồn không hợp lệ.')
   value=value.strip()
   if not value:self.settings[source+'Key']='';self.save();return dict(self.state(),check='cleared')
+  # MiniMax has no free test call (every request is billed): the key is checked on the first voice-over.
+  if source=='minimax':self.settings['minimaxKey']=value;self.save();return dict(self.state(),check='saved')
   # Save only a key the platform has accepted: a wrong key, or no connection, never replaces the saved one.
   check=check_key(source,value)
   if check!='ok':return dict(self.state(),check=check)
