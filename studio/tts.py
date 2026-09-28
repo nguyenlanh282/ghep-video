@@ -38,7 +38,7 @@ def pieces(text, limit=PIECE):
 def synthesize(text, job, key):
     body = dict(model=job['model'], text=text, stream=False, language_boost='Vietnamese', output_format='hex',
                 voice_setting=dict(voice_id=job['voice'], speed=job['speed'], vol=1.0, pitch=0),
-                audio_setting=dict(sample_rate=44100, bitrate=192000, format='mp3', channel=1))
+                audio_setting=dict(sample_rate=44100, bitrate=256000, format='mp3', channel=1))  # bitrate: 32000/64000/128000/256000 only
     host = os.environ.get('MINIMAX_API_BASE') or HOSTS.get(job.get('region'), HOSTS['intl'])  # override only for tests
     req = urllib.request.Request(host + '/v1/t2a_v2', data=json.dumps(body).encode(),
                                  headers={'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'})
@@ -51,7 +51,8 @@ def synthesize(text, job, key):
     base = out.get('base_resp') or {}
     code = base.get('status_code', -1)
     if code != 0:
-        msg = ERRORS.get(code) or f'MiniMax báo lỗi {code}: {base.get("status_msg", "")}'
+        detail = str(base.get('status_msg', '')).strip()
+        msg = (ERRORS.get(code) or f'MiniMax báo lỗi {code}') + (f' (MiniMax: {detail})' if detail and detail.lower() != 'success' else '')
         if 'voice' in str(base.get('status_msg', '')).lower(): msg = 'Không tìm thấy Voice ID này. Kiểm tra lại Voice ID giọng đã clone (và khu vực tài khoản).'
         raise RuntimeError(msg)
     audio = (out.get('data') or {}).get('audio')
