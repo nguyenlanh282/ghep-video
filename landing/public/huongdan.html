@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hướng dẫn sử dụng Ghép Video</title>
+<meta name="description" content="Hướng dẫn sử dụng từng tính năng của Ghép Video: ghép ảnh + lời đọc, giọng đọc MiniMax, edit video chia sẻ, ghép nhiều video, tiêu đề, phụ đề karaoke, chỉnh màu, ảnh bìa, xuất video.">
+<meta property="og:title" content="Hướng dẫn sử dụng Ghép Video">
+<meta property="og:image" content="/gioi-thieu.jpg">
+<link rel="icon" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0f14;--panel:#131922;--panel2:#1a2230;--line:rgba(255,255,255,.09);--text:#eef1f5;--muted:#9ca8ba;--accent:#baf25e;--ink:#0b0f14;--yellow:#ffd54a;--zalo:#0068ff;--warn:#ffb057;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.7 "Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+img{max-width:100%;height:auto}
+header.nav{position:sticky;top:0;z-index:10;background:rgba(11,15,20,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+header.nav .in{max-width:1240px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:64px;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.06em;color:var(--text);text-decoration:none}
+.brand img{width:32px;height:32px}
+.navlinks{display:flex;gap:8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:10px 16px;font:700 14px/1.2 inherit;text-decoration:none;border:1px solid var(--line);color:var(--text);background:rgba(255,255,255,.06)}
+.btn.primary{background:var(--accent);color:var(--ink);border-color:transparent}
+.btn.zalo{background:var(--zalo);color:#fff;border-color:transparent}
+.layout{max-width:1240px;margin:0 auto;padding:0 20px;display:grid;grid-template-columns:260px minmax(0,1fr);gap:40px}
+nav.toc{position:sticky;top:84px;align-self:start;max-height:calc(100vh - 100px);overflow:auto;padding:24px 0 40px}
+.toc b{display:block;font-size:12px;letter-spacing:.12em;color:var(--muted);margin:18px 0 6px}
+.toc a{display:block;color:var(--muted);text-decoration:none;font-size:14px;padding:5px 10px;border-radius:8px;border-left:2px solid transparent}
+.toc a:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.toc a.on{color:var(--accent);border-left-color:var(--accent);background:rgba(186,242,94,.06)}
+main{padding:32px 0 80px;min-width:0}
+.hero{padding:10px 0 20px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.hero h1{font-size:clamp(30px,4.4vw,46px);line-height:1.12;margin:0 0 10px;letter-spacing:-.02em;font-weight:900}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.hero p{color:var(--muted);margin:0;max-width:720px;font-size:17px}
+.quick{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0 0}
+.quick a{display:block;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;text-decoration:none;color:var(--text)}
+.quick a:hover{border-color:rgba(186,242,94,.4)}
+.quick b{display:block;margin-bottom:2px}
+.quick span{color:var(--muted);font-size:14px}
+section{padding:34px 0 8px;border-bottom:1px solid var(--line)}
+h2{font-size:clamp(24px,3vw,32px);line-height:1.2;margin:0 0 6px;letter-spacing:-.01em}
+h2 .n{display:inline-grid;place-items:center;min-width:40px;height:40px;padding:0 8px;border-radius:12px;background:rgba(186,242,94,.12);color:var(--accent);font-size:16px;font-weight:800;margin-right:10px;vertical-align:4px}
+h3{font-size:19px;margin:26px 0 8px}
+.lead{color:var(--muted);margin:0 0 14px}
+ol.steps,ul.list{margin:10px 0 14px;padding-left:22px}
+ol.steps li,ul.list li{margin:6px 0}
+.ui{display:inline-block;background:#0f141c;border:1px solid var(--line);border-bottom-width:2px;border-radius:8px;padding:0 8px;font-weight:600;font-size:14.5px;white-space:nowrap}
+.tip,.warn,.note{border-radius:14px;padding:12px 16px;margin:12px 0;font-size:15px}
+.tip{background:rgba(186,242,94,.07);border:1px solid rgba(186,242,94,.25)}
+.tip::before{content:"💡 ";}
+.warn{background:rgba(255,176,87,.08);border:1px solid rgba(255,176,87,.3);color:#ffe0bd}
+.warn::before{content:"⚠️ ";}
+.note{background:var(--panel);border:1px solid var(--line);color:var(--muted)}
+figure{margin:16px 0 20px}
+figure img{display:block;border-radius:14px;border:1px solid var(--line);box-shadow:0 18px 50px rgba(0,0,0,.4)}
+figure.side{float:right;width:min(300px,40%);margin:4px 0 16px 24px}
+figcaption{color:var(--muted);font-size:13px;margin-top:8px;text-align:center}
+.clear{clear:both}
+table{width:100%;border-collapse:collapse;margin:12px 0 18px;font-size:15px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:13px;letter-spacing:.02em}
+td:first-child{white-space:nowrap;font-weight:600}
+.legend span{display:inline-block;padding:1px 8px;border-radius:6px;font-size:13px;margin:2px}
+.help{text-align:center;padding:40px 0 10px}
+.help p{color:var(--muted)}
+footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);font-size:14px;text-align:center}
+.totop{position:fixed;right:18px;bottom:18px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--panel2);border:1px solid var(--line);color:var(--text);text-decoration:none;font-size:18px}
+@media (max-width:900px){
+ .layout{grid-template-columns:1fr}
+ nav.toc{position:static;max-height:none;padding:16px 0 0;border-bottom:1px solid var(--line)}
+ nav.toc .grp{display:none}nav.toc.open .grp{display:block}
+ .tocbtn{display:flex!important}
+ figure.side{float:none;width:auto;margin:16px 0}
+ .quick{grid-template-columns:1fr}
+ .navlinks .btn span{display:none}
+}
+.tocbtn{display:none;width:100%;justify-content:space-between}
+@media (max-width:600px){td:first-child,.ui{white-space:normal}th,td{padding:8px 6px}.layout{padding:0 16px}header.nav .in{padding:0 16px}.brand{font-size:14px}}
+</style>
+</head>
+<body>
+<header class="nav"><div class="in">
+  <a class="brand" href="/"><img src="/icon.png" alt="">GHÉP VIDEO</a>
+  <div class="navlinks">
+    <a class="btn" href="/download">⬇<span>&nbsp;Tải &amp; cài đặt</span></a>
+    <a class="btn zalo" href="https://zalo.me/g/gimz1uxcifvaydqar800" target="_blank" rel="noopener">💬<span>&nbsp;Nhóm hỗ trợ</span></a>
+  </div>
+</div></header>
+
+<div class="layout">
+<nav class="toc" id="toc" aria-label="Mục lục">
+  <button class="btn tocbtn" type="button" id="tocBtn">📑 Mục lục <span>▾</span></button>
+  <div class="grp">
+    <b>BẮT ĐẦU</b>
+    <a href="#cai-dat">Cài đặt &amp; cập nhật</a>
+    <a href="#ai">Bật AI (Claude / ChatGPT)</a>
+    <a href="#giao-dien">Làm quen giao diện</a>
+    <b>GHÉP ẢNH + LỜI ĐỌC</b>
+    <a href="#tu-lieu">01 · Tư liệu &amp; AI xem ảnh</a>
+    <a href="#giong-doc">Giọng đọc: file ghi âm</a>
+    <a href="#minimax">Giọng đọc MiniMax</a>
+    <a href="#nhac-nen">02 · Nhạc nền</a>
+    <a href="#luu-video">03 · Lưu video</a>
+    <a href="#xuat-ghep-anh">Dựng thử &amp; xuất video</a>
+    <a href="#anh-bia">06 · Ảnh bìa</a>
+    <b>EDIT VIDEO CHIA SẺ</b>
+    <a href="#video-tho">01 · Video thô &amp; ghép nhiều video</a>
+    <a href="#canh-tram">02 · Cảnh trám</a>
+    <a href="#xuat-chia-se">03 · Cài đặt xuất</a>
+    <a href="#sua-bang-chu">04 · Sửa bằng chữ</a>
+    <a href="#noi-dung-dang">Tiêu đề, caption, hashtag, clip ngắn</a>
+    <a href="#xem-xuat">Phân tích, xem trước &amp; xuất</a>
+    <b>DÙNG CHUNG 2 CHẾ ĐỘ</b>
+    <a href="#tieu-de">Tiêu đề mở đầu</a>
+    <a href="#phu-de">Phụ đề karaoke</a>
+    <a href="#mau-sac">🎨 Chỉnh màu</a>
+    <b>KHÁC</b>
+    <a href="#ket-qua">File kết quả ở đâu</a>
+    <a href="#loi">Lỗi thường gặp</a>
+  </div>
+</nav>
+
+<main>
+<div class="hero">
+  <h1>Hướng dẫn sử dụng <em>Ghép Video</em></h1>
+  <p>Đi qua từng tính năng, theo đúng thứ tự trên màn hình app. Ghép Video có 2 chế độ, chuyển bằng 2 nút trên cùng: <span class="ui">Ghép ảnh + lời đọc</span> và <span class="ui">✂ Edit video chia sẻ</span>.</p>
+  <div class="quick">
+    <a href="#tu-lieu"><b>🎬 Ghép ảnh + lời đọc</b><span>Có ảnh, video và giọng kể → video dọc hoàn chỉnh.</span></a>
+    <a href="#video-tho"><b>✂ Edit video chia sẻ</b><span>Có video quay người nói → tự cắt, phụ đề, tiêu đề.</span></a>
+    <a href="#mau-sac"><b>🎨 Màu, tiêu đề, phụ đề</b><span>Dùng chung cho cả 2 chế độ.</span></a>
+  </div>
+</div>
+
+<!-- ======================= BẮT ĐẦU ======================= -->
+<section id="cai-dat">
+  <h2><span class="n">1</span>Cài đặt &amp; cập nhật</h2>
+  <p class="lead">Chưa cài? Làm theo trang <a href="/download">Tải &amp; cài đặt</a> (có hướng dẫn riêng cho Windows và Mac).</p>
+  <h3>Mở app</h3>
+  <ul class="list">
+    <li><b>Windows:</b> bấm đúp biểu tượng <b>Ghép Video</b> ngoài Desktop hoặc trong menu Start.</li>
+    <li><b>Mac:</b> mở <b>Launchpad</b> hoặc thư mục <b>Ứng dụng</b>, bấm <b>Ghép Video</b>.</li>
+  </ul>
+  <h3>Cập nhật bản mới</h3>
+  <ol class="steps">
+    <li>Khi có bản mới, nút <span class="ui">Phiên bản …</span> ở góc trên bên phải chuyển sang màu xanh.</li>
+    <li>Bấm vào nút đó → bấm <span class="ui">Cập nhật</span>, chờ vài giây.</li>
+    <li>Bấm khởi động lại. Ảnh, video, cài đặt, key đã lưu của bạn được giữ nguyên.</li>
+  </ol>
+  <div class="tip">Bản mới bị lỗi? Mở lại <span class="ui">Phiên bản</span> → <span class="ui">↩ Quay lại bản trước</span> để về bản cũ trong lúc chờ sửa.</div>
+</section>
+
+<section id="ai">
+  <h2><span class="n">2</span>Bật AI (Claude hoặc ChatGPT)</h2>
+  <p class="lead">AI giúp xem và đặt tên ảnh, ghép cảnh khớp lời đọc, soát chính tả phụ đề, gợi ý tiêu đề, caption, hashtag, clip ngắn và cảnh trám. Không có AI, app vẫn cắt video, làm phụ đề, cân giọng và xuất video bình thường.</p>
+  <ol class="steps">
+    <li>Nếu bạn có gói <b>Claude Pro/Max</b>: cài <a href="https://code.claude.com/docs/en/setup" target="_blank" rel="noopener">Claude Code</a>. Nếu có gói <b>ChatGPT</b>: cài <a href="https://developers.openai.com/codex/cli" target="_blank" rel="noopener">Codex</a>.</li>
+    <li>Mở Claude Code / Codex một lần và đăng nhập bằng tài khoản của bạn.</li>
+    <li>Trong app, trang Ghép ảnh + lời đọc, khung <b>AI xem ảnh</b>: chọn <span class="ui">Tự động</span>, <span class="ui">Claude</span> hoặc <span class="ui">ChatGPT</span>. Chấm xanh cạnh tên nghĩa là đã sẵn sàng.</li>
+  </ol>
+  <div class="note">Lượt dùng AI tính vào hạn mức gói của bạn. Ảnh thu nhỏ và lời thoại được gửi tới Anthropic (Claude) hoặc OpenAI (ChatGPT) bằng tài khoản của chính bạn; nhận dạng giọng nói và dựng video luôn chạy trên máy.</div>
+</section>
+
+<section id="giao-dien">
+  <h2><span class="n">3</span>Làm quen giao diện</h2>
+  <figure><img src="/hd/index.jpg" alt="Giao diện trang Ghép ảnh + lời đọc" loading="lazy" width="1400" height="875"><figcaption>Trang “Ghép ảnh + lời đọc”: các cột cài đặt đánh số 01–06, khung xem trước bên phải, nút xuất ở thanh dưới.</figcaption></figure>
+  <ul class="list">
+    <li><b>Các mục đánh số</b> (01, 02…): làm lần lượt từ trên xuống, trái sang phải.</li>
+    <li><b>Thanh dưới cùng</b>: trạng thái công việc, thanh tiến độ và các nút chính (Dựng thử, Xuất, Phân tích…). Đang chạy có nút <span class="ui">Dừng</span>.</li>
+    <li><b>Nút − / +</b> và thanh trượt: chỉnh số (âm lượng, cỡ chữ, thời gian…). Mọi thay đổi được <b>tự lưu</b>.</li>
+    <li>Cửa sổ rộng thì các cột trải hết bề ngang; cửa sổ hẹp thì các cột tự xuống hàng.</li>
+  </ul>
+</section>
+
+<!-- ======================= GHÉP ẢNH ======================= -->
+<section id="tu-lieu">
+  <h2><span class="n">01</span>Tư liệu &amp; AI xem ảnh</h2>
+  <p class="lead">Chế độ <span class="ui">Ghép ảnh + lời đọc</span>: bạn có một thư mục ảnh/video và một giọng kể, app tự ghép thành video dọc 9:16 có phụ đề.</p>
+  <figure class="side"><img src="/hd/idx-media.jpg" alt="Mục Tư liệu của bạn" loading="lazy"><figcaption>Mục 01 · Tư liệu của bạn</figcaption></figure>
+  <ol class="steps">
+    <li>Bấm khung <span class="ui">Video &amp; hình ảnh</span>, chọn thư mục chứa ảnh và video (JPG, PNG, HEIC, MP4, MOV…).</li>
+    <li>Bấm <span class="ui">✨ Phân tích &amp; đặt tên</span>: AI xem từng file, mô tả nội dung, <b>đổi tên file</b> theo nội dung và chia video thành các đoạn cảnh. Lần sau chỉ phân tích file mới.</li>
+    <li><span class="ui">Xem ghi chú</span>: mở file ghi chú mô tả từng tư liệu. <span class="ui">↩ Trả lại tên gốc</span>: đổi tên file về như cũ.</li>
+    <li>Bật <b>Ghép cảnh khớp lời đọc</b> để app chọn cảnh hợp với từng câu nói (cần đã phân tích).</li>
+    <li>Bật <b>Tìm ảnh miễn phí cho câu chưa có cảnh hợp</b> nếu muốn app lấy thêm ảnh/video từ Pexels, Pixabay hoặc Openverse. Chọn nguồn (<span class="ui">Tự động</span> dùng mọi key đã lưu), dán API key rồi bấm <span class="ui">Lưu</span>. Bấm <span class="ui">Lấy key miễn phí</span> để đăng ký key.</li>
+  </ol>
+  <div class="tip">Ảnh nên cùng chủ đề với lời kể. Càng nhiều cảnh, video càng ít lặp.</div>
+  <div class="clear"></div>
+</section>
+
+<section id="giong-doc">
+  <h2><span class="n">🎤</span>Giọng đọc: file ghi âm</h2>
+  <ol class="steps">
+    <li>Ở ô chọn giọng, để <span class="ui">🎤 File ghi âm</span>.</li>
+    <li>Bấm khung <span class="ui">File ghi âm</span>, chọn file (M4A, MP3, WAV, AAC, FLAC…). Có thể thu bằng điện thoại rồi chép sang máy.</li>
+    <li><span class="ui">▶ Nghe giọng đọc</span>: nghe thử 30 giây đúng như khi xuất.</li>
+  </ol>
+  <table>
+    <tr><th>Cài đặt</th><th>Tác dụng</th></tr>
+    <tr><td>Âm lượng giọng đọc</td><td>Tăng/giảm độ to giọng (100% = chuẩn).</td></tr>
+    <tr><td>Tự cân bằng giọng đọc</td><td>Đưa giọng về độ to chuẩn mạng xã hội (−14 LUFS), không lúc to lúc nhỏ, có bộ chặn để không rè. Nên bật.</td></tr>
+    <tr><td>Đổi cảnh sau</td><td>Mỗi cảnh hiện tối đa bao nhiêu giây (1,5–5 giây).</td></tr>
+    <tr><td>Tự cắt khoảng im lặng</td><td>Bỏ các đoạn nghỉ dài trong file ghi âm cho video gọn.</td></tr>
+    <tr><td>Ảnh đầy khung, giữ trọn mặt</td><td>Phóng ảnh cho kín khung dọc nhưng không cắt mất mặt người. Ảnh quá ngang sẽ được bỏ qua.</td></tr>
+  </table>
+</section>
+
+<section id="minimax">
+  <h2><span class="n">🗣</span>Giọng đọc MiniMax (không cần thu âm)</h2>
+  <p class="lead">Dán kịch bản, app đọc bằng <b>giọng bạn đã clone</b> trên MiniMax. Cần tài khoản MiniMax có số dư (tính phí theo số ký tự).</p>
+  <figure class="side"><img src="/hd/idx-minimax.jpg" alt="Khung tạo giọng MiniMax" loading="lazy"><figcaption>Khung Tạo giọng MiniMax</figcaption></figure>
+  <h3>Chuẩn bị (làm 1 lần)</h3>
+  <ol class="steps">
+    <li>Vào MiniMax, clone giọng của bạn, chép lại <b>Voice ID</b> (dạng <code>moss_audio_…</code>).</li>
+    <li>Tạo <b>API key</b> ở trang quản lý key của MiniMax (nút <span class="ui">Lấy API key</span> trong app mở trang này).</li>
+  </ol>
+  <h3>Tạo giọng đọc</h3>
+  <ol class="steps">
+    <li>Chọn <span class="ui">🗣 Tạo giọng MiniMax</span>.</li>
+    <li><b>Nội dung đọc</b>: dán kịch bản. Dùng dấu chấm hoặc xuống dòng để ngắt câu. Kịch bản dài được tự chia đoạn.</li>
+    <li><b>Voice ID</b>: dán mã giọng đã clone.</li>
+    <li><b>Chất lượng</b>: <span class="ui">Cao (HD)</span> hay <span class="ui">Nhanh, rẻ</span>. <b>Tốc độ đọc</b>: 0,5×–2×.</li>
+    <li><b>Tài khoản MiniMax</b>: <span class="ui">Quốc tế (minimax.io)</span> hoặc <span class="ui">Trung Quốc</span>, đúng nơi bạn đăng ký.</li>
+    <li>Dán <b>API key MiniMax</b> → <span class="ui">Lưu</span> (chỉ lưu trên máy bạn, màn hình chỉ hiện 4 ký tự cuối).</li>
+    <li>Bấm <span class="ui">🎙 Tạo giọng đọc</span>. Xong, giọng mới thay cho file ghi âm; bấm <span class="ui">▶ Nghe giọng đọc</span> để nghe thử rồi xuất video như bình thường.</li>
+  </ol>
+  <div class="tip">Cùng nội dung, cùng giọng thì app dùng lại file cũ, không tốn phí lần 2. File lưu trong thư mục lưu video, mục <b>“Giọng đọc MiniMax”</b>.</div>
+  <div class="warn">Báo “Không tìm thấy Voice ID”: kiểm tra lại mã giọng và mục Tài khoản (Quốc tế/Trung Quốc). Báo “API key không đúng” hoặc “không đủ số dư”: kiểm tra trên trang MiniMax.</div>
+  <div class="clear"></div>
+</section>
+
+<section id="nhac-nen">
+  <h2><span class="n">02</span>Nhạc nền</h2>
+  <ol class="steps">
+    <li>Bấm <span class="ui">Thêm nhạc nền</span>, chọn file nhạc (không bắt buộc).</li>
+    <li>Chỉnh <b>Âm lượng nhạc</b> (thường 10–20% là vừa, nhạc không lấn lời).</li>
+    <li><span class="ui">▶ Nghe nhạc</span> hoặc <span class="ui">▶ Nghe cùng lời đọc</span> để nghe thử bản trộn. <span class="ui">✕ Bỏ nhạc nền</span> để bỏ.</li>
+  </ol>
+  <div class="note">Nhạc nền do bạn chọn: hãy dùng nhạc bạn có quyền sử dụng khi đăng lên mạng xã hội.</div>
+</section>
+
+<section id="luu-video">
+  <h2><span class="n">03</span>Lưu video</h2>
+  <ul class="list">
+    <li><b>Thư mục xuất video</b>: nơi lưu video thành phẩm.</li>
+    <li><b>Độ phân giải</b>: <span class="ui">1080p</span> (nét, nên dùng) hoặc <span class="ui">720p</span> (nhanh, file nhẹ).</li>
+  </ul>
+</section>
+
+<section id="xuat-ghep-anh">
+  <h2><span class="n">▶</span>Dựng thử &amp; xuất video</h2>
+  <ol class="steps">
+    <li>Khung <b>Xem mẫu kiểu chữ</b> bên phải cho xem ngay tiêu đề, phụ đề, cỡ chữ, hiệu ứng bạn chọn.</li>
+    <li><span class="ui">Dựng thử 20 giây</span>: xuất nhanh 20 giây đầu để kiểm tra cảnh, giọng, màu.</li>
+    <li><span class="ui">Xuất toàn bộ video ↗</span>: xuất bản đầy đủ. Xong, video phát trong khung bên phải; bấm <span class="ui">📁 Mở nơi lưu video</span> để mở thư mục, <span class="ui">Xem mẫu chữ</span> để quay lại khung mẫu.</li>
+  </ol>
+  <div class="tip">Đang xuất vẫn bấm <span class="ui">Dừng</span> được bất cứ lúc nào.</div>
+</section>
+
+<section id="anh-bia">
+  <h2><span class="n">06</span>Ảnh bìa</h2>
+  <ol class="steps">
+    <li>Xuất video trước, rồi bấm <span class="ui">✨ Tìm hình rõ mặt</span>: app tìm các khung hình nét, rõ mặt, không nghiêng trong các cảnh đã dùng.</li>
+    <li>Bấm chọn <b>1–3 hình</b> (bấm hình khác để thay). Hoặc <span class="ui">⬆ Tải ảnh lên</span> ảnh của bạn.</li>
+    <li>Bật/tắt <b>Chữ tiêu đề trên ảnh bìa</b>, xem trước, rồi <span class="ui">💾 Lưu ảnh bìa</span> (1080×1920). <span class="ui">📁 Mở nơi lưu</span> để lấy file.</li>
+  </ol>
+</section>
+
+<!-- ======================= EDIT VIDEO CHIA SẺ ======================= -->
+<section id="video-tho">
+  <h2><span class="n">01</span>Video thô &amp; ghép nhiều video</h2>
+  <p class="lead">Chế độ <span class="ui">✂ Edit video chia sẻ</span>: bạn quay mình nói chuyện, app tự cắt gọn, làm phụ đề, tiêu đề, cảnh trám và xuất nhiều tỉ lệ.</p>
+  <figure class="side"><img src="/hd/talk-videos.jpg" alt="Danh sách video thô đánh số" loading="lazy"><figcaption>Các video được đánh số và nối theo thứ tự</figcaption></figure>
+  <ol class="steps">
+    <li>Bấm <span class="ui">＋ Thêm video</span>. Chọn 1 hoặc <b>nhiều video</b> cùng lúc (giữ <b>Ctrl</b> trên Windows / <b>⌘</b> trên Mac).</li>
+    <li>Mỗi video có <b>số thứ tự</b> 1, 2, 3… App nối theo đúng thứ tự này rồi mới cắt và làm phụ đề.</li>
+    <li>Đổi thứ tự bằng <span class="ui">↑</span> <span class="ui">↓</span>, bỏ video bằng <span class="ui">✕</span>. <span class="ui">Sắp xếp theo tên</span> xếp theo tên file (video 2 đứng trước video 10).</li>
+    <li>Bật <b>Cắt nói vấp, câu nói lại</b> để AI tìm câu nói hỏng rồi nói lại và cắt bản hỏng.</li>
+  </ol>
+  <div class="tip">Video khác khổ (dọc lẫn ngang) vẫn nối được: app đặt video lên nền mờ cho vừa khung. Mỗi video được tìm khuôn mặt riêng để khung hình luôn đúng người nói.</div>
+  <div class="clear"></div>
+</section>
+
+<section id="canh-tram">
+  <h2><span class="n">02</span>Cảnh trám</h2>
+  <p class="lead">Cảnh trám (B-roll) là các cảnh minh hoạ chèn vào lúc bạn đang nói, cho video bớt đơn điệu.</p>
+  <ol class="steps">
+    <li>Bật <b>Chèn cảnh trám hợp với câu nói</b>.</li>
+    <li>Chọn <b>Kho trám</b>: thư mục ảnh/video minh hoạ. Kho cần được <span class="ui">✨ Phân tích &amp; đặt tên</span> ở trang Ghép ảnh + lời đọc trước.</li>
+    <li>Bật <b>Tìm thêm trên mạng (Pexels/Pixabay)</b> nếu kho chưa đủ cảnh.</li>
+    <li><b>Mức cảnh trám</b>: <span class="ui">Ít</span> / <span class="ui">Vừa</span> / <span class="ui">Nhiều</span>.</li>
+  </ol>
+</section>
+
+<section id="xuat-chia-se">
+  <h2><span class="n">03</span>Cài đặt xuất video</h2>
+  <table>
+    <tr><th>Cài đặt</th><th>Tác dụng</th></tr>
+    <tr><td>9:16 · 1:1 · 16:9</td><td>Tích các tỉ lệ cần xuất: TikTok/Reels/Shorts (9:16), Facebook (1:1), YouTube (16:9). Xuất cùng lúc.</td></tr>
+    <tr><td>Zoom nhẹ ở chỗ cắt</td><td>Phóng nhẹ luân phiên sau mỗi chỗ cắt để chỗ nối không bị giật.</td></tr>
+    <tr><td>Khử ồn giọng nói</td><td>Giảm tiếng ồn nền (quạt, xe, gió).</td></tr>
+    <tr><td>Tô màu từ khoá trong phụ đề</td><td>Các từ khoá (mục 04) hiện màu cam trong phụ đề.</td></tr>
+    <tr><td>Xuất thêm các clip ngắn đã chọn</td><td>Xuất kèm các clip ngắn 9:16 bạn tích ở mục “Clip ngắn AI gợi ý”. Tắt thì danh sách clip bị làm mờ.</td></tr>
+  </table>
+</section>
+
+<section id="sua-bang-chu">
+  <h2><span class="n">04</span>Sửa bằng chữ</h2>
+  <p class="lead">Sau khi phân tích, toàn bộ lời nói hiện thành chữ. <b>Sửa chữ là sửa video</b>: chữ bị gạch sẽ bị cắt khỏi video.</p>
+  <figure><img src="/hd/talk-editor.jpg" alt="Bản chữ để sửa video" loading="lazy" width="1000" height="471"><figcaption>Bản chữ: vạch “▶ Video 1, Video 2” đánh dấu chỗ từng video bắt đầu; chữ gạch là chỗ bị cắt.</figcaption></figure>
+  <h3>Màu trong bản chữ</h3>
+  <p class="legend"><span style="background:#1a2230">Giữ</span> <span style="background:#2c3345">Im lặng</span> <span style="background:#4a3b1a">Ậm ừ</span> <span style="background:#46232f">Nói vấp</span> <span style="background:#46232f">Nói lại</span> <span style="background:#1f3354">Bạn cắt</span> <span style="color:#ff9f43">Từ khoá</span> <span>🎬 Cảnh trám</span></p>
+  <h3>Thao tác</h3>
+  <table>
+    <tr><th>Muốn</th><th>Làm</th></tr>
+    <tr><td>Nghe một đoạn</td><td>Bấm vào chữ đó.</td></tr>
+    <tr><td>Giữ lại chữ bị cắt</td><td>Bấm vào chữ bị gạch.</td></tr>
+    <tr><td>Cắt một đoạn</td><td>Bôi đen đoạn chữ → bấm <span class="ui">Delete</span> hoặc <span class="ui">✂ Cắt đoạn đã chọn</span>.</td></tr>
+    <tr><td>Khôi phục một đoạn</td><td>Bôi đen → <span class="ui">↺ Khôi phục đoạn đã chọn</span>.</td></tr>
+    <tr><td>Bỏ mọi chỗ tự cắt</td><td><span class="ui">Khôi phục mọi chỗ tự cắt</span>.</td></tr>
+    <tr><td>Bật/tắt cảnh trám</td><td>Bấm biểu tượng 🎬 trong bản chữ.</td></tr>
+  </table>
+  <div class="tip">Dòng trên cùng cho biết video thô dài bao nhiêu, còn bao nhiêu sau khi cắt.</div>
+</section>
+
+<section id="noi-dung-dang">
+  <h2><span class="n">✍</span>Tiêu đề, caption, hashtag, clip ngắn</h2>
+  <ul class="list">
+    <li><b>Tiêu đề mở đầu</b>: chọn 1 trong 3 tiêu đề AI gợi ý, hoặc sửa 2 dòng bên dưới.</li>
+    <li><b>Caption &amp; hashtag để đăng</b>: AI viết sẵn, bạn sửa tuỳ ý, bấm <span class="ui">📋 Sao chép caption + hashtag</span> để dán lên TikTok/Facebook.</li>
+    <li><b>Từ khoá tô màu</b>: các từ cách nhau bằng dấu phẩy.</li>
+    <li><b>Clip ngắn AI gợi ý</b>: các đoạn hay để đăng riêng. Tích/bỏ tích từng clip; bấm <span class="ui">▶</span> để nghe đoạn đó.</li>
+  </ul>
+</section>
+
+<section id="xem-xuat">
+  <h2><span class="n">▶</span>Phân tích, xem trước &amp; xuất</h2>
+  <table>
+    <tr><th>Nút</th><th>Làm gì</th></tr>
+    <tr><td>✨ Phân tích để sửa</td><td>Nghe và ghi lại lời nói, đánh dấu chỗ cắt, AI viết tiêu đề/caption… rồi <b>dừng</b> để bạn xem và sửa bản chữ.</td></tr>
+    <tr><td>Xuất video ↗</td><td>Xuất theo bản chữ đã sửa, mọi tỉ lệ đã chọn và các clip ngắn.</td></tr>
+    <tr><td>⚡ Edit &amp; xuất ngay</td><td>Tự làm hết: phân tích rồi xuất luôn, không cần sửa.</td></tr>
+  </table>
+  <div class="warn">“⚡ Edit &amp; xuất ngay” phân tích lại từ đầu nên <b>các chỗ bạn đã sửa sẽ mất</b>. Muốn tự chọn clip ngắn, cắt thêm… hãy dùng <span class="ui">✨ Phân tích để sửa</span> → sửa → <span class="ui">Xuất video ↗</span>.</div>
+  <figure class="side"><img src="/hd/talk-exports.jpg" alt="Xem trước video đã edit" loading="lazy"><figcaption>Xem trước: video đã edit và danh sách bản đã xuất</figcaption></figure>
+  <h3>Khung xem trước</h3>
+  <ul class="list">
+    <li><span class="ui">Video đã edit</span>: phát video thành phẩm. Danh sách bên dưới để chọn bản 9:16, 16:9, clip ngắn…</li>
+    <li><span class="ui">Bản thô</span>: phát video gốc; tích <b>Bỏ qua chỗ cắt khi phát bản thô</b> để nghe thử như đã cắt.</li>
+    <li><span class="ui">📁 Mở thư mục video đã xuất</span>: mở nơi lưu.</li>
+  </ul>
+  <div class="clear"></div>
+</section>
+
+<!-- ======================= DÙNG CHUNG ======================= -->
+<section id="tieu-de">
+  <h2><span class="n">T</span>Tiêu đề mở đầu</h2>
+  <p class="lead">Tiêu đề hiện ở đầu video vài giây. Cài đặt dùng chung cho cả 2 chế độ.</p>
+  <figure class="side"><img src="/hd/idx-title.jpg" alt="Cài đặt tiêu đề" loading="lazy"><figcaption>Kiểu, hiệu ứng, cỡ và thời gian hiện tiêu đề</figcaption></figure>
+  <ul class="list">
+    <li><b>Nội dung</b> (trang Ghép ảnh): 2 ô tiêu đề chính và dòng thứ hai. Trang Edit video chia sẻ lấy tiêu đề ở mục 04.</li>
+    <li><b>Kiểu</b>: <span class="ui">Nổi bật</span> (chữ trắng viền đậm), <span class="ui">Khung tối</span>, <span class="ui">Dải màu</span>, <span class="ui">Nền vàng</span>. Tắt tiêu đề: bỏ <b>Hiện tiêu đề</b> (hoặc chọn <span class="ui">Không</span>).</li>
+    <li><b>Hiệu ứng xuất hiện</b>: <span class="ui">Nảy</span>, <span class="ui">Trượt</span>, <span class="ui">Rơi</span>, <span class="ui">Quét</span>, <span class="ui">Nhịp đập</span>, <span class="ui">Hiện dần</span>.</li>
+    <li><b>Cỡ tiêu đề</b> 60–160% và <b>Tiêu đề hiện trong</b> 1–5 giây (mờ dần ở cuối).</li>
+  </ul>
+  <div class="tip">Tiêu đề ngắn thì phóng to được nhiều; tiêu đề dài luôn được giữ vừa khung.</div>
+  <div class="clear"></div>
+</section>
+
+<section id="phu-de">
+  <h2><span class="n">Aa</span>Phụ đề karaoke</h2>
+  <ul class="list">
+    <li><b>Kiểu</b>: <span class="ui">Karaoke vàng</span>, <span class="ui">Karaoke xanh</span>, <span class="ui">Karaoke hồng</span> (chữ đứng yên một hàng, chỉ đổi màu từ đang nói), <span class="ui">Chữ trắng</span> hoặc <span class="ui">Không phụ đề</span>.</li>
+    <li><b>Cỡ chữ phụ đề</b> 60–160%; <b>Kiểu chữ</b>: Arial, Tahoma, Verdana, Georgia, Times (đều đủ dấu tiếng Việt).</li>
+    <li><b>Vị trí phụ đề</b>: số càng nhỏ chữ càng cao. Khoảng 70–75% để phần mô tả của TikTok/Reels không che.</li>
+    <li><b>Sửa chữ nhận dạng sai</b> (trang Ghép ảnh): mỗi dòng một cặp <code>chữ sai =&gt; chữ đúng</code>, áp dụng cho phụ đề và file SRT lần xuất sau.</li>
+  </ul>
+</section>
+
+<section id="mau-sac">
+  <h2><span class="n">🎨</span>Chỉnh màu</h2>
+  <p class="lead">Chỉnh màu áp cho ảnh và video (không đổi màu tiêu đề, phụ đề). Dùng chung cho cả 2 chế độ.</p>
+  <figure class="side"><img src="/hd/idx-color.jpg" alt="Khung chỉnh màu" loading="lazy"><figcaption>Mẫu màu, thanh chỉnh và ảnh so sánh trước/sau</figcaption></figure>
+  <ol class="steps">
+    <li>Chọn một <b>mẫu</b>: Gốc, Tự nhiên, Tươi sáng, Ấm áp, Điện ảnh, Mát lạnh, Món ăn, Phim cổ điển, Trắng đen.</li>
+    <li>Tinh chỉnh bằng các thanh:
+      <ul class="list">
+        <li><b>Ánh sáng</b>: Độ sáng, Tương phản, Vùng sáng, Vùng tối.</li>
+        <li><b>Màu</b>: Nhiệt độ màu (Lạnh ↔ Ấm), Sắc độ (Xanh lá ↔ Hồng), Độ bão hoà, Sống động.</li>
+        <li><b>Hiệu ứng</b>: Điện ảnh (xanh – cam), Phim mờ, Viền tối, Làm nét, Hạt phim; công tắc Trắng đen.</li>
+      </ul></li>
+    <li>Kéo <b>thanh giữa ảnh xem thử</b> để so sánh Gốc và Sau chỉnh, ngay trên khung hình của bạn.</li>
+    <li>Ưng ý thì bấm <span class="ui">💾 Lưu thành mẫu</span>, đặt tên (vd “Vườn sầu riêng”). Mẫu riêng hiện với dấu ★; bấm ✕ trên mẫu để xoá. <span class="ui">↺ Đặt lại</span> để về như gốc.</li>
+  </ol>
+  <div class="tip">Chỉnh nhẹ tay thường đẹp hơn: thử mẫu có sẵn trước, rồi chỉnh thêm 10–20 đơn vị.</div>
+  <div class="clear"></div>
+</section>
+
+<!-- ======================= KHÁC ======================= -->
+<section id="ket-qua">
+  <h2><span class="n">📁</span>File kết quả ở đâu</h2>
+  <table>
+    <tr><th>Chế độ</th><th>Nằm ở thư mục lưu video</th></tr>
+    <tr><td>Ghép ảnh + lời đọc</td><td>Video <code>.mp4</code>, phụ đề <code>.srt</code> cùng tên; nếu có ảnh miễn phí thì kèm file ghi nguồn ảnh.</td></tr>
+    <tr><td>Edit video chia sẻ</td><td>Một thư mục <b>“&lt;tên video&gt; - hoàn thiện &lt;ngày giờ&gt;”</b> gồm: các video theo tỉ lệ (9x16, 1x1, 16x9), các <b>Clip ngắn</b>, phụ đề <code>.srt</code>, <b>caption-hashtag.txt</b> để đăng.</td></tr>
+    <tr><td>Giọng MiniMax</td><td>Thư mục <b>“Giọng đọc MiniMax”</b>.</td></tr>
+    <tr><td>Ảnh bìa</td><td>Ảnh <code>.jpg</code> 1080×1920, mở bằng nút <span class="ui">📁 Mở nơi lưu</span>.</td></tr>
+  </table>
+</section>
+
+<section id="loi">
+  <h2><span class="n">?</span>Lỗi thường gặp</h2>
+  <details open><summary><b>Windows: app không mở, hoặc báo “No module named …”</b></summary>
+    <p>Từ bản 2.8.2, app tự mở cửa sổ cài lại thư viện bị thiếu, <b>đừng đóng cửa sổ đó</b>; xong app tự mở. Bước “3/5 Thư viện” có thể đứng yên vài phút là bình thường. Nếu vẫn lỗi, cài lại bằng file <a href="/download">GhepVideo-Setup.exe</a> (tắt tạm phần mềm diệt virus nếu nó chặn).</p></details>
+  <details><summary><b>Windows báo “Windows protected your PC” / Mac báo không mở được</b></summary>
+    <p>Windows: bấm <b>More info → Run anyway</b>. Mac: <b>Cài đặt hệ thống → Quyền riêng tư &amp; Bảo mật → Vẫn mở</b>. Bộ cài chưa mua chứng chỉ ký số, không phải do virus.</p></details>
+  <details><summary><b>Thanh dưới báo “Chưa có Claude Code / Codex”</b></summary>
+    <p>Cài và đăng nhập Claude Code hoặc Codex (xem <a href="#ai">Bật AI</a>). Không có AI vẫn cắt, làm phụ đề và xuất được.</p></details>
+  <details><summary><b>Phụ đề sai chính tả</b></summary>
+    <p>Bật AI để app tự soát chính tả. Hoặc thêm cặp sửa ở <b>Sửa chữ nhận dạng sai</b> (trang Ghép ảnh + lời đọc): áp dụng cho lần xuất tiếp theo, và cho Edit video chia sẻ khi bấm phân tích lại.</p></details>
+  <details><summary><b>Giọng đọc quá nhỏ / quá to, nhạc lấn lời</b></summary>
+    <p>Bật <b>Tự cân bằng giọng đọc</b>, chỉnh <b>Âm lượng giọng đọc</b>, giảm <b>Âm lượng nhạc</b> xuống 10–15%. Dùng <span class="ui">▶ Nghe cùng lời đọc</span> để kiểm tra.</p></details>
+  <details><summary><b>Xuất video chậm</b></summary>
+    <p>Chọn 720p, ít tỉ lệ hơn, hoặc tắt Khử ồn. Trên Windows có card NVIDIA thì nhận dạng giọng nhanh hơn.</p></details>
+  <details><summary><b>Bấm Dừng rồi muốn làm tiếp</b></summary>
+    <p>Bấm lại nút xuất/phân tích. Các bước đã xong (nhận dạng giọng, phân tích ảnh) được lưu lại nên lần sau nhanh hơn.</p></details>
+</section>
+
+<div class="help">
+  <h2>Cần hỗ trợ thêm?</h2>
+  <p>Hỏi trong nhóm Zalo: có hướng dẫn, lịch buổi Zoom và mọi người cùng trao đổi.</p>
+  <a class="btn zalo" href="https://zalo.me/g/gimz1uxcifvaydqar800" target="_blank" rel="noopener">💬 Vào nhóm Zalo Ghép Video</a>
+</div>
+</main>
+</div>
+
+<footer>© Ghép Video · <a href="/">Trang chủ</a> · <a href="/download">Tải &amp; cài đặt</a></footer>
+<a class="totop" href="#" aria-label="Lên đầu trang">↑</a>
+
+<script>
+'use strict';
+// Highlight the section being read in the table of contents; the mobile menu folds.
+const links = [...document.querySelectorAll('.toc a')], byId = new Map(links.map(a => [a.getAttribute('href').slice(1), a]));
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  links.forEach(a => a.classList.remove('on')); const a = byId.get(e.target.id); if (a) a.classList.add('on');
+}), {rootMargin: '-40% 0px -55% 0px'});
+document.querySelectorAll('main section[id]').forEach(s => io.observe(s));
+const toc = document.getElementById('toc');
+document.getElementById('tocBtn').addEventListener('click', () => toc.classList.toggle('open'));
+links.forEach(a => a.addEventListener('click', () => toc.classList.remove('open')));
+</script>
+</body>
+</html>
