@@ -1,0 +1,43 @@
+# Starts the real app on a Windows machine (not only the renderer) to catch start-up errors that pythonw hides.
+name: Kiểm tra mở app trên Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  open-app:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cài như khách (tải Python, FFmpeg, thư viện)
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File studio\setup-windows.ps1 -NoOpen
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Phiên bản thư viện
+        shell: pwsh
+        run: '& "$env:APPDATA\GhepVideo\venv\Scripts\python.exe" -m pip list'
+      - name: Mở phần máy chủ của app, gọi thử API
+        shell: pwsh
+        run: |
+          $env:PYTHONUTF8 = '1'; $env:GHEPVIDEO_PORT = '8799'
+          $p = Start-Process "$env:APPDATA\GhepVideo\venv\Scripts\python.exe" -ArgumentList 'studio\app\main.py','--serve' -PassThru -RedirectStandardOutput out.txt -RedirectStandardError err.txt
+          Start-Sleep 15
+          Get-Content out.txt; Get-Content err.txt
+          $url = (Get-Content out.txt | Select-Object -First 1)
+          if (-not $url) { throw 'App không khởi động được (xem lỗi ở trên)' }
+          $tok = ($url -split 't=')[1]
+          $r = Invoke-WebRequest -Uri 'http://127.0.0.1:8799/api/state' -Method Post -Body '{}' -ContentType 'application/json' -Headers @{'X-Token'=$tok} -UseBasicParsing
+          "state: $($r.StatusCode) $($r.Content.Length) bytes"
+          foreach ($page in 'index.html','talk.html') { $x = Invoke-WebRequest -Uri "http://127.0.0.1:8799/$page" -UseBasicParsing; "$page $($x.StatusCode)" }
+          Stop-Process $p -Force
+      - name: Mở app có cửa sổ (như khách bấm biểu tượng), ghi lỗi nếu tắt ngay
+        shell: pwsh
+        run: |
+          $env:PYTHONUTF8 = '1'
+          $p = Start-Process "$env:APPDATA\GhepVideo\venv\Scripts\python.exe" -ArgumentList 'studio\app\main.py' -PassThru -RedirectStandardOutput gui-out.txt -RedirectStandardError gui-err.txt
+          Start-Sleep 25
+          "Còn chạy sau 25 giây: $(-not $p.HasExited)"; if ($p.HasExited) { "Mã thoát: $($p.ExitCode)" }
+          Get-Content gui-out.txt; Get-Content gui-err.txt
+          if (-not $p.HasExited) { Stop-Process $p -Force } else { exit 1 }
