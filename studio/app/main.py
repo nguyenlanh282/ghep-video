@@ -8,6 +8,22 @@ run as separate processes (renderer.py / analyzer.py) that report progress as JS
   python main.py --browser  serve the UI and open it in the default browser (no pywebview needed)
 """
 import hashlib, json, mimetypes, os, re, secrets, subprocess, sys, threading, time, unicodedata, uuid, webbrowser
+
+def _crash(kind, err, tb):
+ """The Windows shortcut starts the app with pythonw (no console): without this a start-up error just closes
+ silently. Write it to a log and show it in a message box, so the customer can send a screenshot."""
+ import traceback
+ text=''.join(traceback.format_exception(kind,err,tb))
+ home=Path(os.environ.get('APPDATA') or Path.home()/'Library'/'Application Support')/'GhepVideo'
+ try:home.mkdir(parents=True,exist_ok=True);(home/'loi-khoi-dong.txt').write_text(time.strftime('%Y-%m-%d %H:%M:%S\n')+text,encoding='utf-8')
+ except Exception:pass
+ if sys.platform=='win32':
+  try:
+   import ctypes
+   ctypes.windll.user32.MessageBoxW(None,'Ghép Video không mở được. Chụp màn hình này gửi người hỗ trợ.\n\n'+text[-1500:]+f'\n\nĐã lưu: {home/"loi-khoi-dong.txt"}','Ghép Video · lỗi khởi động',0x10)
+  except Exception:pass
+ sys.__excepthook__(kind,err,tb)
+sys.excepthook=_crash
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse, parse_qs
