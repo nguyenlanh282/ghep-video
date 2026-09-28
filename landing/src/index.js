@@ -55,8 +55,9 @@ async function saveLead(request, env, ctx) {
   const errors = {};
   if (name.length < 2) errors.name = 'Vui lòng nhập họ tên.';
   if (!phone) errors.phone = 'Số điện thoại / Zalo chưa đúng (vd 0912 345 678).';
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) errors.email = 'Email chưa đúng.';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) errors.email = email ? 'Email chưa đúng.' : 'Vui lòng nhập email.';
   if (!purpose) errors.purpose = 'Vui lòng chọn bạn đang là ai.';
+  if (niche.length < 2) errors.niche = 'Vui lòng ghi lĩnh vực bạn làm video.';
   if (Object.keys(errors).length) return json({ ok: false, errors }, 400);
 
   const ipHash = await sha256((request.headers.get('CF-Connecting-IP') || '') + env.SECRET);

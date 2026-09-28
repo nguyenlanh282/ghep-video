@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ghép Video · Quay một lần, có ngay video hoàn thiện</title>
-<meta name="description" content="Ghép Video tự cắt im lặng và “ờ, ừm”, thêm tiêu đề nổi bật, phụ đề karaoke, cảnh trám và xuất mọi tỉ lệ. Tham gia nhóm Zalo để nhận phần mềm và buổi Zoom hướng dẫn miễn phí.">
+<meta name="description" content="Ghép Video tự cắt im lặng và “ờ, ừm”, thêm tiêu đề nổi bật, phụ đề karaoke, cảnh trám và xuất mọi tỉ lệ. Đăng ký để tải miễn phí, vào nhóm Zalo xem hướng dẫn sử dụng.">
 <meta property="og:title" content="Ghép Video · Quay một lần, có ngay video hoàn thiện">
-<meta property="og:description" content="Tự cắt, phụ đề karaoke, tiêu đề nổi bật, xuất mọi nền tảng. Tham gia nhóm Zalo để nhận phần mềm và buổi Zoom hướng dẫn.">
+<meta property="og:description" content="Tự cắt, phụ đề karaoke, tiêu đề nổi bật, xuất mọi nền tảng. Đăng ký để tải miễn phí, vào nhóm Zalo xem hướng dẫn.">
 <meta property="og:image" content="/gioi-thieu.jpg">
 <link rel="icon" href="/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -137,7 +137,14 @@ form .btn{width:100%;margin-top:18px}
 .done-card h3{margin:0 0 10px;font-size:24px}
 .done-card p{margin:0 0 18px;font-size:16px}
 .done-card .btn{width:100%}
-.done-card .later{color:var(--muted);font-size:14px;margin-top:14px}
+.done-card .later{color:var(--muted);font-size:14px;margin:10px 0 0}
+.done-card .step{margin:18px 0 10px;font-size:15px;color:var(--accent)}
+.done-card .step:first-of-type{margin-top:4px}
+.dlbtns{display:grid;gap:10px}
+.dlbtns .btn{flex-direction:column;gap:4px}
+.dlbtns .btn small{font-size:12px;font-weight:500;opacity:.8}
+.need{margin:10px 0 0;font-size:13px;color:var(--warn);text-align:center}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
 
 /* faq + footer */
 details{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-bottom:10px}
@@ -173,7 +180,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 <body>
 <header class="nav"><div class="wrap">
   <a class="brand" href="#"><img src="/icon.png" alt="">GHÉP VIDEO</a>
-  <a class="btn zalo" href="#dang-ky"><span class="zicon">Z</span><span>Vào nhóm<span class="long"> Zalo</span></span></a>
+  <a class="btn primary" href="#dang-ky"><span>⬇ Tải<span class="long"> miễn phí</span></span></a>
 </div></header>
 
 <main>
@@ -183,7 +190,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
     <h1>Quay một lần.<br><em>Có ngay video hoàn thiện.</em></h1>
     <p class="lead">Ghép Video <b>tự cắt chỗ im lặng, “ờ, ừm”, câu nói lại</b>, thêm <b>tiêu đề nổi bật</b>, <b>phụ đề karaoke</b> đúng chính tả và cảnh minh hoạ. Một lần bấm, đủ video cho TikTok, Reels, Facebook, YouTube.</p>
     <div class="cta">
-      <a class="btn zalo big" href="#dang-ky"><span class="zicon">Z</span>Tham gia nhóm Zalo</a>
+      <a class="btn primary big" href="#dang-ky">⬇ Tải miễn phí</a>
       <a class="btn big" href="#gioi-thieu">▶ Xem video giới thiệu</a>
     </div>
     <div class="trust"><span>Mac &amp; Windows</span><span>Tiếng Việt chuẩn dấu</span><span>Dùng gói Claude / ChatGPT sẵn có</span></div>
@@ -263,7 +270,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
     <div>
       <span class="kicker">LỜI MỜI TỪ NGƯỜI LÀM RA GHÉP VIDEO</span>
       <blockquote>“Phần mềm này rất xịn và mình muốn tổ chức một buổi <b>Zoom</b> để hướng dẫn bạn dùng nó, và quan trọng hơn là <b>tư duy để thiết kế ra nó</b>. Mời bạn vào nhóm để chúng ta cùng trao đổi!”</blockquote>
-      <a class="btn zalo big" href="#dang-ky"><span class="zicon">Z</span>Đăng ký vào nhóm Zalo</a>
+      <a class="btn zalo big" href="#dang-ky"><span class="zicon">Z</span>Đăng ký tải &amp; vào nhóm</a>
     </div>
     <ul class="gets">
       <li><span class="n">1</span><div><b>Nhận phần mềm + hướng dẫn cài</b><span>Chia sẻ trong nhóm, cho Mac và Windows.</span></div></li>
@@ -277,12 +284,12 @@ footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 <section id="dang-ky"><div class="wrap signup">
   <div class="reveal">
     <span class="kicker">ĐĂNG KÝ MIỄN PHÍ</span>
-    <h2>Vào nhóm Zalo <em>Ghép Video</em></h2>
-    <p class="sub" style="margin-bottom:0">Điền vài thông tin để nhận link nhóm. Lịch Zoom và phần mềm được gửi trong nhóm.</p>
+    <h2>Tải <em>Ghép Video</em> miễn phí</h2>
+    <p class="sub" style="margin-bottom:0">Điền đủ thông tin để tải phần mềm ngay, rồi vào nhóm Zalo xem hướng dẫn sử dụng.</p>
     <ol class="steps">
-      <li><span class="n">1</span>Điền form bên cạnh (30 giây)</li>
-      <li><span class="n">2</span>Bấm “Vào nhóm Zalo”</li>
-      <li><span class="n">3</span>Nhận phần mềm và lịch buổi Zoom</li>
+      <li><span class="n">1</span>Điền đủ các ô bên cạnh (30 giây)</li>
+      <li><span class="n">2</span>Tải phần mềm cho Windows hoặc Mac</li>
+      <li><span class="n">3</span>Vào nhóm Zalo xem hướng dẫn sử dụng và lịch Zoom</li>
     </ol>
   </div>
 
@@ -294,8 +301,8 @@ footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
       <label for="phone">Số điện thoại / Zalo</label>
       <input id="phone" name="phone" inputmode="tel" autocomplete="tel" placeholder="0912 345 678" required>
       <div class="err" data-for="phone"></div>
-      <label for="email">Email <small>(không bắt buộc)</small></label>
-      <input id="email" name="email" type="email" autocomplete="email">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="email" placeholder="ban@gmail.com" required>
       <div class="err" data-for="email"></div>
       <label for="purpose">Bạn đang là</label>
       <select id="purpose" name="purpose" required>
@@ -305,21 +312,30 @@ footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
       </select>
       <div class="err" data-for="purpose"></div>
       <label for="os">Máy đang dùng</label>
-      <select id="os" name="os">
+      <select id="os" name="os" required>
         <option value="windows">Windows</option><option value="mac">MacOS</option><option value="both">Cả hai</option><option value="unknown">Chưa rõ</option>
       </select>
-      <label for="niche">Làm video cho lĩnh vực nào? <small>(không bắt buộc)</small></label>
-      <input id="niche" name="niche" placeholder="vd: mỹ phẩm, bất động sản, nông nghiệp, giáo dục…" maxlength="200">
+      <label for="niche">Làm video cho lĩnh vực nào?</label>
+      <input id="niche" name="niche" placeholder="vd: mỹ phẩm, bất động sản, nông nghiệp, giáo dục…" maxlength="200" required>
+      <div class="err" data-for="niche"></div>
       <div class="hp" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
-      <button class="btn zalo big" type="submit" id="submitBtn"><span class="zicon">Z</span>Đăng ký vào nhóm</button>
+      <button class="btn primary big" type="submit" id="submitBtn" disabled>⬇ Đăng ký &amp; tải phần mềm</button>
+      <p class="need" id="need">Điền đủ tất cả các ô để đăng ký.</p>
       <div class="err" id="formErr" role="alert"></div>
-      <p class="privacy">Thông tin chỉ dùng để mời bạn vào nhóm và hỗ trợ khi dùng phần mềm. Không chia sẻ cho bên khác.</p>
+      <p class="privacy">Thông tin chỉ dùng để gửi phần mềm, mời bạn vào nhóm và hỗ trợ khi dùng. Không chia sẻ cho bên khác.</p>
     </form>
 
     <div class="done-card" id="ready" tabindex="-1">
       <h3>Cảm ơn <span id="who"></span>! 🎉</h3>
-      <p>Phần mềm này rất xịn và mình muốn tổ chức một buổi <b>Zoom</b> để hướng dẫn bạn dùng nó, và quan trọng hơn là <b>tư duy để thiết kế ra nó</b>. Mời bạn vào nhóm để chúng ta cùng trao đổi!</p>
-      <a class="btn zalo big" id="zaloBtn" href="#" target="_blank" rel="noopener" hidden><span class="zicon">Z</span>Vào nhóm Zalo ngay</a>
+      <p class="step"><b>Bước 1 · Tải phần mềm</b></p>
+      <div class="dlbtns">
+        <a class="btn primary big" id="dlWin" href="/d/windows">🪟 Tải cho Windows<small>Windows 10/11 · GhepVideo-Setup.exe</small></a>
+        <a class="btn big" id="dlMac" href="/d/mac">🍎 Tải cho Mac<small>Chip Apple M1 trở lên · GhepVideo.pkg</small></a>
+      </div>
+      <p class="later"><a href="/download" target="_blank" rel="noopener">📖 Xem hướng dẫn cài đặt từng bước</a></p>
+      <p class="step"><b>Bước 2 · Vào nhóm Zalo xem hướng dẫn sử dụng</b></p>
+      <p>Trong nhóm có hướng dẫn sử dụng, lịch buổi <b>Zoom</b> và nơi hỏi đáp. Mình còn chia sẻ <b>tư duy để thiết kế ra phần mềm này</b>, mời bạn vào cùng trao đổi!</p>
+      <a class="btn zalo big" id="zaloBtn" href="#" target="_blank" rel="noopener" hidden><span class="zicon">Z</span>Vào nhóm Zalo xem hướng dẫn</a>
       <p class="later" id="zaloLater" hidden>Mình sẽ nhắn Zalo cho bạn qua số <b id="phoneShown"></b> để mời vào nhóm trong thời gian sớm nhất.</p>
     </div>
   </div>
@@ -327,7 +343,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 
 <section style="padding-top:0"><div class="wrap" style="max-width:840px">
   <h2 class="center reveal" style="margin-bottom:28px">Câu hỏi thường gặp</h2>
-  <details><summary>Làm sao để có phần mềm?</summary><p>Đăng ký ở form trên và vào nhóm Zalo. Phần mềm, hướng dẫn cài và lịch buổi Zoom được chia sẻ trong nhóm.</p></details>
+  <details><summary>Làm sao để có phần mềm?</summary><p>Điền đủ thông tin ở form đăng ký, bấm tải ngay bản cho Windows hoặc Mac. Sau đó vào nhóm Zalo để xem hướng dẫn sử dụng và lịch buổi Zoom.</p></details>
   <details><summary>Có mất phí không?</summary><p>Tham gia nhóm và buổi Zoom hướng dẫn là miễn phí.</p></details>
   <details><summary>Máy của tôi có chạy được không?</summary><p>Windows 10/11 64-bit hoặc Mac chip Apple (M1 trở lên), RAM từ 8 GB (nên có 16 GB), trống khoảng 6 GB ổ đĩa. Trên Windows có card NVIDIA sẽ nhanh hơn.</p></details>
   <details><summary>Cần gói Claude hoặc ChatGPT không?</summary><p>Cần một trong hai cho phần AI: xem và đặt tên ảnh, gợi ý tiêu đề, soát chính tả. Cắt video, phụ đề, giọng đọc vẫn dùng được khi không có. Lượt dùng tính vào hạn mức gói của bạn.</p></details>
@@ -337,7 +353,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 <section class="final"><div class="wrap">
   <h2 class="reveal">Video tiếp theo của bạn <em>chỉ cần quay</em>. Phần còn lại để Ghép Video lo.</h2>
   <p class="sub reveal" style="margin:0 auto 28px">Vào nhóm để nhận phần mềm và tham gia buổi Zoom hướng dẫn.</p>
-  <a class="btn zalo big reveal" href="#dang-ky"><span class="zicon">Z</span>Tham gia nhóm Zalo</a>
+  <a class="btn primary big reveal" href="#dang-ky">⬇ Đăng ký tải miễn phí</a>
 </div></section>
 </main>
 
@@ -362,9 +378,29 @@ if (matchMedia('(max-width:600px)').matches) { const v = $('#introVideo'); v.src
 $('#unmute').addEventListener('click', () => { const v = $('#introVideo'); v.muted = false; v.currentTime = 0; v.play().catch(() => {}); $('#unmute').hidden = true; });
 $('#introVideo').addEventListener('volumechange', e => { if (!e.target.muted) $('#unmute').hidden = true; });
 
+// Every field must be filled (and phone/email look right) before "Đăng ký" can be pressed.
+const RULES = {
+  name: v => v.trim().length >= 2,
+  phone: v => /^0[35789]\d{8}$/.test(v.replace(/[^\d+]/g, '').replace(/^\+84/, '0').replace(/^84(?=\d{9}$)/, '0')),
+  email: v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()),
+  purpose: v => !!v, os: v => !!v, niche: v => v.trim().length >= 2,
+};
+function checkForm() {
+  const f = $('#leadForm'), missing = Object.keys(RULES).filter(k => !RULES[k](f[k].value));
+  $('#submitBtn').disabled = missing.length > 0;
+  $('#need').hidden = !missing.length;
+  return !missing.length;
+}
+$('#leadForm').addEventListener('input', checkForm); $('#leadForm').addEventListener('change', checkForm);
+// Say what is wrong once the visitor leaves a field.
+const HINTS = {name: 'Vui lòng nhập họ tên.', phone: 'Số điện thoại / Zalo chưa đúng (vd 0912 345 678).', email: 'Email chưa đúng (vd ban@gmail.com).', niche: 'Vui lòng ghi lĩnh vực bạn làm video.'};
+for (const k of Object.keys(HINTS)) $('#' + k).addEventListener('blur', e => { const el = document.querySelector(`.err[data-for="${k}"]`); if (el) el.textContent = e.target.value && !RULES[k](e.target.value) ? HINTS[k] : ''; });
+checkForm();
+
 function showReady(name, zalo, phone) {
   $('#leadForm').style.display = 'none';
   $('#who').textContent = name || 'bạn';
+  if (os === 'mac') { $('#dlMac').classList.add('primary'); $('#dlWin').classList.remove('primary'); $('#dlMac').parentElement.prepend($('#dlMac')); }
   if (/^https:\/\/zalo\.me\//.test(zalo || '')) { $('#zaloBtn').href = zalo; $('#zaloBtn').hidden = false; }
   else { $('#phoneShown').textContent = phone || 'bạn đã điền'; $('#zaloLater').hidden = false; }
   $('#ready').classList.add('show'); $('#ready').focus();
@@ -376,6 +412,7 @@ try {
 
 $('#leadForm').addEventListener('submit', async e => {
   e.preventDefault();
+  if (!checkForm()) return;
   document.querySelectorAll('.err').forEach(x => x.textContent = '');
   const f = e.target, btn = $('#submitBtn'), label = btn.innerHTML;
   const data = { name: f.name.value, phone: f.phone.value, email: f.email.value, purpose: f.purpose.value, os: f.os.value, niche: f.niche.value, website: f.website.value };
@@ -388,13 +425,12 @@ $('#leadForm').addEventListener('submit', async e => {
       try { localStorage.setItem('gv_lead', JSON.stringify(lead)); } catch (e) {}
       document.cookie = 'gv_ok=1; path=/; max-age=2592000; samesite=lax';
       showReady(lead.name, lead.zalo, lead.phone);
-      if (lead.zalo) setTimeout(() => { location.href = lead.zalo; }, 2500);  // take them straight to the group
     } else if (out.errors) {
       for (const [k, v] of Object.entries(out.errors)) { const el = document.querySelector(`.err[data-for="${k}"]`); if (el) el.textContent = v; }
       const firstBad = f.querySelector(`[name="${Object.keys(out.errors)[0]}"]`); if (firstBad) firstBad.focus();
     } else $('#formErr').textContent = out.error || 'Chưa gửi được, vui lòng thử lại.';
   } catch (err) { $('#formErr').textContent = 'Không kết nối được. Kiểm tra mạng rồi thử lại.'; }
-  btn.disabled = false; btn.innerHTML = label;
+  btn.innerHTML = label; checkForm();
 });
 </script>
 </body>
