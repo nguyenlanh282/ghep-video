@@ -52,6 +52,14 @@ if (-not (Test-Path $Py)) { & $Uv venv --seed --python 3.12 $Venv; if ($LASTEXIT
 Step '3/5 Thư viện (lần đầu mất vài phút)'
 & $Uv pip install --python $Py -q -r (Join-Path $Here 'requirements-windows.txt')
 if ($LASTEXITCODE) { Fail 'Cài thư viện chưa được.' }
+# Check the app's libraries really import (an interrupted or blocked install can leave one out); reinstall once if not.
+& $Py -c "import numpy, PIL, webview, faster_whisper, cv2" 2>$null
+if ($LASTEXITCODE) {
+  Write-Host 'Thiếu thư viện, đang cài lại…'
+  & $Uv pip install --python $Py --reinstall -r (Join-Path $Here 'requirements-windows.txt')
+  & $Py -c "import numpy, PIL, webview, faster_whisper, cv2"
+  if ($LASTEXITCODE) { Fail 'Cài thư viện chưa được (có thể phần mềm diệt virus đang chặn). Tắt tạm diệt virus rồi chạy lại.' }
+}
 
 Step '4/5 Nhận diện khuôn mặt + nghe lời đọc (~1,5 GB)'
 $Yunet = Join-Path $Data 'models\face_detection_yunet_2023mar.onnx'

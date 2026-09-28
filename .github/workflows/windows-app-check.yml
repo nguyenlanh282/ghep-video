@@ -41,3 +41,18 @@ jobs:
           "Còn chạy sau 25 giây: $(-not $p.HasExited)"; if ($p.HasExited) { "Mã thoát: $($p.ExitCode)" }
           Get-Content gui-out.txt; Get-Content gui-err.txt
           if (-not $p.HasExited) { Stop-Process $p -Force } else { exit 1 }
+      - name: Thiếu thư viện (numpy bị xoá) thì app tự cài lại
+        shell: pwsh
+        run: |
+          $py = "$env:APPDATA\GhepVideo\venv\Scripts\python.exe"
+          & "$env:APPDATA\GhepVideo\bin\uv.exe" pip uninstall --python $py numpy 2>&1 | Out-Host
+          & $py -c "import numpy" 2>$null; "numpy sau khi xoá: $LASTEXITCODE (khác 0 = đã mất)"
+          # the launcher's check says "missing"
+          & $py -c "import importlib.util as u,sys; sys.exit(any(u.find_spec(m) is None for m in ('numpy','PIL','webview','faster_whisper','cv2')))"; "kiểm tra của Ghep Video (Windows).bat: $LASTEXITCODE (1 = sẽ tự cài lại)"
+          # the app itself: start-up error → runs setup-windows.ps1 in a new window
+          $env:GHEPVIDEO_NO_DIALOG = '1'; $env:PYTHONUTF8 = '1'
+          & $py studio\app\main.py 2>&1 | Select-Object -Last 3 | Out-Host
+          $ok = $false
+          foreach ($i in 1..60) { Start-Sleep 5; & $py -c "import numpy" 2>$null; if ($LASTEXITCODE -eq 0) { $ok = $true; break } }
+          "numpy đã được cài lại: $ok"; if (-not $ok) { exit 1 }
+          Get-Process pythonw -ErrorAction SilentlyContinue | Stop-Process -Force

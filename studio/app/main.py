@@ -20,7 +20,13 @@ def _crash(kind, err, tb):
  if sys.platform=='win32':
   try:
    import ctypes
-   ctypes.windll.user32.MessageBoxW(None,'Ghép Video không mở được. Chụp màn hình này gửi người hỗ trợ.\n\n'+text[-1500:]+f'\n\nĐã lưu: {home/"loi-khoi-dong.txt"}','Ghép Video · lỗi khởi động',0x10)
+   if os.environ.get('GHEPVIDEO_NO_DIALOG'):ctypes.windll.user32.MessageBoxW=lambda *a:0  # automated checks
+   setup=Path(__file__).resolve().parent.parent/'setup-windows.ps1'
+   if issubclass(kind,ImportError) and setup.is_file():
+    # A library is missing (install cut short, antivirus…): run the installer's library step again, it reopens the app.
+    subprocess.Popen(['powershell','-NoProfile','-ExecutionPolicy','Bypass','-File',str(setup)],creationflags=0x10)  # new console
+    ctypes.windll.user32.MessageBoxW(None,f'Ghép Video thiếu thư viện ({getattr(err,"name",None) or err}).\n\nApp đang tự cài lại trong cửa sổ xanh vừa mở. Đừng đóng cửa sổ đó; cài xong app sẽ tự mở (vài phút).','Ghép Video · đang tự sửa',0x40)
+   else:ctypes.windll.user32.MessageBoxW(None,'Ghép Video không mở được. Chụp màn hình này gửi người hỗ trợ.\n\n'+text[-1500:]+f'\n\nĐã lưu: {home/"loi-khoi-dong.txt"}','Ghép Video · lỗi khởi động',0x10)
   except Exception:pass
  sys.__excepthook__(kind,err,tb)
 sys.excepthook=_crash
