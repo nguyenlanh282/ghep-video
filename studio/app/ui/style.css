@@ -238,3 +238,5 @@ kbd{font:11px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.1);borde
 .donate .dnote{margin:10px 0 8px}
 .donate .dacc{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;font-size:13px}
 .donate .dclose{position:absolute;top:10px;right:10px;width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:none;color:inherit;cursor:pointer}
+.donate .didea{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.donate .didea b{color:var(--text);font-size:14px}

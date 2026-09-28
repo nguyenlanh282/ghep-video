@@ -9,6 +9,8 @@ window.Donate = {
 };
 document.addEventListener('click', e => {
   if (e.target.closest('[data-dclose]')) { document.getElementById('donate').hidden = true; try { sessionStorage.setItem('gv_donate_closed', '1'); } catch (x) {} }
+  const l = e.target.closest('[data-dlink]');
+  if (l) fetch('/api/openLink', {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Token': new URLSearchParams(location.search).get('t') || ''}, body: JSON.stringify({url: l.dataset.dlink})});
   const c = e.target.closest('[data-dcopy]');
   if (c) navigator.clipboard.writeText(c.dataset.dcopy).then(() => { c.textContent = 'Đã chép ✓'; setTimeout(() => { c.textContent = 'Sao chép STK'; }, 1500); }).catch(() => {});
 });

@@ -167,7 +167,7 @@ class Studio:
   return dict(status=status,used=used,ready=bool(used and status.get(used)))
 
  def open_link(self,url):
-  if url in ('https://pixabay.com/api/docs/','https://www.pexels.com/api/','https://code.claude.com/docs/en/setup','https://developers.openai.com/codex/cli'):webbrowser.open(url)
+  if url in ('https://pixabay.com/api/docs/','https://www.pexels.com/api/','https://code.claude.com/docs/en/setup','https://developers.openai.com/codex/cli','https://zalo.me/g/gimz1uxcifvaydqar800'):webbrowser.open(url)
   return {}
 
  # ---- background tasks ----

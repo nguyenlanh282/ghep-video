@@ -54,9 +54,8 @@ class TalkTests(unittest.TestCase):
         self.assertTrue(all(p['dur'] <= 3.5 for p in picked))
 
     def test_join_videos_keeps_order_and_times(self):
-        import shutil, subprocess, tempfile
+        import subprocess, tempfile
         from platform_tools import FFMPEG
-        if not (Path(FFMPEG).is_file() or shutil.which(FFMPEG)): self.skipTest('FFmpeg is not installed here (CI unit-test job)')
         with tempfile.TemporaryDirectory() as d:
             d = Path(d); a, b = d / 'a.mp4', d / 'b.mp4'
             subprocess.run([FFMPEG, '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=s=320x180:r=30', '-f', 'lavfi', '-i', 'sine=f=440', '-t', '1.5', '-pix_fmt', 'yuv420p', '-shortest', str(a)], check=True)
