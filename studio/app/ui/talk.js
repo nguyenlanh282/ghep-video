@@ -195,6 +195,7 @@ async function loadProject() {
   P = out.project; videoUrl = out.videoUrl; exportsList = out.exports || [];
   $('#emptyEditor').hidden = !!P; $('#editorBody').hidden = !P; $('#exportBtn').disabled = !P;
   $('#resultRow').hidden = !exportsList.length;
+  if (window.Donate) Donate.show(exportsList.length > 0);
   if (P) { buildTranscript(); paintExtras(); }
   setView(exportsList.length && !preferRaw ? 'edited' : 'raw');
 }

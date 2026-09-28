@@ -324,6 +324,7 @@ function render(state) {
   $('#error').hidden = !job.error; $('#errorText').textContent = job.error || '';
   if (state.resultUrl && (!prevJob || prevJob.result !== job.result || !showingResult) && prevJob && prevJob.running && !job.running) showResult(state.resultUrl);
   $('#resultRow').hidden = !job.result;
+  if (window.Donate) Donate.show(!!job.result && !job.running && !job.error);
   paintTitle();
 }
 const esc = (t) => String(t).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
