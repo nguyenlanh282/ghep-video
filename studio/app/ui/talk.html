@@ -51,26 +51,6 @@
     <label class="switch"><input type="checkbox" data-key="talkDenoise"><span></span>Khử ồn giọng nói</label>
     <label class="switch"><input type="checkbox" data-key="talkKeywords"><span></span>Tô màu từ khoá trong phụ đề</label>
     <label class="switch"><input type="checkbox" data-key="talkShorts"><span></span>Xuất thêm các clip ngắn đã chọn</label>
-    <h3>Tiêu đề mở đầu</h3>
-    <div class="seg wide effects" data-seg="titleStyle"><button data-value="pop">Nổi bật</button><button data-value="card">Khung tối</button><button data-value="ribbon">Dải màu</button><button data-value="box">Nền vàng</button><button data-value="none">Không</button></div>
-    <span class="hint">Hiệu ứng xuất hiện</span>
-    <div class="seg wide effects" data-seg="titleEffect"><button data-value="bounce">Nảy</button><button data-value="slide">Trượt</button><button data-value="drop">Rơi</button><button data-value="wipe">Quét</button><button data-value="pulse">Nhịp đập</button><button data-value="fade">Hiện dần</button></div>
-    <div class="value" data-value-key="titleScale" data-min="0.6" data-max="1.6" data-step="0.1" data-format="percent">Cỡ tiêu đề</div>
-    <div class="value" data-value-key="titleSeconds" data-min="1" data-max="5" data-step="0.5" data-format="seconds">Tiêu đề hiện trong</div>
-
-    <h3>Phụ đề</h3>
-    <div class="styles compact" data-choice="subStyle">
-      <button data-value="sweep" style="--c:#ffd54a"><i>Aa</i><span><b>Karaoke vàng</b></span></button>
-      <button data-value="active" style="--c:var(--accent)"><i>Aa</i><span><b>Karaoke xanh</b></span></button>
-      <button data-value="pill" style="--c:#f37aa5"><i>Aa</i><span><b>Karaoke hồng</b></span></button>
-    </div>
-    <div class="value" data-value-key="subScale" data-min="0.6" data-max="1.6" data-step="0.1" data-format="percent">Cỡ chữ phụ đề</div>
-    <span class="hint">Kiểu chữ phụ đề</span>
-    <div class="seg wide fonts" data-seg="subFont"><button data-value="arial" style="font-family:Arial">Arial</button><button data-value="tahoma" style="font-family:Tahoma">Tahoma</button><button data-value="verdana" style="font-family:Verdana">Verdana</button><button data-value="georgia" style="font-family:Georgia">Georgia</button><button data-value="times" style="font-family:'Times New Roman'">Times</button></div>
-    <hr>
-    <h2><span class="num">🎨</span>Màu sắc</h2>
-    <div class="gradebox" id="gradeBox" data-mode="talk"></div>
-    <p class="hint">Nhạc nền, âm lượng, thư mục lưu, tiêu đề, phụ đề và màu sắc dùng chung với trang Ghép ảnh + lời đọc.</p>
   </section>
 
   <section class="panel editor" aria-labelledby="t2">
@@ -107,6 +87,38 @@
       <p class="hint" id="shortsOff" hidden>Đang tắt “Xuất thêm các clip ngắn đã chọn” (cột trái, mục 03): các clip dưới đây sẽ không được xuất.</p>
       <div id="shorts" class="shorts"></div>
     </div>
+  </section>
+
+  <section class="panel p-color" aria-labelledby="t6">
+    <h2 id="t6"><span class="num">🎨</span>Màu sắc</h2>
+    <div class="gradebox" id="gradeBox" data-mode="talk"></div>
+  </section>
+
+  <section class="panel look" aria-labelledby="t5">
+    <h2 id="t5"><span class="num">05</span>Tiêu đề &amp; phụ đề</h2>
+    <div class="lookgrid">
+      <div class="lookcol">
+      <h3>Tiêu đề mở đầu</h3>
+      <div class="seg wide effects" data-seg="titleStyle"><button data-value="pop">Nổi bật</button><button data-value="card">Khung tối</button><button data-value="ribbon">Dải màu</button><button data-value="box">Nền vàng</button><button data-value="none">Không</button></div>
+      <span class="hint">Hiệu ứng xuất hiện</span>
+      <div class="seg wide effects" data-seg="titleEffect"><button data-value="bounce">Nảy</button><button data-value="slide">Trượt</button><button data-value="drop">Rơi</button><button data-value="wipe">Quét</button><button data-value="pulse">Nhịp đập</button><button data-value="fade">Hiện dần</button></div>
+      <div class="value" data-value-key="titleScale" data-min="0.6" data-max="1.6" data-step="0.1" data-format="percent">Cỡ tiêu đề</div>
+      <div class="value" data-value-key="titleSeconds" data-min="1" data-max="5" data-step="0.5" data-format="seconds">Tiêu đề hiện trong</div>
+
+      </div>
+      <div class="lookcol">
+      <h3>Phụ đề</h3>
+      <div class="styles compact" data-choice="subStyle">
+        <button data-value="sweep" style="--c:#ffd54a"><i>Aa</i><span><b>Karaoke vàng</b></span></button>
+        <button data-value="active" style="--c:var(--accent)"><i>Aa</i><span><b>Karaoke xanh</b></span></button>
+        <button data-value="pill" style="--c:#f37aa5"><i>Aa</i><span><b>Karaoke hồng</b></span></button>
+      </div>
+      <div class="value" data-value-key="subScale" data-min="0.6" data-max="1.6" data-step="0.1" data-format="percent">Cỡ chữ phụ đề</div>
+      <span class="hint">Kiểu chữ phụ đề</span>
+      <div class="seg wide fonts" data-seg="subFont"><button data-value="arial" style="font-family:Arial">Arial</button><button data-value="tahoma" style="font-family:Tahoma">Tahoma</button><button data-value="verdana" style="font-family:Verdana">Verdana</button><button data-value="georgia" style="font-family:Georgia">Georgia</button><button data-value="times" style="font-family:'Times New Roman'">Times</button></div>
+      </div>
+    </div>
+    <p class="hint">Nhạc nền, âm lượng, thư mục lưu, tiêu đề, phụ đề và màu sắc dùng chung với trang Ghép ảnh + lời đọc.</p>
   </section>
 
   <section class="panel preview" aria-labelledby="t3">

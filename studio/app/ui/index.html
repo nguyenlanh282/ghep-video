@@ -35,7 +35,7 @@
 </dialog>
 
 <main id="main">
-  <section class="panel" aria-labelledby="s1">
+  <section class="panel p-media" aria-labelledby="s1">
     <h2 id="s1"><span class="num">01</span>Tư liệu của bạn</h2>
     <button class="filebox" data-choose="media"><span class="ico">🖼</span><span class="fb-text"><b>Video &amp; hình ảnh</b><small data-path="mediaFolder">Chọn thư mục tư liệu</small></span><span class="fb-go">＋</span></button>
     <p class="hint tight"><span id="mediaCount">0</span> ảnh/video trong thư mục</p>
@@ -150,7 +150,7 @@
       <div class="seg" data-seg="resolution"><button data-value="720">720p</button><button data-value="1080">1080p</button></div></div>
   </section>
 
-  <section class="panel" aria-labelledby="s4">
+  <section class="panel p-text" aria-labelledby="s4">
     <h2 id="s4"><span class="num">04</span>Tiêu đề mở đầu</h2>
     <input type="text" data-key="title" placeholder="Tiêu đề chính">
     <input type="text" data-key="subtitle" placeholder="Dòng thứ hai">
@@ -182,14 +182,15 @@
     <p class="hint">Số càng nhỏ chữ càng cao. Khoảng 70–75% để không bị phần mô tả của TikTok/Reels che.</p>
 
     <hr>
-    <h2><span class="num">🎨</span>Màu sắc</h2>
-    <div class="gradebox" id="gradeBox" data-mode="story"></div>
-    <p class="hint">Dùng chung với trang Edit video chia sẻ. Chỉnh màu áp cho ảnh và video, không đổi màu tiêu đề và phụ đề.</p>
-
-    <hr>
     <h3>Sửa chữ nhận dạng sai</h3>
     <p class="hint">Mỗi dòng một cặp: chữ sai =&gt; chữ đúng. Áp dụng cho phụ đề và SRT của lần xuất tiếp theo.</p>
     <textarea data-key="fixesText" rows="4" spellcheck="false"></textarea>
+  </section>
+
+  <section class="panel p-color" aria-labelledby="s7">
+    <h2 id="s7"><span class="num">🎨</span>Màu sắc</h2>
+    <div class="gradebox" id="gradeBox" data-mode="story"></div>
+    <p class="hint">Dùng chung với trang Edit video chia sẻ. Chỉnh màu áp cho ảnh và video, không đổi màu tiêu đề và phụ đề.</p>
   </section>
 
   <section class="panel preview" aria-labelledby="pv">

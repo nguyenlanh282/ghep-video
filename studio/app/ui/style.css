@@ -18,9 +18,16 @@ h1{font-size:18px;letter-spacing:.08em;margin:0}
 .brand p{margin:2px 0 0;color:var(--muted);font-size:12px}
 .local{color:var(--muted);font-size:12px}
 
-main{flex:1;overflow:auto;display:grid;grid-template-columns:minmax(300px,340px) minmax(280px,320px) minmax(300px,340px);gap:20px;padding:22px 24px;justify-content:center;align-items:start}
-@media (max-width:1060px){main{grid-template-columns:minmax(300px,1fr) minmax(300px,1fr)}.preview{grid-column:1/-1;justify-self:center}}
-@media (max-width:700px){main{grid-template-columns:1fr;padding:16px}}
+/* Ghép ảnh page: columns share the window width (up to a comfortable maximum) instead of bunching in the middle.
+   Wide: media | title & captions | colour | preview.  Medium: colour goes under the preview.  Narrow: 2, then 1 column. */
+main{flex:1;overflow:auto;display:grid;gap:20px;padding:22px 24px;align-items:start;align-content:start;
+ grid-template-columns:repeat(3,minmax(290px,1fr)) minmax(320px,380px);grid-template-areas:"media text color preview";
+ max-width:1760px;width:100%;margin:0 auto;box-sizing:border-box}
+main>.p-media{grid-area:media}main>.p-text{grid-area:text}main>.p-color{grid-area:color}main>.preview{grid-area:preview}
+@media (max-width:1500px){main{grid-template-columns:repeat(2,minmax(290px,1fr)) minmax(320px,380px);grid-template-areas:"media text preview" "media text color"}
+ main>.p-media,main>.p-text{grid-row:1/span 2}}
+@media (max-width:1060px){main{grid-template-columns:repeat(2,minmax(280px,1fr));grid-template-areas:"media text" "color preview"}main>.p-media,main>.preview{grid-row:auto}main>.preview{justify-self:center}}
+@media (max-width:700px){main{grid-template-columns:1fr;grid-template-areas:"media" "text" "color" "preview";padding:16px}}
 
 .panel{background:var(--panel);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .panel.preview{background:transparent;padding:4px 0}
@@ -159,10 +166,13 @@ code{font:12px ui-monospace,Menlo,Consolas,monospace}
 .modes a:not(.on):hover{color:var(--text)}
 
 /* ---------- Video chia sẻ ---------- */
-main.talk{grid-template-columns:minmax(290px,320px) minmax(360px,1fr) minmax(280px,320px);max-width:1500px;margin:0 auto;width:100%}
-@media (max-width:1060px){main.talk{grid-template-columns:1fr 1fr}main.talk .editor{grid-column:1/-1;order:3}main.talk .preview{grid-column:auto;justify-self:stretch}}
-@media (max-width:700px){main.talk .preview{grid-column:1/-1}}
-@media (max-width:700px){main.talk{grid-template-columns:1fr}}
+main.talk{grid-template-columns:minmax(280px,360px) minmax(380px,1fr) minmax(280px,380px);grid-template-areas:"set edit prev" "color look prev";max-width:1760px;margin:0 auto;width:100%}
+main.talk>section:first-child{grid-area:set}main.talk>.p-color{grid-area:color}main.talk>.editor{grid-area:edit}main.talk>.look{grid-area:look}main.talk>.preview{grid-area:prev;grid-row:1/span 2}
+.lookgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 28px;align-items:start}
+.lookcol{display:flex;flex-direction:column;gap:12px;min-width:0}
+.lookcol h3{margin:4px 0 0}
+@media (max-width:1060px){main.talk{grid-template-columns:1fr 1fr;grid-template-areas:"set prev" "edit edit" "look color"}main.talk>.preview{grid-row:auto}main.talk .preview{justify-self:stretch}}
+@media (max-width:700px){main.talk{grid-template-columns:1fr;grid-template-areas:"set" "prev" "edit" "look" "color"}}
 .checks label{font-size:13px;display:flex;gap:6px;align-items:center}
 .styles.compact button{padding:6px}.styles.compact button i{width:36px;height:30px;font-size:16px}
 .editor .empty{border:1px dashed var(--line);border-radius:12px;padding:18px}
