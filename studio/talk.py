@@ -416,8 +416,8 @@ def render_variant(project, job, aspect, first, last, title, dest, tmp, progress
         if frames < 1: continue
         out = tmp / f'{aspect.replace(":", "x")}-{n:04}.mp4'
         if p['kind'] == 'speaker':
-            if (W0 / H0) / (W / H) < .6:
-                # Upright footage in a wide frame: keep the whole speaker in the middle over a blurred copy, not a huge zoom.
+            if (W0 / H0) / (W / H) < .6 and not job.get('talkFill', True):
+                # Upright footage in a wide frame, "keep the whole picture": the speaker in the middle over a blurred copy.
                 fh = round(H * p['zoom']); fw = round(fh * W0 / H0 / 2) * 2
                 vf = (f'split=2[bg][fg];[bg]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},gblur=sigma=30[b];'
                       f'[fg]scale={fw}:{fh}[f];[b][f]overlay=(W-w)/2:(H-h)*0.4,setsar=1,fps={FPS},tpad=stop_mode=clone:stop_duration=5')

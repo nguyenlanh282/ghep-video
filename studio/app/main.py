@@ -67,7 +67,8 @@ DEFAULTS=dict(mediaFolder=str(find_child(ROOT,'Video - ảnh')),audio=first_audi
  voiceSource='file',ttsText='',minimaxVoice='',minimaxModel='speech-2.8-hd',minimaxSpeed=1.0,minimaxRegion='intl',minimaxKey='',
  # Video chia sẻ (talking-video editor)
  talkVideo='',talkVideos='[]',talkBrollFolder=str(find_child(ROOT,'Video - ảnh')),talkBroll=True,talkDensity='vua',talkAspects='9:16',
- talkPunchIn=True,talkDenoise=True,talkRetakes=True,talkKeywords=True,talkShorts=True)
+ talkPunchIn=True,talkDenoise=True,talkRetakes=True,talkKeywords=True,talkShorts=True,
+ talkFill=True)  # upright video in a 16:9 / 1:1 frame: fill it (crop top and bottom) or keep the whole picture on a blurred copy
 TALK_DENSITY={'it':.18,'vua':.3,'nhieu':.45}
 SECRET_KEYS={'pexelsKey','pixabayKey','minimaxKey'}
 
@@ -209,7 +210,7 @@ class Studio:
    job=dict(video=self.talk_videos()[0],videos=self.talk_videos(),grade=self.grade(),projectDir=str(self.talk_dir()),cacheFolder=str(self.cache()),brollFolder=s['talkBrollFolder'],broll=s['talkBroll'],
             brollDensity=TALK_DENSITY.get(s['talkDensity'],.3),stockEnabled=s['stockEnabled'],stockSource=s['stockSource'],cutRetakes=s['talkRetakes'],
             fixesText=s['fixesText'],outputFolder=s['outputFolder'],titleStyle=s['titleStyle'],titleSeconds=s['titleSeconds'],titleScale=s['titleScale'],titleEffect=s['titleEffect'],subScale=s['subScale'],subFont=s['subFont'],aiSpelling=s['aiSpelling'],subStyle=s['subStyle'],captionY=s['captionY'],
-            aspects=[a for a in s['talkAspects'].split(',') if a],exportShorts=s['talkShorts'],punchIn=s['talkPunchIn'],denoise=s['talkDenoise'],
+            aspects=[a for a in s['talkAspects'].split(',') if a],exportShorts=s['talkShorts'],talkFill=s['talkFill'],punchIn=s['talkPunchIn'],denoise=s['talkDenoise'],
             highlightKeywords=s['talkKeywords'],voiceVolume=s['voiceVolume'],normalizeVoice=s['normalizeVoice'],music=s['music'],musicVolume=s['musicVolume'],aiPython=sys.executable)
    if task=='talk-render':
     proj=self.talk_project() or {};pick=proj.get('title_choice') or (proj.get('titles') or [{}])[0]  # ⚡ exports before the editor saves a choice
