@@ -59,20 +59,46 @@ def ai_json(question, schema=None, fallback=None):
     except Exception as exc:
         emit(None, f'AI chưa trả lời được: {str(exc)[:160]}'); return fallback if fallback is not None else {}
 
-def ai_correct(words, progress):
-    """Spelling/diacritics, one word at a time so every timing stays put. Only single-word replacements are applied."""
+def _bare(t):
+    """Lowercase letters without diacritics or punctuation: 'Tỉa,' -> 'tia'."""
+    t = unicodedata.normalize('NFD', nfc(t).lower().replace('đ', 'd'))
+    return re.sub(r'[^a-z0-9]', '', ''.join(ch for ch in t if not unicodedata.combining(ch)))
+
+def _plausible(old, new):
+    """A spelling fix of the same word (diacritics, a letter or two, a mis-heard syllable), not a different word."""
+    from difflib import SequenceMatcher
+    a, b = _bare(old), _bare(new)
+    return bool(b) and (a == b or SequenceMatcher(None, a, b).ratio() >= .5)
+
+def _keep_punct(old, new):
+    """Keep the punctuation stuck to the recognised word (the captions break lines on it) if the AI dropped it."""
+    m = re.search(r'[.,!?…:;]+$', old)
+    return new if not m or re.search(r'[.,!?…:;]$', new) else new + m.group(0)
+
+def ai_correct(words, progress, reference=''):
+    """Spelling/diacritics, one word at a time so every timing stays put. Only single-word replacements are applied,
+    and only where the AI's "old word" matches the transcript there (±3 words if it miscounted) and the new word is a
+    plausible spelling of it. reference: the script that was read aloud (MiniMax voice-over), when there is one."""
     fixed = 0
+    ref = (f'\nĐây là kịch bản gốc đã được đọc (đúng chính tả), dùng để đối chiếu:\n"""{reference.strip()[:6000]}"""\n' if reference.strip() else '')
     for c in range(0, len(words), 120):
         part = words[c:c + 120]
         lines = '\n'.join(f'{c + k}|{w["text"]}' for k, w in enumerate(part))
-        got = ai_json(f'''Đây là bản nhận dạng giọng nói tiếng Việt, mỗi dòng là "số|từ". Sửa lỗi chính tả, thiếu dấu, sai dấu, sai từ do nhận dạng nhầm (dựa vào ngữ cảnh), viết hoa đầu câu và tên riêng. Giữ nguyên dấu câu đi kèm từ. KHÔNG thêm, bớt, gộp hay tách từ.
+        got = ai_json(f'''Đây là bản nhận dạng giọng nói tiếng Việt, mỗi dòng là "số|từ". Sửa lỗi chính tả, thiếu dấu, sai dấu, sai từ do nhận dạng nhầm (dựa vào ngữ cảnh), viết hoa đầu câu và tên riêng. Giữ nguyên dấu câu đi kèm từ. KHÔNG thêm, bớt, gộp hay tách từ.{ref}
 {lines}
-Chỉ trả về những từ cần sửa, dạng JSON: {{"sua": {{"số": "từ đã sửa"}}}}''', fallback={})
+Chỉ trả về những từ cần sửa, dạng JSON: {{"sua": {{"số": {{"cu": "từ đang sai (y như trên)", "moi": "từ đã sửa"}}}}}}''', fallback={})
         for k, v in (got.get('sua') or {}).items():
             i = int(k) if str(k).isdigit() else -1
-            v = nfc(str(v)).strip()
-            if c <= i < c + len(part) and v and ' ' not in v and v != words[i]['text']:
-                words[i]['raw'] = words[i].get('raw', words[i]['text']); words[i]['text'] = v; fixed += 1
+            old, new = (v.get('cu', ''), v.get('moi', '')) if isinstance(v, dict) else ('', v)
+            new = nfc(str(new)).strip()
+            if not new or ' ' in new: continue
+            # Find the word the AI meant: its number, or a neighbour if it miscounted.
+            near = [j for j in (i, i - 1, i + 1, i - 2, i + 2, i - 3, i + 3) if c <= j < c + len(part)]
+            j = next((j for j in near if old and _bare(words[j]['text']) == _bare(old)), i if not old else -1)
+            if not (c <= j < c + len(part)) or not _plausible(words[j]['text'], new): continue
+            new = _keep_punct(words[j]['text'], new)
+            if new != words[j]['text']:
+                words[j]['raw'] = words[j].get('raw', words[j]['text']); words[j]['text'] = new; fixed += 1
         progress(c / max(1, len(words)))
     return fixed
 
@@ -232,7 +258,7 @@ def analyze(job):
     emit(25, 'Đang tìm chỗ im lặng, ậm ừ, nói vấp…'); mark_auto_cuts(words)
     ai = ai_provider()
     info = dict(ai=ai, corrected=0, retakes=0)
-    if ai:
+    if ai and job.get('aiSpelling', True):
         emit(30, 'AI đang soát chính tả phụ đề…')
         info['corrected'] = ai_correct(words, lambda f: emit(30 + 15 * f, f'AI đang soát chính tả phụ đề… {int(f * 100)}%'))
     R.apply_fixes(words, R.parse_fixes(job.get('fixesText', '')))

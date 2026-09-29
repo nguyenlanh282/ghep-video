@@ -60,7 +60,7 @@ DEFAULTS=dict(mediaFolder=str(find_child(ROOT,'Video - ảnh')),audio=first_audi
  title='VỢ CHỒNG',subtitle='Ai làm việc nhà?',titleStyle='pop',subStyle='sweep',musicVolume=.15,voiceVolume=1.0,normalizeVoice=True,
  shotSeconds=2.5,removeSilence=True,faceAwareFill=True,resolution='1080',fixesText='xòng => sòng\nđận => đần',
  matchScenes=True,stockEnabled=False,stockSource='auto',pexelsKey='',pixabayKey='',updateManifest='',captionY=.73,aiProvider='auto',titleSeconds=3.0,
- titleScale=1.0,titleEffect='bounce',subScale=1.0,subFont='arial',
+ titleScale=1.0,titleEffect='bounce',subScale=1.0,subFont='arial',aiSpelling=True,
  # colour grade of both modes (JSON: slider values + chosen look) and the user's saved grades (JSON list)
  grade='{}',gradePresets='[]',
  # voice-over: a recording ('file') or MiniMax Speech from text ('minimax', the user's own key and cloned voice)
@@ -208,7 +208,7 @@ class Studio:
    if task=='talk-render' and not self.talk_project():return self.fail('Hãy bấm “Phân tích video” trước.')
    job=dict(video=self.talk_videos()[0],videos=self.talk_videos(),grade=self.grade(),projectDir=str(self.talk_dir()),cacheFolder=str(self.cache()),brollFolder=s['talkBrollFolder'],broll=s['talkBroll'],
             brollDensity=TALK_DENSITY.get(s['talkDensity'],.3),stockEnabled=s['stockEnabled'],stockSource=s['stockSource'],cutRetakes=s['talkRetakes'],
-            fixesText=s['fixesText'],outputFolder=s['outputFolder'],titleStyle=s['titleStyle'],titleSeconds=s['titleSeconds'],titleScale=s['titleScale'],titleEffect=s['titleEffect'],subScale=s['subScale'],subFont=s['subFont'],subStyle=s['subStyle'],captionY=s['captionY'],
+            fixesText=s['fixesText'],outputFolder=s['outputFolder'],titleStyle=s['titleStyle'],titleSeconds=s['titleSeconds'],titleScale=s['titleScale'],titleEffect=s['titleEffect'],subScale=s['subScale'],subFont=s['subFont'],aiSpelling=s['aiSpelling'],subStyle=s['subStyle'],captionY=s['captionY'],
             aspects=[a for a in s['talkAspects'].split(',') if a],exportShorts=s['talkShorts'],punchIn=s['talkPunchIn'],denoise=s['talkDenoise'],
             highlightKeywords=s['talkKeywords'],voiceVolume=s['voiceVolume'],normalizeVoice=s['normalizeVoice'],music=s['music'],musicVolume=s['musicVolume'],aiPython=sys.executable)
    if task=='talk-render':
@@ -220,7 +220,9 @@ class Studio:
    if not Path(s['audio']).is_file():return self.fail('Hãy chọn file ghi âm.')
    if not Path(s['outputFolder']).is_dir():return self.fail('Hãy chọn thư mục lưu video.')
    analysed=len(self.analysis())>0
-   job={k:s[k] for k in ('mediaFolder','audio','music','outputFolder','title','subtitle','titleStyle','subStyle','musicVolume','shotSeconds','resolution','removeSilence','faceAwareFill','fixesText','voiceVolume','normalizeVoice','stockSource','captionY','titleSeconds','titleScale','titleEffect','subScale','subFont')}
+   job={k:s[k] for k in ('mediaFolder','audio','music','outputFolder','title','subtitle','titleStyle','subStyle','musicVolume','shotSeconds','resolution','removeSilence','faceAwareFill','fixesText','voiceVolume','normalizeVoice','stockSource','captionY','titleSeconds','titleScale','titleEffect','subScale','subFont','aiSpelling')}
+   # The MiniMax voice-over's own script is the reference text for the AI spelling check.
+   if s['voiceSource']=='minimax' and s['ttsText'].strip() and 'Giọng đọc - ' in Path(s['audio']).name:job['script']=s['ttsText']
    job.update(preview=bool(preview),grade=self.grade(),cacheFolder=str(self.cache()),matchScenes=s['matchScenes'] and analysed,stockEnabled=s['stockEnabled'] and s['matchScenes'] and analysed,aiPython=sys.executable)
    job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
    args=[str(ENGINE/'renderer.py'),str(job_file)];log='render.log';cleanup=lambda:job_file.unlink(missing_ok=True)

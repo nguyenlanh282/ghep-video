@@ -30,6 +30,29 @@ def digest(path):
   for b in iter(lambda:f.read(1024*1024),b''):h.update(b)
  return h.hexdigest()
 
+def ai_spell(words,job,cache):
+ """AI spelling/diacritics check of the recognised words (in place, timings untouched). The result is kept per
+ transcript + script, so the 20-second preview and the full export ask the AI only once. Returns words changed."""
+ from platform_tools import ai_provider
+ if not ai_provider():return 0
+ ref=job.get('script','') or ''
+ key=cache/('chinh-ta-'+hashlib.sha1(json.dumps([[w['text'] for w in words],ref],ensure_ascii=False).encode()).hexdigest()[:16]+'.json')
+ if key.exists():
+  try:
+   fixed=json.loads(key.read_text(encoding='utf-8'))
+   for i,t in fixed.items():
+    if 0<=int(i)<len(words):words[int(i)]['text']=t
+   return len(fixed)
+  except Exception:pass
+ import talk  # shares the transcript checker of Video chia sẻ (imported here: talk imports this module)
+ emit(4,'AI đang soát chính tả phụ đề…')
+ before=[w['text'] for w in words]
+ talk.ai_correct(words,lambda f:emit(4+3*f,f'AI đang soát chính tả phụ đề… {int(f*100)}%'),ref)
+ fixed={str(i):w['text'] for i,(b,w) in enumerate(zip(before,words)) if w['text']!=b}
+ try:key.write_text(json.dumps(fixed,ensure_ascii=False),encoding='utf-8')
+ except OSError:pass
+ return len(fixed)
+
 def get_words(audio,cache):
  cache.mkdir(parents=True,exist_ok=True);key=cache/(digest(audio)+'.json')
  if key.exists():r=json.loads(key.read_text(encoding='utf-8'))
@@ -507,11 +530,13 @@ def render(job):
  keep=[[0,original_duration]]
  if job.get('removeSilence',True):audio,words,keep=cut_silence(audio,cache,words)
  audio_duration=float(probe(audio)['format']['duration']);duration=min(audio_duration,20) if job.get('preview') else audio_duration
- # Spelling fixes come from the app (Sửa chữ nhận dạng sai); applied before grouping so line widths are measured on the final text.
+ # AI reads the transcript and fixes spelling first; then the app's own fixes (Sửa chữ nhận dạng sai) have the last word.
+ # Both before grouping, so line widths are measured on the final text.
+ corrected=ai_spell(words,job,cache) if words and job.get('aiSpelling',True) else 0
  fixes=parse_fixes(job.get('fixesText',''));apply_fixes(words,fixes)
  sub_scale=max(.6,min(1.6,float(job.get('subScale',1) or 1)));sub_font=font_path(job.get('subFont','arial'))
  groups=[g for g in groups_for(words,max_width=600/sub_scale,font_file=sub_font) if g[0]['start']<duration]
- job=dict(job,removeSilence=job.get('removeSilence',True),faceAwareFill=face_aware,originalDuration=original_duration,editedDuration=audio_duration,keptAudioRanges=keep,spellingFixes=fixes)
+ job=dict(job,removeSilence=job.get('removeSilence',True),faceAwareFill=face_aware,originalDuration=original_duration,editedDuration=audio_duration,keptAudioRanges=keep,spellingFixes=fixes,aiCorrected=corrected)
  emit(8,'Đang chuẩn bị cảnh quay…')
  details=[]
  for p in media:

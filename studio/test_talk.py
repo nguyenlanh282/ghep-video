@@ -80,4 +80,31 @@ class TalkTests(unittest.TestCase):
             squash = lambda t: t.replace(' ', '').replace('\n', '')
             self.assertEqual(squash(''.join(ps)), squash(text))
 
+    def test_ai_fix_must_match_the_word_and_be_a_plausible_spelling(self):
+        self.assertTrue(talk._plausible('tỉ', 'tỉa')); self.assertTrue(talk._plausible('bóng', 'bón')); self.assertTrue(talk._plausible('chao', 'chào'))
+        self.assertFalse(talk._plausible('cành,', 'tỉa')); self.assertFalse(talk._plausible('mọi', 'bàn'))
+        self.assertEqual(talk._keep_punct('cành,', 'cánh'), 'cánh,')
+
+    def test_ai_spelling_before_captions_is_cached_and_uses_the_script(self):
+        import tempfile, renderer, platform_tools
+        asked = []
+        def fake_ai(question, schema=None, fallback=None):
+            asked.append(question); return {'sua': {'1': {'cu': 'chao', 'moi': 'chào'}, '2': {'cu': 'nguoi', 'moi': 'người'}, '0': {'cu': 'mọi', 'moi': 'bàn'}}}
+        old = (talk.ai_json, platform_tools.ai_provider)
+        talk.ai_json = fake_ai; platform_tools.ai_provider = lambda: 'claude'
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                ws = words('Xin|chao|mọi|nguoi')
+                n = renderer.ai_spell(ws, {'script': 'Xin chào mọi người'}, Path(d))
+                self.assertEqual((n, [w['text'] for w in ws]), (2, ['Xin', 'chào', 'mọi', 'người']))
+                self.assertIn('kịch bản gốc', asked[0]); self.assertIn('Xin chào mọi người', asked[0])
+                ws2 = words('Xin|chao|mọi|nguoi')
+                self.assertEqual(renderer.ai_spell(ws2, {'script': 'Xin chào mọi người'}, Path(d)), 2)
+                self.assertEqual(len(asked), 1, 'the second export reuses the saved check')
+                self.assertEqual(ws2[3]['text'], 'người')
+                platform_tools.ai_provider = lambda: None
+                self.assertEqual(renderer.ai_spell(words('a|b'), {}, Path(d)), 0, 'no AI: skipped')
+        finally:
+            talk.ai_json, platform_tools.ai_provider = old
+
 if __name__ == '__main__': unittest.main()
