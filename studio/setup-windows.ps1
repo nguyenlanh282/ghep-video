@@ -50,7 +50,8 @@ $Py = Join-Path $Venv 'Scripts\python.exe'
 if (-not (Test-Path $Py)) { & $Uv venv --seed --python 3.12 $Venv; if ($LASTEXITCODE) { Fail 'Không tạo được môi trường Python.' } }
 
 Step '3/5 Thư viện (lần đầu mất vài phút)'
-& $Uv pip install --python $Py -q -r (Join-Path $Here 'requirements-windows.txt')
+Write-Host 'Đang tải và cài thư viện (hiện tiến độ bên dưới; đứng yên vài phút là bình thường)…'
+& $Uv pip install --python $Py -r (Join-Path $Here 'requirements-windows.txt')
 if ($LASTEXITCODE) { Fail 'Cài thư viện chưa được.' }
 # Check the app's libraries really import (an interrupted or blocked install can leave one out); reinstall once if not.
 & $Py -c "import numpy, PIL, webview, faster_whisper, cv2" 2>$null
