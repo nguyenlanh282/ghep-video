@@ -199,7 +199,7 @@ def s_intro(f, t, d, c):
     L = ['Từ video thô', 'đến video hoàn thiện'] if V else ['Từ video thô đến video hoàn thiện']
     for i, l in enumerate(L): put_text(f, l, W / 2, cy + 230 + i * 108, 92 if V else 84, .6 + .15 * i, t, anchor='c')
     put_text(f, 'chỉ với một cú bấm', W / 2, cy + (470 if V else 340), 92 if V else 84, 1.0, t, YELLOW, anchor='c')
-    tags = ['Ghép nhiều video', 'Chỉnh màu', 'Giọng MiniMax', 'Phụ đề karaoke']
+    tags = ['Ghép nhiều video', 'Chỉnh màu', 'Giọng MiniMax', 'Phụ đề đúng chính tả']
     for i, tag in enumerate(tags):
         if V: pill(f, tag, 130 + (i % 2) * 430, cy + 600 + (i // 2) * 90, 1.4 + i * .12, t, TEXT, (40, 50, 66), 32)
         else: pill(f, tag, 330 + i * 330, cy + 480, 1.4 + i * .12, t, TEXT, (40, 50, 66), 28)
@@ -260,21 +260,62 @@ def s_voice(f, t, d, c):
         card(f, SH['idx-minimax'], 880, 130, h=800, k=k); wave(f, 1330, 420, 460, 220, t, k)
         put_text(f, 'Giọng của chính bạn', 1560, 690, 38, 1.0, t, ACCENT, anchor='c')
 
+SYM = ImageFont.truetype('/System/Library/Fonts/Supplemental/Arial Unicode.ttf', 40)  # ✓ ✗
+
+def spell_box(f, x, y, w, t, k):
+    """Before → after of the AI spelling check."""
+    h = 236; box = Image.new('RGBA', (w, h)); d = ImageDraw.Draw(box)
+    d.rounded_rectangle((0, 0, w - 1, h - 1), 22, fill=PANEL + (255,), outline=(60, 72, 90), width=2)
+    d.text((24, 22), 'Nhận dạng', font=font(24, False), fill=MUTED)
+    d.text((24, 56), 'Bà con nên tỉ cành, bóng phân', font=font(32), fill=(255, 140, 140))
+    p = ease((t - 1.3) / .6)
+    if p > 0:
+        d.text((24, 118), 'AI sửa thành', font=font(24, False), fill=ACCENT + (int(255 * p),))
+        d.text((24, 152), 'Bà con nên tỉa cành, bón phân', font=font(32), fill=TEXT + (int(255 * p),))
+    shadowed(f, alpha_img(box, k), x, y, 22)
+
 def s_title(f, t, d, c):
-    head(f, 'TIÊU ĐỀ & PHỤ ĐỀ', ['Nổi bật ngay', 'giây đầu tiên'], t)
-    notes(f, ['4 kiểu tiêu đề · 6 hiệu ứng', 'Chỉnh cỡ, thời gian hiện', 'Karaoke: chữ đứng yên, đổi màu', 'Chọn cỡ và kiểu chữ phụ đề'], t)
+    head(f, 'MỚI · PHỤ ĐỀ ĐÚNG CHÍNH TẢ', ['AI soát chính tả', 'trước khi tạo phụ đề'], t)
+    notes(f, ['Sửa dấu, từ nghe nhầm', 'Đối chiếu kịch bản khi dùng MiniMax', 'Karaoke: chữ đứng yên, đổi màu', '4 kiểu tiêu đề · 6 hiệu ứng'], t)
     k = ease((t - .3) / .5)
     if k <= 0: return
-    if V: card(f, SH['idx-title'], 60, 540, h=700, k=k); phone(f, c['after'], 620, 540, 380, 676, k)
-    else: card(f, SH['idx-title'], 880, 140, h=780, k=k); phone(f, c['after'], 1340, 150, 420, 747, k)
+    if V: card(f, SH['idx-sub'], 60, 520, w=560, k=k); spell_box(f, 60, 980, 560, t, k); phone(f, c['after'], 650, 540, 360, 640, k)
+    else: card(f, SH['idx-sub'], 860, 130, w=480, k=k); spell_box(f, 860, 530, 520, t, k); phone(f, c['after'], 1420, 150, 380, 676, k)
 
 def s_story(f, t, d, c):
-    head(f, 'GHÉP ẢNH + LỜI ĐỌC', ['Thả ảnh và giọng,', 'nhận video dọc'], t)
-    notes(f, ['AI xem và đặt tên ảnh, video', 'Chọn cảnh khớp từng câu nói', 'Giọng to rõ chuẩn −14 LUFS', 'Tự tìm ảnh bìa rõ mặt'], t)
+    head(f, 'GHÉP ẢNH + LỜI ĐỌC', ['Thả ảnh và giọng,', 'AI hiểu từng cảnh'], t)
+    notes(f, ['Khi xuất, AI tự xem ảnh chưa phân tích', 'Chọn cảnh khớp từng câu nói', 'Ảnh đã phân tích thì dùng luôn', 'Giọng to rõ chuẩn −14 LUFS'], t)
     k = ease((t - .3) / .5)
     if k <= 0: return
-    if V: card(f, SH['idx-media'], 60, 560, w=520, k=k); phone(f, c['story'], 620, 540, 380, 676, k)
-    else: card(f, SH['idx-media'], 860, 250, w=480, k=k); phone(f, c['story'], 1400, 150, 400, 711, k)
+    if V: card(f, SH['idx-match'], 60, 560, w=520, k=k); phone(f, c['story'], 620, 540, 380, 676, k)
+    else: card(f, SH['idx-match'], 860, 200, w=480, k=k); phone(f, c['story'], 1400, 150, 400, 711, k)
+
+def s_context(f, t, d, c):
+    head(f, 'MỚI · ẢNH TRÁM ĐÚNG BỐI CẢNH', ['Ảnh trên mạng', 'đúng bối cảnh'], t)
+    notes(f, ['AI xác định bối cảnh của video', 'Từ khoá tìm giữ đúng chủ thể', 'Ảnh lạc đề bị loại', 'Thiếu key Pexels thì app nhắc'], t)
+    k = ease((t - .3) / .5)
+    if k <= 0: return
+    x, y, w = (80, 520, 920) if V else (860, 170, 900)
+    # 1. the setting the AI works out
+    bw = w; box = Image.new('RGBA', (bw, 110)); dd = ImageDraw.Draw(box)
+    dd.rounded_rectangle((0, 0, bw - 1, 109), 22, fill=(30, 44, 26, 255), outline=ACCENT + (255,), width=2)
+    dd.text((26, 18), 'Bối cảnh AI nhận ra', font=font(24, False), fill=MUTED); dd.text((26, 52), 'Vườn sầu riêng ở Việt Nam', font=font(38), fill=ACCENT)
+    shadowed(f, alpha_img(box, k), x, y, 22)
+    # 2. search words
+    qx = x
+    for i, q in enumerate(['durian farmer pruning', 'durian orchard', 'durian tree']):
+        pill(f, q, qx, y + 140, .9 + i * .2, t, TEXT, (40, 50, 66), 26); qx += font(26).getlength(q) + 60
+    # 3. what is kept and what is dropped
+    rows = [('✓', 'Vườn sầu riêng', 'đúng bối cảnh → dùng', ACCENT), ('✗', 'Quả mít', 'sai bối cảnh → loại', (255, 120, 120)), ('✗', 'Ảnh cũ đen trắng', 'không hợp → loại', (255, 120, 120))]
+    for i, (m, a, b, col) in enumerate(rows):
+        p = ease((t - 1.8 - i * .35) / .4)
+        if p <= 0: continue
+        r = Image.new('RGBA', (w, 84)); dd = ImageDraw.Draw(r)
+        dd.rounded_rectangle((0, 0, w - 1, 83), 18, fill=PANEL + (255,), outline=(60, 72, 90), width=2)
+        dd.text((28, 42), m, font=SYM, fill=col, anchor='lm'); dd.text((84, 42), a, font=font(32), fill=TEXT, anchor='lm')
+        dd.text((w - 28, 42), b, font=font(26, False), fill=col, anchor='rm')
+        shadowed(f, alpha_img(r, p), x, y + 230 + i * 100 + 20 * (1 - p), 18)
+
 
 def s_export(f, t, d, c):
     head(f, 'XUẤT MỌI NỀN TẢNG', ['Một lần xuất,', 'đủ cho mọi kênh'], t)
@@ -323,7 +364,7 @@ def s_cta(f, t, d, c):
         b = Image.new('RGBA', (int(w), h)); dd = ImageDraw.Draw(b); dd.rounded_rectangle((0, 0, w - 1, h - 1), 26, fill=ACCENT); dd.text((w / 2, h / 2), txt, font=fo, fill=BG, anchor='mm')
         shadowed(f, alpha_img(b, pe), W / 2 - w / 2, cy + (560 if V else 400), 26)
 
-SCENES = [(s_intro, None), (s_multi, None), (s_cut, None), (s_before_after, 'ba'), (s_color, None), (s_voice, None), (s_title, 'title'), (s_story, 'story'), (s_export, 'export'), (s_trust, None), (s_cta, None)]
+SCENES = [(s_intro, None), (s_multi, None), (s_cut, None), (s_before_after, 'ba'), (s_color, None), (s_voice, None), (s_title, 'title'), (s_story, 'story'), (s_context, None), (s_export, 'export'), (s_trust, None), (s_cta, None)]
 
 def main():
     out = sys.argv[2]

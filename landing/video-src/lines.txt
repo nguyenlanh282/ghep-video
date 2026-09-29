@@ -4,8 +4,9 @@ Phần mềm tự cắt chỗ im lặng, tiếng ờ, ừm, và những câu nó
 Hai đoạn thô hai mươi ba giây, giờ còn mười lăm giây gọn gàng, có tiêu đề và phụ đề karaoke.
 Chỉnh màu như dân chuyên, với chín mẫu có sẵn, và lưu lại mẫu màu của riêng bạn.
 Không cần thu âm. Dán kịch bản vào, phần mềm đọc bằng chính giọng bạn đã clone trên MiniMax.
-Tiêu đề nổi bật với sáu hiệu ứng. Phụ đề đúng chính tả, chỉ đổi màu đúng từ đang nói.
-Hoặc thả ảnh và giọng đọc vào. AI xem từng cảnh, rồi ghép khớp với từng câu.
+Phụ đề đúng chính tả: AI đọc lại và sửa lỗi trước khi tạo phụ đề, chữ đổi màu đúng từ đang nói.
+Hoặc thả ảnh và giọng đọc vào. Khi xuất, AI tự xem những ảnh chưa phân tích, rồi ghép khớp với từng câu.
+Ảnh trám tìm trên mạng cũng đúng bối cảnh video, ảnh lạc đề sẽ bị loại. Chỉ cần dán key Pexels miễn phí.
 Một lần xuất, đủ cho TikTok, Facebook, YouTube, kèm clip ngắn, caption và hashtag.
 Chạy ngay trên máy Mac và Windows, dùng gói Claude hoặc ChatGPT bạn đang có.
 Tham gia nhóm Zalo để nhận phần mềm, và buổi Zoom hướng dẫn miễn phí.
