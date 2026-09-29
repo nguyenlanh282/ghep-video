@@ -65,6 +65,7 @@ function renderState(st) {
   $$('[data-choice]').forEach(box => $$('button', box).forEach(b => b.classList.toggle('on', s[box.dataset.choice] === b.dataset.value)));
   $$('[data-path]').forEach(el => { const p = s[el.dataset.path]; if (p) { el.textContent = base(p); el.closest('button').title = p; } });
   renderVideos(s.talkVideos);
+  $('#stockKeyWarn').hidden = !(s.stockEnabled && !s.pexelsKeySet && !s.pixabayKeySet);
   $('#shorts').classList.toggle('off', !s.talkShorts); $('#shortsOff').hidden = !!s.talkShorts;
   if (window.Grade) Grade.update(st);
   $$('.value[data-value-key]').forEach(el => { if (el._apply && !el.contains(document.activeElement)) el._apply(+s[el.dataset.valueKey]); });
@@ -271,6 +272,7 @@ function wire() {
   $('#vlist').addEventListener('click', e => { const b = e.target.closest('[data-vop]'); if (b) api('talkVideos', {op: b.dataset.vop, index: +b.dataset.i, dir: +b.dataset.dir || 1}); });
   $('#vSort').addEventListener('click', () => api('talkVideos', {op: 'sort'}));
   if (window.Grade) Grade.init($('#gradeBox'), api);
+  $('#keyLink').href = `index.html?t=${TOKEN}#keys`;  // the key boxes live on the Ghép ảnh page
   $('#viewSeg').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b && !b.disabled) { preferRaw = b.dataset.view === 'raw'; setView(b.dataset.view, true); } });
   $('#editedPick').addEventListener('click', e => { const b = e.target.closest('[data-export]'); if (b) { currentExport = +b.dataset.export; setView('edited', true); } });
   buildValueControls();

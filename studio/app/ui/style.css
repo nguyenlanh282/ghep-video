@@ -259,3 +259,8 @@ kbd{font:11px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.1);borde
 .tts .keyrow{margin-top:4px}
 .tts .ttsgo{width:100%;margin-top:4px}
 .tts .ttsfile{color:var(--accent)}
+.keywarn{margin:0 0 8px;padding:8px 10px;border-radius:10px;font-size:12.5px;line-height:1.5;background:rgba(255,176,87,.1);border:1px solid rgba(255,176,87,.35);color:#ffd6a6}
+.keywarn b{color:#fff}
+.keywarn a{color:#fff;font-weight:700}
+#stockBox.flash{animation:flash 1.6s ease 2}
+@keyframes flash{50%{box-shadow:0 0 0 3px rgba(255,176,87,.7);border-radius:10px}}

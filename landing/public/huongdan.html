@@ -185,10 +185,11 @@ footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);fon
     <li>Bấm khung <span class="ui">Video &amp; hình ảnh</span>, chọn thư mục chứa ảnh và video (JPG, PNG, HEIC, MP4, MOV…).</li>
     <li>Bấm <span class="ui">✨ Phân tích &amp; đặt tên</span>: AI xem từng file, mô tả nội dung, <b>đổi tên file</b> theo nội dung và chia video thành các đoạn cảnh. Lần sau chỉ phân tích file mới.</li>
     <li><span class="ui">Xem ghi chú</span>: mở file ghi chú mô tả từng tư liệu. <span class="ui">↩ Trả lại tên gốc</span>: đổi tên file về như cũ.</li>
-    <li>Bật <b>Ghép cảnh khớp lời đọc</b> để app chọn cảnh hợp với từng câu nói (cần đã phân tích).</li>
-    <li>Bật <b>Tìm ảnh miễn phí cho câu chưa có cảnh hợp</b> nếu muốn app lấy thêm ảnh/video từ Pexels, Pixabay hoặc Openverse. Chọn nguồn (<span class="ui">Tự động</span> dùng mọi key đã lưu), dán API key rồi bấm <span class="ui">Lưu</span>. Bấm <span class="ui">Lấy key miễn phí</span> để đăng ký key.</li>
+    <li>Bật <b>Ghép cảnh khớp lời đọc</b> để app chọn cảnh hợp với từng câu nói. <b>Không cần bấm phân tích trước</b>: khi xuất, AI tự xem các ảnh/video chưa phân tích (file đã phân tích thì dùng luôn), hiểu mỗi cảnh nói về gì rồi mới ghép.</li>
+    <li>Bật <b>Tìm ảnh miễn phí cho câu chưa có cảnh hợp</b> nếu muốn app lấy thêm ảnh/video từ Pexels, Pixabay hoặc Openverse. Chọn nguồn (<span class="ui">Tự động</span> dùng mọi key đã lưu), dán API key rồi bấm <span class="ui">Lưu</span>. Bấm <span class="ui">Lấy key miễn phí</span> để đăng ký key. AI xác định <b>bối cảnh chung</b> của video (vd “vườn sầu riêng ở Việt Nam”) và chỉ nhận ảnh đúng bối cảnh đó.</li>
   </ol>
   <div class="tip">Ảnh nên cùng chủ đề với lời kể. Càng nhiều cảnh, video càng ít lặp.</div>
+  <div class="warn">Chưa có key Pexels/Pixabay thì app chỉ tìm được trên Openverse (ít ảnh, nhiều chủ đề như sầu riêng hầu như không có). App sẽ hiện cảnh báo vàng: nên đăng ký key miễn phí.</div>
   <div class="clear"></div>
 </section>
 
@@ -290,8 +291,8 @@ footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);fon
   <p class="lead">Cảnh trám (B-roll) là các cảnh minh hoạ chèn vào lúc bạn đang nói, cho video bớt đơn điệu.</p>
   <ol class="steps">
     <li>Bật <b>Chèn cảnh trám hợp với câu nói</b>.</li>
-    <li>Chọn <b>Kho trám</b>: thư mục ảnh/video minh hoạ. Kho cần được <span class="ui">✨ Phân tích &amp; đặt tên</span> ở trang Ghép ảnh + lời đọc trước.</li>
-    <li>Bật <b>Tìm thêm trên mạng (Pexels/Pixabay)</b> nếu kho chưa đủ cảnh.</li>
+    <li>Chọn <b>Kho trám</b>: thư mục ảnh/video minh hoạ. Ảnh/video chưa phân tích thì AI tự xem trước khi chọn cảnh.</li>
+    <li>Bật <b>Tìm thêm trên mạng (Pexels/Pixabay)</b> nếu kho chưa đủ cảnh. AI tìm theo <b>bối cảnh của video</b> và loại ảnh sai bối cảnh. Chưa có key thì bấm <span class="ui">Cấu hình key miễn phí →</span> trong cảnh báo vàng.</li>
     <li><b>Mức cảnh trám</b>: <span class="ui">Ít</span> / <span class="ui">Vừa</span> / <span class="ui">Nhiều</span>.</li>
   </ol>
 </section>

@@ -223,7 +223,10 @@ class Studio:
    job={k:s[k] for k in ('mediaFolder','audio','music','outputFolder','title','subtitle','titleStyle','subStyle','musicVolume','shotSeconds','resolution','removeSilence','faceAwareFill','fixesText','voiceVolume','normalizeVoice','stockSource','captionY','titleSeconds','titleScale','titleEffect','subScale','subFont','aiSpelling')}
    # The MiniMax voice-over's own script is the reference text for the AI spelling check.
    if s['voiceSource']=='minimax' and s['ttsText'].strip() and 'Giọng đọc - ' in Path(s['audio']).name:job['script']=s['ttsText']
-   job.update(preview=bool(preview),grade=self.grade(),cacheFolder=str(self.cache()),matchScenes=s['matchScenes'] and analysed,stockEnabled=s['stockEnabled'] and s['matchScenes'] and analysed,aiPython=sys.executable)
+   # Matching scenes needs every photo/video analysed: the renderer analyses the new ones first (the AI must be ready).
+   ai_ready=self.ai_state()['ready'];match=s['matchScenes'] and (analysed or ai_ready)
+   job.update(preview=bool(preview),grade=self.grade(),cacheFolder=str(self.cache()),matchScenes=match,autoAnalyze=match and ai_ready,
+              stockEnabled=s['stockEnabled'] and match,context=s['title']+(' · '+s['subtitle'] if s['subtitle'] else ''),aiPython=sys.executable)
    job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
    args=[str(ENGINE/'renderer.py'),str(job_file)];log='render.log';cleanup=lambda:job_file.unlink(missing_ok=True)
   elif task=='tts':

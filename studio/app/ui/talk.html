@@ -35,8 +35,9 @@
     <h2><span class="num">02</span>Cảnh trám</h2>
     <label class="switch"><input type="checkbox" data-key="talkBroll"><span></span>Chèn cảnh trám hợp với câu nói</label>
     <button class="filebox" data-choose="talkBroll"><span class="ico">🗂</span><span class="fb-text"><b>Kho trám</b><small data-path="talkBrollFolder">Thư mục ảnh/video minh hoạ</small></span><span class="fb-go">＋</span></button>
-    <p class="hint">Kho cần được “Phân tích &amp; đặt tên” ở trang Ghép ảnh + lời đọc trước.</p>
+    <p class="hint">Ảnh/video trong kho chưa phân tích thì AI tự xem trước, rồi chọn cảnh hợp với từng câu nói.</p>
     <label class="switch"><input type="checkbox" data-key="stockEnabled"><span></span>Tìm thêm trên mạng (Pexels/Pixabay)</label>
+    <p class="keywarn" id="stockKeyWarn" hidden>⚠️ Chưa có API key <b>Pexels</b> hoặc <b>Pixabay</b>: chỉ tìm được trên Openverse (ít ảnh, dễ lệch bối cảnh). <a id="keyLink" href="#">Cấu hình key miễn phí →</a></p>
     <div class="row between"><span class="hint">Mức cảnh trám</span>
       <div class="seg" data-seg="talkDensity"><button data-value="it">Ít</button><button data-value="vua">Vừa</button><button data-value="nhieu">Nhiều</button></div></div>
 

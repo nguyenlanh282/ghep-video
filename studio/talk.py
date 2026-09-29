@@ -276,12 +276,15 @@ def analyze(job):
     broll = []
     kho = job.get('brollFolder')
     if job.get('broll', True) and ai:
+        if kho and Path(kho).is_dir(): R.ensure_analyzed(kho, job.get('aiPython'), 70, 72, 'trong kho trám')
         emit(72, 'Đang chọn cảnh trám hợp với từng câu…')
         analysis = R.load_analysis(Path(kho)) if kho and Path(kho).is_dir() else {}
         units = build_kho_units(kho, analysis) if analysis else []
         kept = [p for p in phrases if not all(words[i].get('cut') for i in range(p['first'], p['last'] + 1))]
         spans = [dict(start=p['start'], end=p['end'], text=p['text']) for p in kept]
-        rjob = dict(job, stockEnabled=job.get('stockEnabled', False))
+        # What the video is about, so online B-roll matches its setting (a durian orchard, not just "a tree").
+        topic = ' · '.join(x for x in [(pack.get('tieu_de') or [{}])[0].get('dong1', '') if pack.get('tieu_de') else '', ', '.join(pack.get('tu_khoa') or [])] if x)
+        rjob = dict(job, stockEnabled=job.get('stockEnabled', False), context=topic)
         plan = R.plan_scenes(spans, units, rjob, cache) if (units or rjob['stockEnabled']) else {}
         if plan:
             stock_dir = work / 'stock'; stock_dir.mkdir(exist_ok=True)

@@ -238,14 +238,19 @@ def openverse_candidates(query):
  rows.sort(key=lambda r:(-(r['height']>=r['width']),r.get('source')!='stocksnap'))
  return [dict(kind='photo',url=r['url'],ext='.'+(r.get('filetype') or 'jpg').lower().replace('jpeg','jpg'),credit=f"{r.get('title','')} — {r.get('creator') or 'không rõ tác giả'} ({r.get('source','')})",page=r.get('foreign_landing_url',''),license=(r.get('license') or '').upper()) for r in rows[:6]]
 
-QUERY_Q="""Video kể chuyện sau (tiếng Việt):
+QUERY_Q="""Video sau (tiếng Việt):
 {story}
-
-Với mỗi câu dưới đây, viết 2 cụm từ tìm ảnh/video stock bằng TIẾNG ANH: cụm thứ nhất cụ thể (3-5 từ: người, hành động, đồ vật nhìn thấy được), cụm thứ hai chung hơn (1-3 từ) để dự phòng:
+{hint}
+Bước 1: xác định BỐI CẢNH CHUNG của cả video: nơi chốn, ngành nghề, đối tượng chính (vd "vườn sầu riêng ở miền Tây Việt Nam", "tiệm bánh nhỏ", "bếp gia đình Việt").
+Bước 2: với mỗi câu dưới đây, viết 3 cụm từ tìm ảnh/video stock bằng TIẾNG ANH, từ cụ thể tới ngắn (trang ảnh tìm cụm ngắn dễ ra kết quả hơn). Cả ba PHẢI giữ chủ thể của bối cảnh chung (vd với vườn sầu riêng: "durian farmer pruning branches", "durian orchard", "durian tree" chứ không phải "tree" hay "farmer"):
+ - cụm 1 cụ thể (3-5 từ: người, hành động, đồ vật nhìn thấy được trong bối cảnh đó),
+ - cụm 2 chung hơn (2-3 từ) vẫn đúng bối cảnh,
+ - cụm 3 chỉ là chủ thể chính của bối cảnh (1-2 từ).
 {lines}
-Trả về đúng một JSON dạng {{"số câu": ["specific query", "general query"], ...}}"""
+Trả về đúng một JSON dạng {{"boi_canh": "bối cảnh chung bằng tiếng Việt", "cau": {{"số câu": ["cụm 1", "cụm 2", "cụm 3"], ...}}}}"""
 CHECK_Q="""Câu lời đọc: "{text}"
-Hình này có minh hoạ hợp cho câu trên trong một video gia đình hiện đại không?
+Bối cảnh chung của video: {context}
+Hình này có đúng bối cảnh đó và minh hoạ hợp cho câu trên không? Trả lời false nếu hình ở bối cảnh khác (nơi chốn, ngành nghề, loại cây/con/sản phẩm khác).
 Trả lời false nếu hình là ảnh đen trắng hoặc ảnh cũ, người nổi tiếng / nhân vật lịch sử, tranh vẽ, có chữ hoặc logo lớn, hoặc không liên quan nội dung câu.
 Trả về đúng một JSON: {{"hop": true hoặc false, "mo_ta": "1 câu mô tả hình bằng tiếng Việt"}}"""
 
@@ -262,7 +267,11 @@ def find_stock(missing,sentences,cfg):
  search={'pexels':lambda q:pexels_candidates(q,keys['pexels']),'pixabay':lambda q:pixabay_candidates(q,keys['pixabay']),'openverse':openverse_candidates}
  names={'pexels':'Pexels','pixabay':'Pixabay','openverse':'Openverse'};blocked=set()
  story=' '.join(s['text'] for s in sentences)[:900]
- queries=parse_json(ask(QUERY_Q.format(story=story,lines='\n'.join(f'{s["id"]}. {s["text"]}' for s in missing))),{})
+ hint=f'Thông tin thêm về video: {cfg["context"]}\n' if cfg.get('context') else ''
+ got=parse_json(ask(QUERY_Q.format(story=story,hint=hint,lines='\n'.join(f'{s["id"]}. {s["text"]}' for s in missing))),{})
+ context=str(got.get('boi_canh') or cfg.get('context') or 'video tiếng Việt').strip()[:300]
+ queries=got.get('cau') if isinstance(got.get('cau'),dict) else got
+ emit(0,f'Bối cảnh để tìm ảnh: {context}')
  found={}
  for n,s in enumerate(missing):
   q=queries.get(str(s['id'])) or []
@@ -283,7 +292,7 @@ def find_stock(missing,sentences,cfg):
     try:
      path=download(c['url'],folder,c['ext'])
      frame=still(path,(duration(path)/2 if c['kind']=='video' else None),folder/(path.stem+'-check.jpg'))
-     verdict=parse_json(ask(CHECK_Q.format(text=s['text']),[frame],obj(['hop','mo_ta'])),{})
+     verdict=parse_json(ask(CHECK_Q.format(text=s['text'],context=context),[frame],obj(['hop','mo_ta'])),{})
     except Exception:continue
     if verdict.get('hop') is True:
      found[s['id']]=dict(c,path=str(path),mo_ta=verdict.get('mo_ta',''),provider=provider);break

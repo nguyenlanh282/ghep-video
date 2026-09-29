@@ -291,14 +291,23 @@ function render(state) {
 
   paintAI(state);
   // analysis
-  const analysed = state.analyzedCount > 0;
+  const analysed = state.analyzedCount > 0, left = Math.max(0, state.mediaCount - state.analyzedCount), aiReady = state.ai && state.ai.ready;
+  // Scenes can be matched once analysed, or with the AI ready: new files are analysed automatically before an export.
+  const canMatch = analysed || aiReady;
   $('#analyzeBtn').textContent = analysed ? '✨ Phân tích file mới' : '✨ Phân tích & đặt tên';
   $('#notesBtn').hidden = !analysed; $('#noteList').hidden = !analysed;
-  $('#analysisInfo').textContent = analysed ? `${state.analyzedCount}/${state.mediaCount} file đã phân tích · ${state.sceneCount} đoạn cảnh` : 'AI trên máy xem từng ảnh/video, đặt tên theo nội dung và ghi chú từng đoạn cảnh.';
+  $('#analysisInfo').textContent = (analysed ? `${state.analyzedCount}/${state.mediaCount} file đã phân tích · ${state.sceneCount} đoạn cảnh.` : 'AI xem từng ảnh/video để hiểu nội dung, đặt tên và ghi chú từng đoạn cảnh.')
+    + (left && aiReady && s.matchScenes ? ` Còn ${left} file chưa phân tích: khi xuất, AI tự xem trước rồi mới ghép.` : left && !aiReady ? ' Cần Claude/ChatGPT để phân tích.' : '');
   const match = $('input[data-key=matchScenes]'), stock = $('input[data-key=stockEnabled]');
-  match.disabled = !analysed; match.closest('.switch').classList.toggle('disabled', !analysed);
-  stock.disabled = !analysed || !s.matchScenes; stock.closest('.switch').classList.toggle('disabled', stock.disabled);
-  $('#stockBox').hidden = !(s.stockEnabled && s.matchScenes && analysed);
+  match.disabled = !canMatch; match.closest('.switch').classList.toggle('disabled', !canMatch);
+  stock.disabled = !canMatch || !s.matchScenes; stock.closest('.switch').classList.toggle('disabled', stock.disabled);
+  $('#stockBox').hidden = !(s.stockEnabled && s.matchScenes && canMatch);
+  $('#stockKeyWarn').hidden = !!(s.pexelsKeySet || s.pixabayKeySet);
+  // Opened from "Cấu hình key" on the Video chia sẻ page: show the key boxes even if the switches here are off.
+  if (location.hash === '#keys' && !render.keysShown) {
+    render.keysShown = true; $('#stockBox').hidden = false;
+    setTimeout(() => { $('#stockBox').scrollIntoView({block: 'center'}); $('#stockBox').classList.add('flash'); }, 300);
+  }
   const src = s.stockSource, needsKey = src === 'pexels' || src === 'pixabay', hasKey = needsKey && s[src + 'KeySet'];
   // Only the chosen site's key is shown; "Tự động" uses every saved key, so both rows are shown.
   if (render.lastSource && render.lastSource !== src) $$('.keys .keyrow').forEach(r => { $('input', r).value = ''; $('.save', r).disabled = true; $('.keystate', r).className = 'keystate'; });

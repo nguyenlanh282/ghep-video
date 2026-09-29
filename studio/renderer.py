@@ -21,6 +21,24 @@ def run(args):
  if p.returncode:raise RuntimeError(err.decode(errors='replace')[-1600:])
  return out
 
+def ensure_analyzed(folder,ai_python,lo,hi,what='tư liệu'):
+ """Have the AI look at every photo/video of the folder not analysed yet (files keep their names), so scenes can be
+ matched to what is said. Analysed files are reused as they are. Progress is shown between lo and hi percent."""
+ folder=Path(folder);script=Path(__file__).with_name('analyzer.py')
+ if not folder.is_dir() or not script.exists():return
+ files=load_analysis(folder)
+ media=[p for p in folder.iterdir() if p.is_file() and not p.name.startswith(('.','_')) and p.suffix.lower() in VIDEO|PHOTO]
+ todo=[p for p in media if (files.get(unicodedata.normalize('NFC',p.name)) or {}).get('size')!=p.stat().st_size]
+ if not todo:return
+ emit(lo,f'AI đang xem {len(todo)} ảnh/video {what} chưa phân tích…')
+ p=subprocess.Popen([ai_python or sys.executable,'-u',str(script),'analyze',str(folder),'--no-rename'],stdout=subprocess.PIPE,stderr=subprocess.PIPE,**NOWIN);CHILDREN.append(p)
+ for line in p.stdout:
+  try:m=json.loads(line.decode('utf-8'))
+  except Exception:continue
+  if m.get('message') and isinstance(m.get('progress'),(int,float)) and m['progress']>=0:emit(lo+(hi-lo)*m['progress']/100,m['message'])
+ p.wait();CHILDREN.remove(p)
+ if p.returncode:emit(hi,'Phân tích tư liệu chưa xong hết, ghép với phần đã phân tích.')
+
 def probe(path):
  return json.loads(run([FFPROBE,'-v','quiet','-show_format','-show_streams','-of','json',str(path)]))
 
@@ -284,7 +302,7 @@ def plan_scenes(spans,units,job,cache):
   if source in ('pexels','pixabay') and not os.environ.get(source.upper()+'_API_KEY'):source='openverse'
   # Which keys exist is part of the plan: adding a key later must trigger a fresh search.
   request['stockKeys']=sorted(k for k in ('pexels','pixabay') if os.environ.get(k.upper()+'_API_KEY'))
-  request['stock']=dict(source=source,folder=str(cache/'stock'))
+  request['stock']=dict(source=source,folder=str(cache/'stock'),context=str(job.get('context','') or '')[:600])
  key=hashlib.sha256(json.dumps(request,ensure_ascii=False,sort_keys=True).encode()).hexdigest()[:24]
  out=cache/f'plan-{key}.json'
  if not out.exists():
@@ -526,6 +544,7 @@ def render(job):
  shot=max(1.5,min(5,float(job.get('shotSeconds',2.5))));W=1080 if job.get('resolution')=='1080' else 720;H=W*16//9;fps=30
  face_aware=job.get('faceAwareFill',True)
  info=probe(audio);original_duration=float(info['format']['duration'])
+ if job.get('autoAnalyze'):ensure_analyzed(folder,job.get('aiPython'),1,3)
  cache=Path(job['cacheFolder']);cache.mkdir(parents=True,exist_ok=True);words=get_words(audio,cache) if job.get('subStyle')!='none' or job.get('matchScenes',True) else []
  keep=[[0,original_duration]]
  if job.get('removeSilence',True):audio,words,keep=cut_silence(audio,cache,words)
