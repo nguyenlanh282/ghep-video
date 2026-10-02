@@ -58,7 +58,7 @@ def first_audio():
 
 DEFAULTS=dict(mediaFolder=str(find_child(ROOT,'Video - ảnh')),audio=first_audio(),music='',outputFolder=str(ROOT/'output'),
  title='VỢ CHỒNG',subtitle='Ai làm việc nhà?',titleStyle='pop',subStyle='sweep',musicVolume=.15,voiceVolume=1.0,normalizeVoice=True,
- shotSeconds=2.5,removeSilence=True,faceAwareFill=True,resolution='1080',fixesText='xòng => sòng\nđận => đần',
+ shotSeconds=2.5,removeSilence=True,faceAwareFill=True,resolution='1080',aspect='9:16',fixesText='xòng => sòng\nđận => đần',
  matchScenes=True,stockEnabled=False,stockSource='auto',pexelsKey='',pixabayKey='',updateManifest='',captionY=.73,aiProvider='auto',titleSeconds=3.0,
  titleScale=1.0,titleEffect='bounce',subScale=1.0,subFont='arial',aiSpelling=True,
  # colour grade of both modes (JSON: slider values + chosen look) and the user's saved grades (JSON list)
@@ -221,7 +221,7 @@ class Studio:
    if not Path(s['audio']).is_file():return self.fail('Hãy chọn file ghi âm.')
    if not Path(s['outputFolder']).is_dir():return self.fail('Hãy chọn thư mục lưu video.')
    analysed=len(self.analysis())>0
-   job={k:s[k] for k in ('mediaFolder','audio','music','outputFolder','title','subtitle','titleStyle','subStyle','musicVolume','shotSeconds','resolution','removeSilence','faceAwareFill','fixesText','voiceVolume','normalizeVoice','stockSource','captionY','titleSeconds','titleScale','titleEffect','subScale','subFont','aiSpelling')}
+   job={k:s[k] for k in ('mediaFolder','audio','music','outputFolder','title','subtitle','titleStyle','subStyle','musicVolume','shotSeconds','resolution','aspect','removeSilence','faceAwareFill','fixesText','voiceVolume','normalizeVoice','stockSource','captionY','titleSeconds','titleScale','titleEffect','subScale','subFont','aiSpelling')}
    pf=self.story_file()
    if pf:self.story_save();job['projectFile']=str(pf)   # settings + timeline of this narration + media folder
    if task=='plan':job['planOnly']=True
@@ -351,7 +351,7 @@ class Studio:
 
  # ---- projects: everything worked on is kept, so it can be opened and edited again ----
  STORY_KEYS=('mediaFolder','audio','music','title','subtitle','titleStyle','titleEffect','titleScale','titleSeconds','subStyle','subScale','subFont','captionY',
-             'musicVolume','voiceVolume','normalizeVoice','shotSeconds','removeSilence','faceAwareFill','resolution','fixesText','matchScenes','grade',
+             'musicVolume','voiceVolume','normalizeVoice','shotSeconds','removeSilence','faceAwareFill','resolution','aspect','fixesText','matchScenes','grade',
              'voiceSource','ttsText','minimaxVoice','minimaxModel','minimaxSpeed','aiSpelling')
 
  def story_file(self):
@@ -418,7 +418,8 @@ class Studio:
 
  def timeline_state(self):
   d=self.story_read();tl=d.get('timeline') or {}
-  shots=[dict(sh,name=Path(sh['file']).name,missing=not Path(sh['file']).is_file(),thumb=self.thumb_url(sh['file'],float(sh.get('srcStart') or 0)+.2 if sh.get('d') else 0)) for sh in tl.get('shots') or []]
+  stale=tl.get('aspect','9:16')!=self.settings['aspect']   # automatic crops were found for another output shape
+  shots=[dict({k:v for k,v in sh.items() if not (stale and k=='auto')},name=Path(sh['file']).name,missing=not Path(sh['file']).is_file(),thumb=self.thumb_url(sh['file'],float(sh.get('srcStart') or 0)+.2 if sh.get('d') else 0)) for sh in tl.get('shots') or []]
   last=d.get('lastExport') or {}
   return dict(shots=shots,duration=tl.get('duration',0),name=d.get('name',''),files=self.media_list(self.settings['mediaFolder']) if shots else [],
               exportUrl=self.url(last.get('path')) if last.get('path') else None,hasAudio=bool(self.story_file()))

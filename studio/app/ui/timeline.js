@@ -85,7 +85,7 @@ window.TL = (() => {
   const stripShot = sh => { const {thumb: _t, name: _n, missing: _m, ...rest} = sh; return rest; };
 
   /* ================= Ghép ảnh + lời đọc ================= */
-  function story(root, {api, player, isResult, poll}) {
+  function story(root, {api, player, isResult, poll, aspect = () => 9 / 16}) {
     const plan = async () => { const out = await api('start', {task: 'plan'}); if (out.job && out.job.running && poll) poll(); };
     const st = strip(root, {title: 'Timeline', tracks: ['main'], tools: `<button class="btn small primary" data-act="plan">✨ Lên timeline</button><button class="btn small" data-act="reset" hidden>↺ Tạo lại tự động</button>`});
     const track = root.querySelector('.tl-track.main');
@@ -121,7 +121,7 @@ window.TL = (() => {
           ${sh.d ? `<div class="fe-row"><label>Bắt đầu từ giây</label><input type="range" data-src min="0" max="${Math.max(0, sh.d - len - .12).toFixed(2)}" step="0.1" value="${sh.srcStart}" aria-label="Đoạn nguồn bắt đầu từ giây"><output>${sec(sh.srcStart)}</output></div><p class="hint">Video dài ${sec(sh.d)}. Cảnh phát ${sec(len)} kể từ giây đã chọn.</p>` : ''}
           <div class="row gap wrap"><button class="btn small" data-do="split" ${len < 1.6 ? 'disabled' : ''}>✂ Tách đôi cảnh</button><button class="btn small" data-do="merge" ${sel === 0 ? 'disabled' : ''}>⟵ Gộp vào cảnh trước</button>
             <button class="btn small" data-do="left" ${sel === 0 ? 'disabled' : ''}>◀ Đổi chỗ</button><button class="btn small" data-do="right" ${sel === shots.length - 1 ? 'disabled' : ''}>Đổi chỗ ▶</button></div></div>`;
-      fe = frameEditor(st.insp.querySelector('.fe'), {src: thumb(sh.file, sh.d ? sh.srcStart + .2 : 0), aspect: 9 / 16, frame: sh.frame, auto: sh.auto,
+      fe = frameEditor(st.insp.querySelector('.fe'), {src: thumb(sh.file, sh.d ? sh.srcStart + .2 : 0), aspect: aspect(), frame: sh.frame, auto: sh.auto,
         onChange: f => patch(sel, {frame: f, auto: f ? undefined : sh.auto}, true)});
       const src = st.insp.querySelector('[data-src]');
       if (src) {

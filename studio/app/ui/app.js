@@ -73,7 +73,7 @@ function wire() {
   $('#showTitle').addEventListener('change', e => set({titleStyle: e.target.checked ? 'pop' : 'none'}).then(replaySample));
   $$('[data-choose]').forEach(b => b.addEventListener('click', () => choose(b.dataset.choose)));
   if (window.Grade) Grade.init($('#gradeBox'), api);
-  if (window.TL) timeline = TL.story($('#tlPanel'), {api, player: $('#player'), isResult: () => showingResult, poll});
+  if (window.TL) timeline = TL.story($('#tlPanel'), {api, player: $('#player'), isResult: () => showingResult, poll, aspect: () => ASPECT_RATIO[S && S.settings.aspect] || 9 / 16});
 
   $('#analyzeBtn').addEventListener('click', () => api('start', {task: 'analyze'}).then(poll));
   $('#undoBtn').addEventListener('click', () => { if (confirm('Trả lại tên gốc cho tất cả tư liệu đã đổi tên?')) api('start', {task: 'undo'}).then(poll); });
@@ -101,6 +101,7 @@ function wire() {
   const player = $('#player');
   $('#playBtn').addEventListener('click', () => { stopListening(); player.paused ? player.play() : player.pause(); });
   $('#restartBtn').addEventListener('click', replaySample);
+  player.addEventListener('loadedmetadata', paintAspect);
   player.addEventListener('play', () => { $('#playBtn').textContent = '❚❚'; $('#playBtn').setAttribute('aria-label', 'Tạm dừng'); });
   player.addEventListener('pause', () => { $('#playBtn').textContent = '▶'; $('#playBtn').setAttribute('aria-label', 'Phát xem thử'); });
 }
@@ -277,8 +278,9 @@ function render(state) {
   const prevJob = S && S.job; S = state; const s = state.settings, job = state.job;
   if (window.Grade) Grade.update(state);
   // Timeline: reload when the project changes (other narration / folder) and when a plan or export finishes.
-  const tlKey = s.audio + '|' + s.mediaFolder, finished = prevJob && prevJob.running && !job.running && ['plan', 'render'].includes(job.task);
+  const tlKey = s.audio + '|' + s.mediaFolder + '|' + s.aspect, finished = prevJob && prevJob.running && !job.running && ['plan', 'render'].includes(job.task);
   if (timeline && (tlKey !== timelineKey || finished)) { timelineKey = tlKey; timeline.refresh(); }
+  paintAspect();
   $$('input[type=checkbox][data-key]').forEach(cb => cb.checked = !!s[cb.dataset.key]);
   $$('input[type=text][data-key], textarea[data-key]').forEach(inp => { if (document.activeElement !== inp && !inp.dataset.dirty) inp.value = s[inp.dataset.key] ?? ''; });
   $$('.value').forEach(el => { if (!el.contains(document.activeElement) || el._apply) el._apply(+s[el.dataset.valueKey]); });
@@ -341,7 +343,7 @@ function render(state) {
   $('#main').classList.toggle('busy', job.running);
   $('#progress').hidden = !job.running; $('#progress').value = job.progress;
   $('#status').textContent = job.status;
-  $('#substatus').textContent = job.running ? `${Math.round(job.progress * 100)}% · Bạn có thể dừng bất cứ lúc nào` : `Video dọc 9:16 · ${s.resolution}p · Giữ nguyên file gốc`;
+  $('#substatus').textContent = job.running ? `${Math.round(job.progress * 100)}% · Bạn có thể dừng bất cứ lúc nào` : `${ASPECT_NAMES[s.aspect] || ASPECT_NAMES['9:16']} · ${s.resolution}p · Giữ nguyên file gốc`;
   $('#actions').hidden = job.running; $('#cancelBtn').hidden = !job.running;
   $('#cancelBtn').textContent = {render: 'Dừng xuất', tts: 'Dừng tạo giọng', plan: 'Dừng lên timeline'}[job.task] || 'Dừng phân tích';
   if (job.task === 'update' || job.task === 'thumbs') $('#cancelBtn').hidden = true;  // short in-app tasks: they finish on their own
@@ -464,9 +466,16 @@ function tick() {
   requestAnimationFrame(tick);
 }
 
+const ASPECT_NAMES = {'9:16': 'Video dọc 9:16', '1:1': 'Video vuông 1:1', '16:9': 'Video ngang 16:9'}, ASPECT_RATIO = {'9:16': 9 / 16, '1:1': 1, '16:9': 16 / 9};
+// The preview box takes the chosen output shape; an exported video keeps the shape it was made in.
+function paintAspect() {
+  const p = $('#player'); let a = (S && S.settings.aspect) || '9:16';
+  if (showingResult && p.videoWidth) { const r = p.videoWidth / p.videoHeight; a = r > 1.3 ? '16:9' : r > .8 ? '1:1' : '9:16'; }
+  $('#frame').dataset.aspect = a; $('#ratio').textContent = a;
+}
 function loadSample() {
   const p = $('#player'); showingResult = false; p.controls = false;
-  p.src = SAMPLE + 'demo.mp4'; $('#pv').textContent = 'XEM MẪU KIỂU CHỮ';
+  p.src = SAMPLE + 'demo.mp4'; $('#pv').textContent = 'XEM MẪU KIỂU CHỮ'; paintAspect();
   $('#previewHint').hidden = false; $('#backToSample').hidden = true;
 }
 function replaySample() { if (showingResult) loadSample(); const p = $('#player'); p.currentTime = 0; p.play().catch(() => {}); }

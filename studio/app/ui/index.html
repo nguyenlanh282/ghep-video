@@ -151,6 +151,9 @@
     <button class="filebox" data-choose="output"><span class="ico">📁</span><span class="fb-text"><b>Thư mục xuất video</b><small data-path="outputFolder">Chọn nơi lưu</small></span><span class="fb-go">＋</span></button>
     <div class="row between"><span>Độ phân giải</span>
       <div class="seg" data-seg="resolution"><button data-value="720">720p</button><button data-value="1080">1080p</button></div></div>
+    <div class="row between"><span>Khung hình</span>
+      <div class="seg" data-seg="aspect"><button data-value="9:16">Dọc 9:16</button><button data-value="1:1">Vuông 1:1</button><button data-value="16:9">Ngang 16:9</button></div></div>
+    <p class="hint">Dọc cho TikTok, Reels, Shorts; ngang cho YouTube. Ảnh/video được cắt cho vừa khung và giữ mặt người; chỉnh lại từng cảnh ở Timeline.</p>
   </section>
 
   <section class="panel p-text" aria-labelledby="s4">
@@ -199,7 +202,7 @@
   </section>
 
   <section class="panel preview" aria-labelledby="pv">
-    <div class="row between"><span class="eyebrow" id="pv">XEM MẪU KIỂU CHỮ</span><span class="ratio">9:16</span></div>
+    <div class="row between"><span class="eyebrow" id="pv">XEM MẪU KIỂU CHỮ</span><span class="ratio" id="ratio">9:16</span></div>
     <div class="frame" id="frame">
       <video id="player" playsinline preload="auto"></video>
       <div class="title-ov" id="titleOv"><div class="t1" id="t1"></div><div class="t2" id="t2"></div></div>

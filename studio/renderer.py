@@ -138,9 +138,9 @@ def cut_silence(audio,cache,words):
   if b>a+.001:new_words.append(dict(w,start=a,end=b))
  return wav,new_words,keep
 
-def face_crop(width,height,faces):
- """A 9:16 cover crop that contains all detected faces plus forehead/chin room."""
- cw=min(width,height*9/16);ch=cw*16/9
+def face_crop(width,height,faces,ratio=9/16):
+ """A cover crop of the output shape (ratio = width/height) that contains all detected faces plus forehead/chin room."""
+ cw=min(width,height*ratio);ch=cw/ratio
  if faces:
   left=min(max(0,(x-.015*w)*width) for x,y,w,h in faces)
   right=max(min(width,(x+1.015*w)*width) for x,y,w,h in faces)
@@ -166,7 +166,7 @@ def video_filter(p,at,tmp,W,H,fps,face_aware):
   found=detect_faces(frame)
  except Exception:
   return f'[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},setsar=1,fps={fps}[v]',None
- crop=face_crop(found['width'],found['height'],found['faces'])
+ crop=face_crop(found['width'],found['height'],found['faces'],W/H)
  if crop is None:return blur,dict(found,crop=None)
  x,y,r,b=crop
  return f'[0:v]crop={r-x}:{b-y}:{x}:{y},scale={W}:{H},setsar=1,fps={fps}[v]',dict(found,crop=crop)
@@ -178,9 +178,9 @@ def prepare_photo(path,tmp,W,H):
  normalized=tmp/(digest(path)[:16]+'.jpg')
  run([FFMPEG,'-v','error','-y','-i',str(path),'-frames:v','1','-q:v','2',str(normalized)])
  found=detect_faces(normalized)
- im=Image.open(normalized).convert('RGB');crop=face_crop(im.width,im.height,found['faces'])
+ im=Image.open(normalized).convert('RGB');crop=face_crop(im.width,im.height,found['faces'],W/H)
  if crop is None:return None,found
- framed=tmp/(normalized.stem+'-portrait.jpg');im.crop(crop).resize((W,H),Image.Resampling.LANCZOS).save(framed,quality=96)
+ framed=tmp/(normalized.stem+f'-{W}x{H}.jpg');im.crop(crop).resize((W,H),Image.Resampling.LANCZOS).save(framed,quality=96)
  return framed,dict(found,crop=crop)
 
 PUNCT=(',','.','?','!',':',';','…')
@@ -391,6 +391,7 @@ def saved_shots(job,sig,duration):
  return shots
 
 TARGET_LUFS=-14
+STORY_ASPECTS={'9:16':None,'1:1':.80,'16:9':.86}  # caption height per shape; None: the user's captionY setting
 
 def loudness(path,cache):
  """Integrated loudness (LUFS) of a whole file, cached per file content."""
@@ -571,7 +572,10 @@ def render(job):
  if not media:raise ValueError('Thư mục chưa có ảnh hoặc video được hỗ trợ.')
  music=Path(job['music']).expanduser().resolve() if job.get('music') else None
  if music and not music.is_file():raise ValueError('Không tìm thấy file nhạc nền.')
- shot=max(1.5,min(5,float(job.get('shotSeconds',2.5))));W=1080 if job.get('resolution')=='1080' else 720;H=W*16//9;fps=30
+ shot=max(1.5,min(5,float(job.get('shotSeconds',2.5))));fps=30
+ # Output shape: the short side is the resolution (720/1080); text is sized to the short side so every shape reads alike.
+ S=1080 if job.get('resolution')=='1080' else 720;aspect=job.get('aspect') if job.get('aspect') in STORY_ASPECTS else '9:16'
+ W,H={'9:16':(S,S*16//9),'1:1':(S,S),'16:9':(S*16//9,S)}[aspect]
  face_aware=job.get('faceAwareFill',True)
  info=probe(audio);original_duration=float(info['format']['duration'])
  if job.get('autoAnalyze'):ensure_analyzed(folder,job.get('aiPython'),1,3)
@@ -584,7 +588,7 @@ def render(job):
  corrected=ai_spell(words,job,cache) if words and job.get('aiSpelling',True) else 0
  fixes=parse_fixes(job.get('fixesText',''));apply_fixes(words,fixes)
  sub_scale=max(.6,min(1.6,float(job.get('subScale',1) or 1)));sub_font=font_path(job.get('subFont','arial'))
- groups=[g for g in groups_for(words,max_width=600/sub_scale,font_file=sub_font) if g[0]['start']<duration]
+ groups=[g for g in groups_for(words,max_width=(600 if aspect=='9:16' else min(.83*W,1150*S/1080)*720/S)/sub_scale,font_file=sub_font) if g[0]['start']<duration]
  job=dict(job,removeSilence=job.get('removeSilence',True),faceAwareFill=face_aware,originalDuration=original_duration,editedDuration=audio_duration,keptAudioRanges=keep,spellingFixes=fixes,aiCorrected=corrected)
  emit(8,'Đang chuẩn bị cảnh quay…')
  details=[]
@@ -678,7 +682,7 @@ def render(job):
    cmd+=['-filter_complex',vf,'-map','[v]','-frames:v',str(frames),'-an','-c:v','libx264','-preset','veryfast','-crf','19','-pix_fmt','yuv420p',str(out)]
    run(cmd);clips.append(out);emit(10+25*(i+1)/count,f'Chuẩn bị cảnh {i+1}/{count}')
   # The crop each automatic shot got, so the timeline can show (and start editing from) the real framing.
-  write_project(job,timeline=dict(sig=sig,duration=round(audio_duration,3),shots=shots))
+  write_project(job,timeline=dict(sig=sig,duration=round(audio_duration,3),shots=shots,aspect=aspect))
   job['scenePlan']=plan_log
   if face_aware:job['videoFraming']=video_info
   concat=tmp/'clips.txt';concat.write_text(''.join(f"file '{p.name}'\n" for p in clips),encoding='utf-8')
@@ -694,8 +698,8 @@ def render(job):
    cmd+=['-t',str(duration),'-c:v','libx264','-preset','fast','-crf','20','-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','-movflags','+faststart',str(movie)]
    enc=subprocess.Popen(cmd,stdin=subprocess.PIPE,stderr=enc_log,**NOWIN);CHILDREN.append(enc)
    style=job.get('subStyle','active');title_style=job.get('titleStyle','pop');effect=title_effect(job)
-   font=ImageFont.truetype(sub_font,round(40*W/720*sub_scale));cap_y=max(.5,min(.9,float(job.get('captionY',CAPTION_Y))));positions=[caption_layout(g,font,W,H,cap_y) for g in groups];band_top,band_h=caption_band(font,H,cap_y)
-   title=make_title(job,W,H);title_y=round(H*.21875);title_secs=max(.5,min(6,float(job.get('titleSeconds',3))));gi=0;nframes=round(duration*fps);cached_key=None;cached=None
+   font=ImageFont.truetype(sub_font,round(40*S/720*sub_scale));cap_y=STORY_ASPECTS[aspect] or max(.5,min(.9,float(job.get('captionY',CAPTION_Y))));positions=[caption_layout(g,font,W,H,cap_y) for g in groups];band_top,band_h=caption_band(font,H,cap_y)
+   title=make_title(job,S,H);title_y=round(H*(.21875 if aspect=='9:16' else .12));title_secs=max(.5,min(6,float(job.get('titleSeconds',3))));gi=0;nframes=round(duration*fps);cached_key=None;cached=None
    for n in range(nframes):
     data=dec.stdout.read(W*H*3)
     if len(data)!=W*H*3:raise RuntimeError(f'Video nguồn kết thúc ở khung {n}/{nframes} ({len(data)} byte).')

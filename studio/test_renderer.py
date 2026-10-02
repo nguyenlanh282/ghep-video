@@ -98,5 +98,11 @@ class GradeTests(unittest.TestCase):
    self.assertEqual(len(renderer.saved_shots(job,'a|full',10.2)),1)
    self.assertIsNone(renderer.saved_shots(job,'b|full',10))   # another recording
    self.assertIsNone(renderer.saved_shots(job,'a|full',12))   # same name, other length
+ def test_face_crop_follows_the_output_shape(self):
+  self.assertEqual(renderer.face_crop(1920,1080,[],16/9),(0,0,1920,1080))      # 16:9 picture into a 16:9 video: nothing is cut
+  x,y,r,b=renderer.face_crop(1920,1080,[[.8,.3,.1,.2]],1)                        # square: follows the face to the right
+  self.assertEqual((r-x,b-y),(1080,1080));self.assertGreater(x,420)
+  x,y,r,b=renderer.face_crop(1080,1920,[[.4,.1,.2,.1]],16/9)                     # upright picture into a wide video: keeps the face near the top
+  self.assertEqual(r-x,1080);self.assertLess(y,200)
 
 if __name__=='__main__':unittest.main()
