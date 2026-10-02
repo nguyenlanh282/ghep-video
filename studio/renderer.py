@@ -280,10 +280,10 @@ def build_units(details,analysis):
   e=analysis.get(unicodedata.normalize('NFC',source.name),{})
   if d and e.get('scenes'):
    for sc in e['scenes']:
-    if sc['end']-sc['start']>.3:units.append(dict(path=path,d=d,a=sc['start'],b=min(d,sc['end']),text=f"{sc['mo_ta']} ({', '.join(sc.get('tu_khoa',[]))})",source=source.name))
+    if sc['end']-sc['start']>.3:units.append(dict(path=path,orig=str(source),d=d,a=sc['start'],b=min(d,sc['end']),text=f"{sc['mo_ta']} ({', '.join(sc.get('tu_khoa',[]))})",source=source.name))
   else:
    text=(e.get('mo_ta','')+(' ('+', '.join(e.get('tu_khoa',[]))+')' if e.get('tu_khoa') else '')) if e else ''
-   units.append(dict(path=path,d=d,a=0,b=d,text=text,source=source.name))
+   units.append(dict(path=path,orig=str(source),d=d,a=0,b=d,text=text,source=source.name))
  for i,u in enumerate(units):u['id']=i+1
  return units
 
@@ -319,7 +319,7 @@ def add_stock(plan,units,tmp,W,H,face_aware):
  """Turn downloaded free photos/videos into scene units and make them the choice for their phrase."""
  credits=[]
  for k,item in plan['stock'].items():
-  path=Path(item['path'])
+  path=Path(item['path']);orig=str(path)
   if not path.exists():continue
   if item['kind']=='video':
    try:d=float(probe(path)['format']['duration'])
@@ -331,7 +331,7 @@ def add_stock(plan,units,tmp,W,H,face_aware):
     if framed is None:continue
     path=framed
   uid=max([u['id'] for u in units],default=0)+1
-  units.append(dict(id=uid,path=path,d=d,a=0,b=d,text=item.get('mo_ta',''),source='Miễn phí: '+item.get('provider','')))
+  units.append(dict(id=uid,path=path,orig=orig,d=d,a=0,b=d,text=item.get('mo_ta',''),source='Miễn phí: '+item.get('provider','')))
   plan['choices'][k]=[uid];credits.append(dict(phrase=k,credit=item['credit'],page=item['page'],license=item['license'],query=item['query']))
  return credits
 
@@ -359,6 +359,36 @@ def source_start(u,length,use):
  room=max(0,(u['b']-u['a'])-length)
  start=u['a']+((use*length)%(room+.001) if room else 0)
  return max(0,min(start,u['d']-length-.12))
+
+# ---------- timeline: the list of shots, saved in the project so it can be edited and exported again ----------
+def media_size(path):
+ """Displayed width and height of a photo or video (rotation applied)."""
+ vs=next(x for x in probe(path)['streams'] if x['codec_type']=='video')
+ rot=abs(int(float((vs.get('side_data_list') or [{}])[0].get('rotation',0) or 0)))%180==90
+ return (vs['height'],vs['width']) if rot else (vs['width'],vs['height'])
+
+def manual_crop(w,h,frame,W,H):
+ """Crop rectangle chosen on the timeline: frame = {zoom ≥ 1, cx, cy} with the centre as fractions of the picture."""
+ z=max(1,min(4,float(frame.get('zoom',1) or 1)));cw=min(w,h*W/H)/z;ch=cw*H/W
+ x=min(max(0,float(frame.get('cx',.5))*w-cw/2),w-cw);y=min(max(0,float(frame.get('cy',.5))*h-ch/2),h-ch)
+ return math.floor(x),math.floor(y),math.floor(cw/2)*2,math.floor(ch/2)*2
+
+def read_project(job):
+ try:return json.loads(Path(job['projectFile']).read_text(encoding='utf-8')) if job.get('projectFile') else {}
+ except Exception:return {}
+
+def write_project(job,**changes):
+ """Read-modify-write, so settings the app keeps in the same file are not lost."""
+ if not job.get('projectFile'):return
+ f=Path(job['projectFile']);data=read_project(job);data.update(changes);data['updated']=time.strftime('%Y-%m-%d %H:%M')
+ f.parent.mkdir(parents=True,exist_ok=True);tmp=f.with_suffix('.tmp');tmp.write_text(json.dumps(data,ensure_ascii=False,indent=1),encoding='utf-8');tmp.replace(f)
+
+def saved_shots(job,sig,duration):
+ """The edited shot list of this project, if it was made for this same narration."""
+ tl=read_project(job).get('timeline') or {}
+ shots=tl.get('shots') or []
+ if tl.get('sig')!=sig or not shots or abs(float(tl.get('duration',0))-duration)>.3:return None
+ return shots
 
 TARGET_LUFS=-14
 
@@ -578,42 +608,77 @@ def render(job):
     else:emit(8,'Bỏ qua ảnh không thể giữ đủ khuôn mặt trong khung dọc: '+p.name)
    details=usable;job['photoFraming']=photo_info
    if not details:raise ValueError('Không có ảnh phù hợp để phủ đầy khung dọc mà giữ trọn khuôn mặt. Hãy thêm ảnh dọc hoặc video.')
-  analysis=load_analysis(folder) if job.get('matchScenes',True) else {}
-  if analysis and words:
-   # Scene changes follow the narration: every phrase gets scenes whose description matches what is said.
-   units=build_units(details,analysis);spans=scene_spans(phrases_for(words),duration)
-   plan=plan_scenes(spans,units,job,cache)
-   job['stockCredits']=add_stock(plan,units,tmp,W,H,face_aware) if plan else []
-   shots=assign_shots(spans,plan['choices'] if plan else {},units,shot,duration)
-  else:
-   # Alternate videos and photos; step through different source positions on each pass.
-   videos=[x for x in details if x[1]>0];photos=[x for x in details if x[1]==0];ordered=[]
-   while videos or photos:
-    if videos:ordered.append(videos.pop(0))
-    if videos:ordered.append(videos.pop(0))
-    if photos:ordered.append(photos.pop(0))
-   units=[dict(id=i+1,path=p,d=d,a=0,b=d,text='',source=src.name) for i,(p,d,src) in enumerate(ordered)]
-   shots=[dict(start=a,end=b,unit=units[i%len(units)]['id'],text='',matched=False) for i,(a,b) in enumerate(rotation_shots(duration,shot))]
-  by_id={u['id']:u for u in units};uses={};count=len(shots);plan_log=[]
-  for i,sh in enumerate(shots):
-   u=by_id[sh['unit']];p,d=u['path'],u['d'];length=sh['end']-sh['start'];out=tmp/f'{i:04}.mp4';cmd=[FFMPEG,'-v','error','-y']
-   # Frame counts come from rounded cut times, so scene changes never drift away from the narration.
-   frames=round(sh['end']*fps)-round(sh['start']*fps)
-   if frames<1:continue
-   if d:
-    start=source_start(u,length,uses.get(u['id'],0)) if analysis else ((i//len(units))*7.1+min(2,max(0,d-length-.12)))%(max(0,d-length-.12)+.001)
-    cmd+=['-stream_loop','-1','-ss',f'{start:.3f}','-i',str(p)]
-    # Videos get the same face check as photos: faces must stay inside the 9:16 crop, otherwise use a blurred fit.
-    vf,found=video_filter(p,min(start+length/2,max(0,d-.05)),tmp,W,H,fps,face_aware)
-    if found is not None:video_info.append(dict(source=str(p),start=round(start,2),faces=found['faces'],crop=found['crop']))
+  framed_of={str(src):p for p,d,src in details if not d and p!=src}   # photos already re-framed to keep faces in 9:16
+  auto_of={x['source']:[x['crop'][0]/x['width'],x['crop'][1]/x['height'],x['crop'][2]/x['width'],x['crop'][3]/x['height']] for x in job.get('photoFraming',[]) if x.get('crop')}
+  sig=digest(Path(job['audio']).expanduser().resolve())+('|cut' if job.get('removeSilence',True) else '|full')
+  shots=saved_shots(job,sig,audio_duration) if job.get('useTimeline',True) else None
+  if shots is None:
+   # Plan the whole narration (also for a 20-second preview), so the timeline is complete.
+   analysis=load_analysis(folder) if job.get('matchScenes',True) else {}
+   if analysis and words:
+    # Scene changes follow the narration: every phrase gets scenes whose description matches what is said.
+    units=build_units(details,analysis);spans=scene_spans(phrases_for(words),audio_duration)
+    plan=plan_scenes(spans,units,job,cache)
+    job['stockCredits']=add_stock(plan,units,tmp,W,H,face_aware) if plan else []
+    picked=assign_shots(spans,plan['choices'] if plan else {},units,shot,audio_duration)
    else:
-    start=0;cmd+=['-loop','1','-i',str(p)]
-    # Face-safe photos are already 9:16.
-    vf=f'[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},setsar=1,fps={fps}[v]' if face_aware else video_filter(p,0,tmp,W,H,fps,False)[0]
-   uses[u['id']]=uses.get(u['id'],0)+1
-   plan_log.append(dict(time=f"{sh['start']:.2f}-{sh['end']:.2f}",file=u['source'],sourceStart=round(start,2),scene=u['text'],phrase=sh['text'],matched=sh['matched']))
+    # Alternate videos and photos; step through different source positions on each pass.
+    videos=[x for x in details if x[1]>0];photos=[x for x in details if x[1]==0];ordered=[]
+    while videos or photos:
+     if videos:ordered.append(videos.pop(0))
+     if videos:ordered.append(videos.pop(0))
+     if photos:ordered.append(photos.pop(0))
+    units=[dict(id=i+1,path=p,orig=str(src),d=d,a=0,b=d,text='',source=src.name) for i,(p,d,src) in enumerate(ordered)]
+    picked=[dict(start=a,end=b,unit=units[i%len(units)]['id'],text='',matched=False) for i,(a,b) in enumerate(rotation_shots(audio_duration,shot))]
+   by_id={u['id']:u for u in units};uses={};shots=[]
+   for i,sh in enumerate(picked):
+    u=by_id[sh['unit']];d=u['d'];length=sh['end']-sh['start'];start=0
+    if d:start=source_start(u,length,uses.get(u['id'],0)) if analysis else ((i//len(units))*7.1+min(2,max(0,d-length-.12)))%(max(0,d-length-.12)+.001)
+    uses[u['id']]=uses.get(u['id'],0)+1
+    shots.append(dict(start=round(sh['start'],3),end=round(sh['end'],3),file=str(u.get('orig') or u['path']),d=round(d,3),srcStart=round(start,3),text=sh['text'],scene=u['text'],matched=sh['matched'],frame=None))
+   write_project(job,timeline=dict(sig=sig,duration=round(audio_duration,3),shots=shots),stockCredits=job.get('stockCredits') or [])
+  else:job['stockCredits']=read_project(job).get('stockCredits') or []
+  if job.get('planOnly'):
+   emit(100,f'Đã lên timeline {len(shots)} cảnh. Chỉnh từng cảnh rồi bấm xuất.',done=True,timeline=True);return
+  count=sum(1 for sh in shots if sh['start']<duration);plan_log=[];sizes={}
+  for i,sh in enumerate(shots):
+   if sh['start']>=duration:break
+   p=Path(sh['file']);d=float(sh.get('d') or 0);end=min(sh['end'],duration);length=end-sh['start'];out=tmp/f'{i:04}.mp4';cmd=[FFMPEG,'-v','error','-y']
+   if not p.exists():raise ValueError(f'Không tìm thấy file của cảnh {i+1}: {p.name}. Chọn ảnh/video khác cho cảnh này trên timeline.')
+   # Frame counts come from rounded cut times, so scene changes never drift away from the narration.
+   frames=round(end*fps)-round(sh['start']*fps)
+   if frames<1:continue
+   frame=sh.get('frame');auto=None
+   if frame:
+    if str(p) not in sizes:sizes[str(p)]=media_size(p)
+    x,y,cw,ch=manual_crop(*sizes[str(p)],frame,W,H)
+    manual=f'[0:v]crop={cw}:{ch}:{x}:{y},scale={W}:{H},setsar=1,fps={fps}[v]'
+   if d:
+    start=max(0,min(float(sh.get('srcStart') or 0),d-length-.12))
+    cmd+=['-stream_loop','-1','-ss',f'{start:.3f}','-i',str(p)]
+    if frame:vf=manual
+    else:
+     # Videos get the same face check as photos: faces must stay inside the 9:16 crop, otherwise use a blurred fit.
+     vf,found=video_filter(p,min(start+length/2,max(0,d-.05)),tmp,W,H,fps,face_aware)
+     if found is not None:
+      video_info.append(dict(source=str(p),start=round(start,2),faces=found['faces'],crop=found['crop']))
+      if found.get('crop'):auto=[found['crop'][0]/found['width'],found['crop'][1]/found['height'],found['crop'][2]/found['width'],found['crop'][3]/found['height']]
+   else:
+    start=0;src=p
+    if frame:vf=manual
+    else:
+     # Face-safe photos were re-framed to 9:16 above; a photo picked by hand that cannot keep its faces gets a blurred fit.
+     src=framed_of.get(str(p)) or (prepare_photo(p,tmp,W,H)[0] if face_aware else None)
+     vf=f'[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},setsar=1,fps={fps}[v]' if src else video_filter(p,0,tmp,W,H,fps,False)[0]
+     if src:auto=auto_of.get(str(p))
+     src=src or p
+    cmd+=['-loop','1','-i',str(src)]
+   if auto:sh['auto']=[round(v,4) for v in auto]
+   plan_log.append(dict(time=f"{sh['start']:.2f}-{end:.2f}",file=p.name,sourceStart=round(start,2),scene=sh.get('scene',''),phrase=sh.get('text',''),matched=sh.get('matched',False),manualFrame=bool(frame)))
    cmd+=['-filter_complex',vf,'-map','[v]','-frames:v',str(frames),'-an','-c:v','libx264','-preset','veryfast','-crf','19','-pix_fmt','yuv420p',str(out)]
    run(cmd);clips.append(out);emit(10+25*(i+1)/count,f'Chuẩn bị cảnh {i+1}/{count}')
+  # The crop each automatic shot got, so the timeline can show (and start editing from) the real framing.
+  write_project(job,timeline=dict(sig=sig,duration=round(audio_duration,3),shots=shots))
   job['scenePlan']=plan_log
   if face_aware:job['videoFraming']=video_info
   concat=tmp/'clips.txt';concat.write_text(''.join(f"file '{p.name}'\n" for p in clips),encoding='utf-8')
@@ -664,6 +729,7 @@ def render(job):
  if job.get('stockCredits'):
   dest.with_suffix('.nguon-anh.txt').write_text('Ảnh/video miễn phí dùng trong video này:\n\n'+'\n'.join(f"- {c['credit']} · {c['license']} · {c['page']}" for c in job['stockCredits'])+'\n',encoding='utf-8')
  dest.with_suffix('.json').write_text(json.dumps(job,ensure_ascii=False,indent=2),encoding='utf-8')
+ write_project(job,lastExport=dict(path=str(dest),preview=bool(job.get('preview')),at=time.strftime('%Y-%m-%d %H:%M')))
  emit(100,'Đã xuất xong video',output=str(dest),srt=str(srt))
 
 if __name__=='__main__':

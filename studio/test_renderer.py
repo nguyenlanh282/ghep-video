@@ -1,4 +1,5 @@
 import unittest
+import renderer
 import numpy as np
 from renderer import silence_ranges,kept_ranges,mapped_time,face_crop,groups_for,group_end,parse_fixes,apply_fixes,scene_spans,assign_shots,source_start,rotation_shots
 
@@ -81,5 +82,21 @@ class GradeTests(unittest.TestCase):
    f=renderer.grade_filter(grade)
    if key!='goc':self.assertTrue(f,name)
   self.assertIn('hue=s=0',renderer.grade_filter(renderer.LOOKS['trang-den'][1]))
+ def test_manual_frame_is_a_crop_of_the_output_shape_inside_the_picture(self):
+  self.assertEqual(renderer.manual_crop(1920,1080,dict(zoom=1,cx=.5,cy=.5),1080,1920),(656,0,606,1080))  # no zoom: the widest 9:16 cut, centred
+  x,y,cw,ch=renderer.manual_crop(1920,1080,dict(zoom=2,cx=.95,cy=.1),1080,1920)
+  self.assertAlmostEqual(cw/ch,9/16,delta=.01);self.assertLessEqual(x+cw,1920);self.assertEqual(y,0)  # pushed back inside the picture
+  self.assertEqual(renderer.manual_crop(1080,1920,dict(zoom=9,cx=.5,cy=.5),1080,1920)[2:],(270,480))  # zoom is capped at 4
+ def test_saved_timeline_is_reused_only_for_the_same_narration(self):
+  import tempfile
+  with tempfile.TemporaryDirectory() as tmp:
+   job=dict(projectFile=tmp+'/du-an/p.json')
+   self.assertIsNone(renderer.saved_shots(job,'a|full',10))
+   renderer.write_project(job,settings=dict(title='X'))
+   renderer.write_project(job,timeline=dict(sig='a|full',duration=10,shots=[dict(start=0,end=10,file='f.jpg')]))
+   self.assertEqual(renderer.read_project(job)['settings'],dict(title='X'))  # the app's part of the file is kept
+   self.assertEqual(len(renderer.saved_shots(job,'a|full',10.2)),1)
+   self.assertIsNone(renderer.saved_shots(job,'b|full',10))   # another recording
+   self.assertIsNone(renderer.saved_shots(job,'a|full',12))   # same name, other length
 
 if __name__=='__main__':unittest.main()

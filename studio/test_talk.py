@@ -106,5 +106,11 @@ class TalkTests(unittest.TestCase):
                 self.assertEqual(renderer.ai_spell(words('a|b'), {}, Path(d)), 0, 'no AI: skipped')
         finally:
             talk.ai_json, platform_tools.ai_provider = old
+    def test_manual_frame_follows_the_joined_video_being_played(self):
+        fr = dict(zoom=1.5, cx=.4, cy=.5)
+        p = dict(clips=[dict(start=0, end=5), dict(start=5, end=9)], frames={'1': fr})
+        self.assertIsNone(talk.frame_at(p, 2)); self.assertEqual(talk.frame_at(p, 6), fr)
+        self.assertEqual(talk.frame_at(dict(frames={'0': fr}), 3), fr)       # one video, no clip list
+        self.assertEqual(talk.frame_at(dict(clips=p['clips'], frames={'all': fr}), 2), fr)
 
 if __name__ == '__main__': unittest.main()

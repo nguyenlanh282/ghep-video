@@ -10,7 +10,7 @@ const base = p => p ? p.split(/[\\/]/).pop() : '';
 const fmt = s => { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 const REASON = {'im-lang': 'Im lặng', 'am-u': 'Ậm ừ', 'lap': 'Nói vấp', 'noi-lai': 'Nói lại', 'tay': 'Bạn cắt'};
 let S = null, P = null, videoUrl = null, keep = [];
-let autoExport = false;
+let autoExport = false, timeline = null;
 let exportsList = [], view = 'raw', currentExport = 0, preferRaw = false;  // preview: the edited result, or the raw video with cuts skipped  // “Edit & xuất ngay”: export as soon as the analysis finishes
 
 async function api(name, body = {}) {
@@ -124,7 +124,7 @@ function setCut(indices, reason) {
 }
 // Per-item toggles (clips, B-roll) are merged, so several quick clicks are all kept, not just the last one.
 function editOther(obj) {
-  for (const [k, v] of Object.entries(obj)) pendingOther[k] = (k === 'shorts' || k === 'broll') ? {...(pendingOther[k] || {}), ...v} : v;
+  for (const [k, v] of Object.entries(obj)) pendingOther[k] = (k === 'shorts' || k === 'broll' || k === 'frames') ? {...(pendingOther[k] || {}), ...v} : v;
   saveEdits();
 }
 
@@ -162,6 +162,7 @@ function paintWords() {
   });
   $$('#transcript .brmark').forEach(b => b.classList.toggle('off', !P.broll[+b.dataset.br].on));
   keep = keepRanges(P.words, P.duration);
+  if (timeline) timeline.redraw();   // cuts changed: every block moves
   const kept = keep.reduce((s, [a, b]) => s + b - a, 0), by = {};
   for (const w of P.words) if (w.cut) by[w.cut] = (by[w.cut] || 0) + (w.end - w.start);
   const wordsCut = Object.values(by).reduce((a, b) => a + b, 0);
@@ -198,6 +199,7 @@ async function loadProject() {
   $('#resultRow').hidden = !exportsList.length;
   if (window.Donate) Donate.show(exportsList.length > 0);
   if (P) { buildTranscript(); paintExtras(); }
+  if (timeline) timeline.refresh();
   setView(exportsList.length && !preferRaw ? 'edited' : 'raw');
 }
 
@@ -272,6 +274,8 @@ function wire() {
   $('#vlist').addEventListener('click', e => { const b = e.target.closest('[data-vop]'); if (b) api('talkVideos', {op: b.dataset.vop, index: +b.dataset.i, dir: +b.dataset.dir || 1}); });
   $('#vSort').addEventListener('click', () => api('talkVideos', {op: 'sort'}));
   if (window.Grade) Grade.init($('#gradeBox'), api);
+  if (window.TL) timeline = TL.talk($('#tlPanel'), {api, player: $('#player'), project: () => P, keep: () => keep, settings: () => (S ? S.settings : {}), view: () => view,
+    save: patch => { editOther(patch); if (patch.brollList) buildTranscript(); }});
   $('#keyLink').href = `index.html?t=${TOKEN}#keys`;  // the key boxes live on the Ghép ảnh page
   $('#viewSeg').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b && !b.disabled) { preferRaw = b.dataset.view === 'raw'; setView(b.dataset.view, true); } });
   $('#editedPick').addEventListener('click', e => { const b = e.target.closest('[data-export]'); if (b) { currentExport = +b.dataset.export; setView('edited', true); } });

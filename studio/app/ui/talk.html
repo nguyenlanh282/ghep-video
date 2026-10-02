@@ -16,9 +16,11 @@
     <a data-mode-link="index.html">Ghép ảnh + lời đọc</a>
     <a class="on" aria-current="page">✂ Edit video chia sẻ</a>
   </nav>
+  <div class="row gap"><button class="btn small" id="projBtn" title="Mở lại các video đã làm">📂 Dự án</button></div>
 </header>
 
 <main id="main" class="talk">
+  <section class="panel tl-panel" id="tlPanel" aria-label="Timeline" hidden></section>
   <section class="panel" aria-labelledby="t1">
     <h2 id="t1"><span class="num">01</span>Video thô</h2>
     <ol class="vlist" id="vlist" aria-label="Các video thô, theo thứ tự ghép"></ol>
@@ -162,6 +164,8 @@
   </div>
 </footer>
 <script src="donate.js"></script>
+<script src="timeline.js"></script>
+<script src="projects.js"></script>
 <script src="grade.js"></script>
 <script src="talk.js"></script>
 </body>

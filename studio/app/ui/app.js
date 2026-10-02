@@ -7,6 +7,7 @@ let sampleWords = [];    // karaoke timings for the bundled sample clip
 let groups = [];
 let showingResult = false;
 let SAMPLE = 'assets/';
+let timeline = null, timelineKey = null;   // timeline of the current project (narration + media folder)
 
 async function api(name, body = {}) {
   const r = await fetch('/api/' + name, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Token': TOKEN}, body: JSON.stringify(body)});
@@ -72,6 +73,7 @@ function wire() {
   $('#showTitle').addEventListener('change', e => set({titleStyle: e.target.checked ? 'pop' : 'none'}).then(replaySample));
   $$('[data-choose]').forEach(b => b.addEventListener('click', () => choose(b.dataset.choose)));
   if (window.Grade) Grade.init($('#gradeBox'), api);
+  if (window.TL) timeline = TL.story($('#tlPanel'), {api, player: $('#player'), isResult: () => showingResult, poll});
 
   $('#analyzeBtn').addEventListener('click', () => api('start', {task: 'analyze'}).then(poll));
   $('#undoBtn').addEventListener('click', () => { if (confirm('Trả lại tên gốc cho tất cả tư liệu đã đổi tên?')) api('start', {task: 'undo'}).then(poll); });
@@ -274,6 +276,9 @@ function paintTtsCount() {
 function render(state) {
   const prevJob = S && S.job; S = state; const s = state.settings, job = state.job;
   if (window.Grade) Grade.update(state);
+  // Timeline: reload when the project changes (other narration / folder) and when a plan or export finishes.
+  const tlKey = s.audio + '|' + s.mediaFolder, finished = prevJob && prevJob.running && !job.running && ['plan', 'render'].includes(job.task);
+  if (timeline && (tlKey !== timelineKey || finished)) { timelineKey = tlKey; timeline.refresh(); }
   $$('input[type=checkbox][data-key]').forEach(cb => cb.checked = !!s[cb.dataset.key]);
   $$('input[type=text][data-key], textarea[data-key]').forEach(inp => { if (document.activeElement !== inp && !inp.dataset.dirty) inp.value = s[inp.dataset.key] ?? ''; });
   $$('.value').forEach(el => { if (!el.contains(document.activeElement) || el._apply) el._apply(+s[el.dataset.valueKey]); });
@@ -338,7 +343,7 @@ function render(state) {
   $('#status').textContent = job.status;
   $('#substatus').textContent = job.running ? `${Math.round(job.progress * 100)}% · Bạn có thể dừng bất cứ lúc nào` : `Video dọc 9:16 · ${s.resolution}p · Giữ nguyên file gốc`;
   $('#actions').hidden = job.running; $('#cancelBtn').hidden = !job.running;
-  $('#cancelBtn').textContent = {render: 'Dừng xuất', tts: 'Dừng tạo giọng'}[job.task] || 'Dừng phân tích';
+  $('#cancelBtn').textContent = {render: 'Dừng xuất', tts: 'Dừng tạo giọng', plan: 'Dừng lên timeline'}[job.task] || 'Dừng phân tích';
   if (job.task === 'update' || job.task === 'thumbs') $('#cancelBtn').hidden = true;  // short in-app tasks: they finish on their own
   paintThumbs();
   $('#error').hidden = !job.error; $('#errorText').textContent = job.error || '';

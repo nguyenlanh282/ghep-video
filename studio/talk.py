@@ -352,6 +352,13 @@ def face_at(project, t):
     """Face of the joined video playing at source time t (each has its own framing)."""
     return next((c.get('face') for c in project.get('clips') or [] if c['start'] <= t < c['end']), None)
 
+def frame_at(project, t):
+    """Framing set by hand on the timeline for the raw video playing at source time t (one per joined video, or 'all')."""
+    frames = project.get('frames') or {}
+    k = next((str(i) for i, c in enumerate(project.get('clips') or []) if c['start'] <= t < c['end']), '0')
+    fr = frames.get(k) or frames.get('all')
+    return fr if isinstance(fr, dict) else None
+
 def speaker_crop(W0, H0, face, W, H, zoom):
     """Cover-crop of the speaker for the output aspect: face centred horizontally, eyes near the upper third."""
     ratio = W / H
@@ -416,18 +423,24 @@ def render_variant(project, job, aspect, first, last, title, dest, tmp, progress
         if frames < 1: continue
         out = tmp / f'{aspect.replace(":", "x")}-{n:04}.mp4'
         if p['kind'] == 'speaker':
-            if (W0 / H0) / (W / H) < .6 and not job.get('talkFill', True):
+            if (W0 / H0) / (W / H) < .6 and not job.get('talkFill', True) and not frame_at(project, p['src']):
                 # Upright footage in a wide frame, "keep the whole picture": the speaker in the middle over a blurred copy.
                 fh = round(H * p['zoom']); fw = round(fh * W0 / H0 / 2) * 2
                 vf = (f'split=2[bg][fg];[bg]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},gblur=sigma=30[b];'
                       f'[fg]scale={fw}:{fh}[f];[b][f]overlay=(W-w)/2:(H-h)*0.4,setsar=1,fps={FPS},tpad=stop_mode=clone:stop_duration=5')
             else:
-                x, y, cw, ch = speaker_crop(W0, H0, face_at(project, p['src']) or face, W, H, p['zoom'])
+                fr = frame_at(project, p['src'])
+                # A hand-set frame wins over the face-based crop; the punch-in zoom still alternates on top of it.
+                if fr: x, y, cw, ch = R.manual_crop(W0, H0, dict(fr, zoom=float(fr.get('zoom', 1)) * p['zoom']), W, H)
+                else: x, y, cw, ch = speaker_crop(W0, H0, face_at(project, p['src']) or face, W, H, p['zoom'])
                 vf = f'crop={cw}:{ch}:{x}:{y},scale={W}:{H},setsar=1,fps={FPS},tpad=stop_mode=clone:stop_duration=5'
             cmd = [FFMPEG, '-v', 'error', '-y', '-ss', f'{p["src"]:.3f}', '-i', str(src), '-vf', vf]
         else:
             br = p['br']; bp = Path(br['path'])
             vf = f'scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},setsar=1,fps={FPS},tpad=stop_mode=clone:stop_duration=5'
+            if br.get('frame'):
+                x, y, cw, ch = R.manual_crop(*R.media_size(bp), br['frame'], W, H)
+                vf = f'crop={cw}:{ch}:{x}:{y},scale={W}:{H},setsar=1,fps={FPS},tpad=stop_mode=clone:stop_duration=5'
             if br['d']: cmd = [FFMPEG, '-v', 'error', '-y', '-stream_loop', '-1', '-ss', f'{min(max(0, br["d"] - 4), br["a"] + p["off"]):.3f}', '-i', str(bp), '-vf', vf]
             else: cmd = [FFMPEG, '-v', 'error', '-y', '-loop', '1', '-i', str(bp), '-vf', vf]
         R.run(cmd + ['-frames:v', str(frames), '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '19', '-pix_fmt', 'yuv420p', str(out)])

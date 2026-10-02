@@ -217,11 +217,14 @@ class Studio:
     job.update(title=pick.get('dong1',''),subtitle=pick.get('dong2',''))
    job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
    args=[str(ENGINE/'talk.py'),task[5:],str(job_file)];log='talk.log';cleanup=lambda:job_file.unlink(missing_ok=True)
-  elif task=='render':
+  elif task in ('render','plan'):
    if not Path(s['audio']).is_file():return self.fail('Hãy chọn file ghi âm.')
    if not Path(s['outputFolder']).is_dir():return self.fail('Hãy chọn thư mục lưu video.')
    analysed=len(self.analysis())>0
    job={k:s[k] for k in ('mediaFolder','audio','music','outputFolder','title','subtitle','titleStyle','subStyle','musicVolume','shotSeconds','resolution','removeSilence','faceAwareFill','fixesText','voiceVolume','normalizeVoice','stockSource','captionY','titleSeconds','titleScale','titleEffect','subScale','subFont','aiSpelling')}
+   pf=self.story_file()
+   if pf:self.story_save();job['projectFile']=str(pf)   # settings + timeline of this narration + media folder
+   if task=='plan':job['planOnly']=True
    # The MiniMax voice-over's own script is the reference text for the AI spelling check.
    if s['voiceSource']=='minimax' and s['ttsText'].strip() and 'Giọng đọc - ' in Path(s['audio']).name:job['script']=s['ttsText']
    # Matching scenes needs every photo/video analysed: the renderer analyses the new ones first (the AI must be ready).
@@ -346,6 +349,168 @@ class Studio:
   elif op=='clear':vids=[]
   return self.set_talk_videos(vids)
 
+ # ---- projects: everything worked on is kept, so it can be opened and edited again ----
+ STORY_KEYS=('mediaFolder','audio','music','title','subtitle','titleStyle','titleEffect','titleScale','titleSeconds','subStyle','subScale','subFont','captionY',
+             'musicVolume','voiceVolume','normalizeVoice','shotSeconds','removeSilence','faceAwareFill','resolution','fixesText','matchScenes','grade',
+             'voiceSource','ttsText','minimaxVoice','minimaxModel','minimaxSpeed','aiSpelling')
+
+ def story_file(self):
+  """Project of the Ghép ảnh mode: one per narration + media folder."""
+  a=Path(self.settings['audio'])
+  if not a.is_file():return None
+  key=hashlib.sha1(f"{a.resolve()}|{a.stat().st_size}|{Path(self.settings['mediaFolder']).resolve()}".encode()).hexdigest()[:14]
+  return self.cache()/'projects'/f'{key}.json'
+
+ def story_read(self,f=None):
+  f=f or self.story_file()
+  try:return json.loads(f.read_text(encoding='utf-8')) if f and f.is_file() else {}
+  except Exception:return {}
+
+ def story_write(self,data,f=None):
+  f=f or self.story_file()
+  if not f:return
+  f.parent.mkdir(parents=True,exist_ok=True);data['updated']=time.strftime('%Y-%m-%d %H:%M')
+  tmp=f.with_suffix('.tmp');tmp.write_text(json.dumps(data,ensure_ascii=False,indent=1),encoding='utf-8');tmp.replace(f)
+
+ def story_save(self):
+  """Keep this project's settings with its timeline."""
+  f=self.story_file()
+  if not f:return
+  d=self.story_read(f);s=self.settings
+  d.update(kind='story',settings={k:s[k] for k in self.STORY_KEYS})
+  d.setdefault('name',(s['title'].strip() or Path(s['audio']).stem)[:60]);d.setdefault('created',time.strftime('%Y-%m-%d %H:%M'))
+  self.story_write(d,f)
+
+ def thumb_url(self,path,at=0):
+  from urllib.parse import quote
+  return f'/t/{TOKEN}/?p={quote(str(path))}&at={float(at):.2f}'
+
+ def thumb_file(self,src,at):
+  """Small still of a photo, or of a video at a time, cached on disk (whole picture, never cropped)."""
+  import renderer
+  folder=self.cache()/'thumbs-tl';folder.mkdir(parents=True,exist_ok=True)
+  out=folder/(hashlib.sha1(f'{src}|{src.stat().st_size}|{at:.1f}'.encode()).hexdigest()[:20]+'.jpg')
+  if not out.is_file():
+   seek=['-ss',f'{max(0,at):.2f}'] if src.suffix.lower() in renderer.VIDEO else []
+   subprocess.run([renderer.FFMPEG,'-v','error','-y',*seek,'-i',str(src),'-frames:v','1','-vf','scale=480:480:force_original_aspect_ratio=decrease','-q:v','4',str(out)],capture_output=True,**NOWIN)
+  return out if out.is_file() else None
+
+ def media_list(self,folder):
+  """Photos and videos of a folder for the timeline's picker (durations are read once and remembered)."""
+  import renderer
+  out=[];memo=self.__dict__.setdefault('_durations',{})
+  try:files=sorted(p for p in Path(folder).iterdir() if p.is_file() and not p.name.startswith(('.','_')) and p.suffix.lower() in MEDIA_EXT)
+  except OSError:files=[]
+  notes={}
+  try:notes=renderer.load_analysis(Path(folder))
+  except Exception:pass
+  for p in files[:400]:
+   video=p.suffix.lower() in renderer.VIDEO;k=(str(p),p.stat().st_size);d=0
+   if video:
+    if k not in memo:
+     try:memo[k]=float(renderer.probe(p)['format']['duration'])
+     except Exception:memo[k]=0
+    d=memo[k]
+    if d<.2:continue
+   out.append(dict(path=str(p),name=p.name,kind='video' if video else 'photo',d=round(d,2),thumb=self.thumb_url(p,min(1,d/2) if d else 0),
+                   note=(notes.get(nfc(p.name)) or {}).get('mo_ta','')))
+  return out
+
+ def timeline_state(self):
+  d=self.story_read();tl=d.get('timeline') or {}
+  shots=[dict(sh,name=Path(sh['file']).name,missing=not Path(sh['file']).is_file(),thumb=self.thumb_url(sh['file'],float(sh.get('srcStart') or 0)+.2 if sh.get('d') else 0)) for sh in tl.get('shots') or []]
+  last=d.get('lastExport') or {}
+  return dict(shots=shots,duration=tl.get('duration',0),name=d.get('name',''),files=self.media_list(self.settings['mediaFolder']) if shots else [],
+              exportUrl=self.url(last.get('path')) if last.get('path') else None,hasAudio=bool(self.story_file()))
+
+ def timeline_edit(self,b):
+  """Save the shot list edited on the timeline: shots stay back to back from 0 to the end of the narration."""
+  f=self.story_file();d=self.story_read(f);tl=d.get('timeline')
+  if not tl:return dict(error='Chưa có timeline.')
+  dur=float(tl['duration']);shots=[]
+  for sh in sorted(b.get('shots') or [],key=lambda x:float(x.get('start',0))):
+   if not Path(str(sh.get('file',''))).is_file():continue
+   fr=sh.get('frame');fr=dict(zoom=max(1,min(4,float(fr.get('zoom',1)))),cx=max(0,min(1,float(fr.get('cx',.5)))),cy=max(0,min(1,float(fr.get('cy',.5))))) if isinstance(fr,dict) else None
+   shots.append(dict(start=float(sh['start']),end=float(sh['end']),file=str(sh['file']),d=float(sh.get('d') or 0),srcStart=max(0,float(sh.get('srcStart') or 0)),
+                     text=str(sh.get('text',''))[:300],scene=str(sh.get('scene',''))[:300],matched=bool(sh.get('matched')),frame=fr,edited=bool(sh.get('edited')),
+                     **({'auto':sh['auto']} if isinstance(sh.get('auto'),list) and len(sh['auto'])==4 and not sh.get('edited') else {})))
+  if not shots:return dict(error='Timeline phải có ít nhất 1 cảnh.')
+  shots[0]['start']=0
+  for a,c in zip(shots,shots[1:]):a['end']=c['start']
+  shots[-1]['end']=dur
+  shots=[x for x in shots if x['end']-x['start']>=.2]
+  for a,c in zip(shots,shots[1:]):a['end']=c['start']
+  shots[0]['start']=0;shots[-1]['end']=dur
+  for x in shots:x['start']=round(x['start'],3);x['end']=round(x['end'],3)
+  tl['shots']=shots;d['timeline']=tl;self.story_write(d,f)
+  return self.timeline_state()
+
+ def timeline_reset(self):
+  f=self.story_file();d=self.story_read(f)
+  if d.pop('timeline',None) is not None:self.story_write(d,f)
+  return self.timeline_state()
+
+ def projects(self):
+  """Every project kept in this output folder, newest first."""
+  out=[]
+  for f in (self.cache()/'projects').glob('*.json'):
+   d=self.story_read(f)
+   if d.get('kind')!='story':continue
+   st=d.get('settings') or {};last=d.get('lastExport') or {}
+   out.append(dict(kind='story',id=f.stem,name=d.get('name') or f.stem,updated=d.get('updated',''),shots=len((d.get('timeline') or {}).get('shots') or []),
+                   detail=Path(st.get('audio','')).name,missing=not Path(st.get('audio','')).is_file(),exported=bool(last.get('path') and Path(last['path']).is_file()),
+                   active=f==self.story_file()))
+  cur=self.talk_dir() if self.talk_videos() else None
+  for f in (self.cache()/'talk').glob('*/project.json'):
+   try:d=json.loads(f.read_text(encoding='utf-8'))
+   except Exception:continue
+   vids=d.get('videos') or ([d['source']] if d.get('source') else [])
+   out.append(dict(kind='talk',id=f.parent.name,name=d.get('label') or d.get('name') or Path(d.get('source','')).stem,updated=d.get('updated') or (d.get('last_export') or {}).get('at') or d.get('created',''),
+                   shots=len(vids),detail=', '.join(Path(v).name for v in vids)[:80],missing=not all(Path(v).is_file() for v in vids),
+                   exported=bool((d.get('last_export') or {}).get('results')),active=cur is not None and f.parent==cur))
+  return dict(projects=sorted(out,key=lambda x:x['updated'],reverse=True))
+
+ @staticmethod
+ def project_id(pid):
+  """Project ids are hex digests made by the app; anything else ('..', a path) must never reach the disk."""
+  return pid if isinstance(pid,str) and re.fullmatch(r'[0-9a-f]{8,40}',pid) else None
+
+ def project_open(self,kind,pid):
+  pid=self.project_id(pid)
+  if not pid:return dict(error='Không mở được dự án này.')
+  if kind=='story':
+   d=self.story_read(self.cache()/'projects'/f'{Path(pid).name}.json');st=d.get('settings') or {}
+   if not Path(st.get('audio','')).is_file():return dict(error='Không còn file ghi âm của dự án này.')
+   return self.set({k:v for k,v in st.items() if k in self.STORY_KEYS})
+  try:d=json.loads((self.cache()/'talk'/Path(pid).name/'project.json').read_text(encoding='utf-8'))
+  except Exception:return dict(error='Không mở được dự án này.')
+  vids=d.get('videos') or ([d['source']] if d.get('source') else [])
+  if not vids or not all(Path(v).is_file() for v in vids):return dict(error='Không còn đủ video gốc của dự án này.')
+  return self.set_talk_videos(vids)
+
+ def project_rename(self,kind,pid,name):
+  name=str(name).strip()[:60]
+  if not name:return dict(error='Hãy nhập tên.')
+  pid=self.project_id(pid)
+  if not pid:return dict(error='Không tìm thấy dự án.')
+  f=self.cache()/'projects'/f'{Path(pid).name}.json' if kind=='story' else self.cache()/'talk'/Path(pid).name/'project.json'
+  try:d=json.loads(f.read_text(encoding='utf-8'))
+  except Exception:return dict(error='Không tìm thấy dự án.')
+  d['name' if kind=='story' else 'label']=name
+  tmp=f.with_suffix('.tmp');tmp.write_text(json.dumps(d,ensure_ascii=False,indent=1),encoding='utf-8');tmp.replace(f)
+  return self.projects()
+
+ def project_delete(self,kind,pid):
+  """Removes the saved edit only (transcript, timeline, choices). Source files and exported videos are not touched."""
+  import shutil
+  pid=self.project_id(pid)
+  if not pid:return dict(error='Không tìm thấy dự án.')
+  if kind=='story':(self.cache()/'projects'/f'{pid}.json').unlink(missing_ok=True)
+  else:
+   folder=self.cache()/'talk'/pid
+   if (folder/'project.json').is_file():shutil.rmtree(folder,ignore_errors=True)
+  return self.projects()
+
  # ---- colour grading ----
  def grade(self):
   try:g=json.loads(self.settings['grade'] or '{}')
@@ -422,6 +587,24 @@ class Studio:
   for key in ('shorts','broll'):
    for i,on in (b.get(key) or {}).items():
     if 0<=int(i)<len(p.get(key,[])):p[key][int(i)]['on']=bool(on)
+  frame=lambda fr:dict(zoom=max(1,min(4,float(fr.get('zoom',1)))),cx=max(0,min(1,float(fr.get('cx',.5)))),cy=max(0,min(1,float(fr.get('cy',.5))))) if isinstance(fr,dict) else None
+  if isinstance(b.get('brollList'),list):
+   # The B-roll track edited on the timeline: where each cut-away starts (a word), how long, which file, which part, framing.
+   items=[]
+   for x in b['brollList'][:200]:
+    if not Path(str(x.get('path',''))).is_file() or not 0<=int(x.get('first',-1))<len(p['words']):continue
+    d=float(x.get('d') or 0)
+    items.append(dict(first=int(x['first']),lead=max(0,min(2,float(x.get('lead',.15)))),dur=round(max(.8,min(15,float(x.get('dur',2.5)))),2),path=str(x['path']),d=d,
+                      a=max(0,min(float(x.get('a') or 0),max(0,d-.5))),b=float(x.get('b') or d),text=str(x.get('text',''))[:300],source=str(x.get('source') or Path(str(x['path'])).name)[:200],
+                      on=bool(x.get('on',True)),frame=frame(x.get('frame'))))
+   p['broll']=sorted(items,key=lambda x:x['first'])
+  if isinstance(b.get('frames'),dict):
+   frames=p.get('frames') or {}
+   for k,v in b['frames'].items():
+    if frame(v):frames[str(k)]=frame(v)
+    else:frames.pop(str(k),None)
+   p['frames']=frames
+  p['updated']=time.strftime('%Y-%m-%d %H:%M')
   f=self.talk_dir()/'project.json';tmp=f.with_suffix('.tmp');tmp.write_text(json.dumps(p,ensure_ascii=False,indent=1),encoding='utf-8');tmp.replace(f)
   return dict(ok=True)
 
@@ -526,7 +709,11 @@ API={'state':lambda b:studio.state(),'set':lambda b:studio.set(b.get('values',{}
  'gradePreview':lambda b:studio.grade_preview(b.get('mode','story')),'gradeSave':lambda b:studio.grade_save(b.get('name','')),
  'gradeDelete':lambda b:studio.grade_delete(b.get('name','')),'talkState':lambda b:studio.talk_state(),'talkEdit':lambda b:studio.talk_edit(b),
  'thumbFind':lambda b:studio.thumb_find(),'thumbCompose':lambda b:studio.thumb_compose(b.get('ids',[]),b.get('text',True)),
- 'thumbSave':lambda b:studio.thumb_save(b.get('ids',[]),b.get('text',True)),'thumbReveal':lambda b:studio.reveal(studio.thumb_saved)}
+ 'thumbSave':lambda b:studio.thumb_save(b.get('ids',[]),b.get('text',True)),'thumbReveal':lambda b:studio.reveal(studio.thumb_saved),
+ 'timelineState':lambda b:studio.timeline_state(),'timelineEdit':lambda b:studio.timeline_edit(b),'timelineReset':lambda b:studio.timeline_reset(),
+ 'mediaList':lambda b:dict(files=studio.media_list(studio.settings['talkBrollFolder' if b.get('which')=='broll' else 'mediaFolder'])),
+ 'projects':lambda b:studio.projects(),'projectOpen':lambda b:studio.project_open(b.get('kind'),b.get('id','')),
+ 'projectRename':lambda b:studio.project_rename(b.get('kind'),b.get('id',''),b.get('name','')),'projectDelete':lambda b:studio.project_delete(b.get('kind'),b.get('id',''))}
 
 class Handler(BaseHTTPRequestHandler):
  def log_message(self,*a):pass
@@ -561,6 +748,11 @@ class Handler(BaseHTTPRequestHandler):
   if url.path.startswith('/m/'):
    if len(parts)<4 or parts[2]!=TOKEN or parts[3] not in studio.media:return self.send(403,b'')
    return self.file(Path(studio.media[parts[3]]))
+  if url.path.startswith('/t/'):
+   q=parse_qs(url.query);src=Path(q.get('p',[''])[0])
+   if len(parts)<3 or parts[2]!=TOKEN or not src.is_file() or src.suffix.lower() not in MEDIA_EXT:return self.send(403,b'')
+   thumb=studio.thumb_file(src,float(q.get('at',['0'])[0] or 0))
+   return self.file(thumb) if thumb else self.send(404,b'')
   if url.path in ('/','/index.html'):
    if parse_qs(url.query).get('t',[''])[0]!=TOKEN:return self.send(403,'Mở app bằng cửa sổ Ghép Video.'.encode(),'text/plain; charset=utf-8')
    return self.file(UI/'index.html')

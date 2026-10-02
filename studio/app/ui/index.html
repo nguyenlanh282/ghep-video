@@ -17,6 +17,7 @@
     <a data-mode-link="talk.html">✂ Edit video chia sẻ</a>
   </nav>
   <div class="row gap">
+    <button class="btn small" id="projBtn" title="Mở lại các video đã làm">📂 Dự án</button>
     <span class="local" id="platformLabel">Xử lý trên máy</span>
     <button class="btn small" id="updateBtn">Phiên bản <span id="versionLabel">–</span></button>
   </div>
@@ -35,6 +36,7 @@
 </dialog>
 
 <main id="main">
+  <section class="panel tl-panel" id="tlPanel" aria-label="Timeline" hidden></section>
   <section class="panel p-media" aria-labelledby="s1">
     <h2 id="s1"><span class="num">01</span>Tư liệu của bạn</h2>
     <button class="filebox" data-choose="media"><span class="ico">🖼</span><span class="fb-text"><b>Video &amp; hình ảnh</b><small data-path="mediaFolder">Chọn thư mục tư liệu</small></span><span class="fb-go">＋</span></button>
@@ -260,6 +262,8 @@
 
 <audio id="listenAudio"></audio>
 <script src="donate.js"></script>
+<script src="timeline.js"></script>
+<script src="projects.js"></script>
 <script src="grade.js"></script>
 <script src="app.js"></script>
 </body>
