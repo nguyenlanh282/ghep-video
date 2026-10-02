@@ -46,7 +46,7 @@ Trên máy mới chỉ cần làm như mục **Cài đặt: 1 file, bấm là c�
 3. Chọn file ghi âm. Chỉnh **Âm lượng giọng đọc** (50–300%, nút − / +). **Tự cân bằng giọng đọc** (mặc định bật) đưa giọng về −14 LUFS, mức chuẩn mạng xã hội; file ghi âm mẫu gốc chỉ −40 LUFS nên trước đây nghe rất nhỏ. Có bộ chặn đỉnh −1 dB để không rè.
 4. Chọn nhạc nền nếu cần; nghe nhạc riêng hoặc nghe cùng lời đọc. Thanh âm lượng chỉ thay đổi nhạc nền, không làm nhỏ lời đọc.
 5. Chỉnh hai dòng tiêu đề, chọn mẫu tiêu đề và kiểu phụ đề độc lập. Nếu máy nghe sai chữ nào, ghi vào ô **Sửa chữ nhận dạng sai** (mỗi dòng `chữ sai => chữ đúng`); lần xuất sau sẽ dùng chữ đúng.
-6. Chọn thư mục lưu, độ phân giải (mặc định **1080p**) và nhịp đổi cảnh 1,5–5 giây (kéo thanh trượt hoặc bấm − / +).
+6. Chọn thư mục lưu, độ phân giải (mặc định **1080p**), **khung hình** (Dọc 9:16 / Vuông 1:1 / Ngang 16:9) và nhịp đổi cảnh 1,5–5 giây (kéo thanh trượt hoặc bấm − / +).
 7. Bấm **Dựng thử 20 giây** để kiểm tra lựa chọn, hoặc **Xuất toàn bộ video**.
 
 8. **Ảnh bìa** (mục 06, dưới khung xem trước): bấm **Tìm hình rõ mặt**. App lấy khung hình từ chính các cảnh video vừa xuất (hình gốc, không dính phụ đề) và chấm điểm: có mặt, mặt to, nét, đủ sáng, không nghiêng, vừa khung 9:16 (hình có mặt sát mép được ghi “Mặt sát mép”). Bấm để chọn 1–3 hình (số trên hình là thứ tự; 1 hình tràn khung, 2 hình trên/dưới, 3 hình 1 trên 2 dưới). Bấm hình đã chọn để bỏ; đã đủ 3 mà bấm hình khác thì hình số 3 được thay. **Tải ảnh lên** để dùng ảnh riêng. Bật/tắt chữ tiêu đề, rồi **Lưu ảnh bìa**: file `…-anh-bia.jpg` (1080×1920) lưu cạnh video.
