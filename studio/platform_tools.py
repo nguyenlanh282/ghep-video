@@ -57,11 +57,16 @@ def transcribe(audio):
    return mlx_whisper.transcribe(str(audio),path_or_hf_repo='mlx-community/whisper-medium-mlx',language='vi',word_timestamps=True,verbose=None)
   except ImportError:pass
  from faster_whisper import WhisperModel
+ import numpy as np
+ # Decode with our own FFmpeg: faster-whisper's built-in decoder (PyAV) breaks whenever a new PyAV release changes its API.
+ p=subprocess.run([FFMPEG,'-v','error','-i',str(audio),'-vn','-ac','1','-ar','16000','-f','f32le','-'],capture_output=True,**NOWIN)
+ if p.returncode or not p.stdout:raise RuntimeError('Không đọc được âm thanh: '+p.stderr.decode(errors='replace')[-300:])
+ pcm=np.frombuffer(p.stdout,dtype=np.float32)
  # NVIDIA GPU when its CUDA libraries are present; otherwise CPU (slower, always works).
  for device,compute in (('cuda','float16'),('cpu','int8')):
   try:
    model=WhisperModel('medium',device=device,compute_type=compute)
-   segments,_=model.transcribe(str(audio),language='vi',word_timestamps=True)
+   segments,_=model.transcribe(pcm,language='vi',word_timestamps=True)
    return {'segments':[{'words':[{'word':w.word,'start':w.start,'end':w.end} for w in (s.words or [])]} for s in segments]}
   except Exception:
    if device=='cpu':raise
