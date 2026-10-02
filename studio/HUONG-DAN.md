@@ -66,6 +66,16 @@ Biến 1 video thô quay người nói (chưa cắt, có ậm ừ, im lặng, n�
 
 Ghi chú: video quay dọc khi xuất 16:9 giữ trọn người nói ở giữa trên nền mờ. Không có Claude/ChatGPT vẫn cắt và làm phụ đề được, nhưng không có soát chính tả, tiêu đề gợi ý, cảnh trám, clip ngắn.
 
+## Timeline và Dự án
+
+**Timeline** (khung đầu màn hình, cả hai chế độ) để chỉnh từng cảnh theo ý mình trước khi xuất.
+
+- *Ghép ảnh + lời đọc*: bấm **✨ Lên timeline** để app chia cảnh theo lời đọc. Bấm một cảnh để **đổi ảnh/video**, kéo mép phải (hoặc ± 0,5s) để đổi **độ dài**, kéo thanh **Bắt đầu từ giây** để chọn đoạn của video nguồn, kéo ô khung + thanh **Phóng to** để chọn **khung hình**; có **Tách đôi**, **Gộp vào cảnh trước**, **Đổi chỗ**. **↺ Tạo lại tự động** bỏ các chỉnh sửa và chia cảnh lại.
+- *Video chia sẻ*: hàng dưới là video người nói (bấm để chỉnh khung hình từng video, xem theo từng tỉ lệ xuất); hàng trên là cảnh trám (kéo để dời, kéo mép phải để đổi độ dài, đổi ảnh/video, chọn đoạn nguồn, khung hình, tạm tắt, xoá, **＋ Cảnh trám tại vạch phát**).
+- Dựng thử / Xuất luôn theo timeline đã chỉnh.
+
+**📂 Dự án** (góc trên): mọi video đang làm được tự lưu (cài đặt, timeline, bản chữ, chỗ cắt, cảnh trám, khung hình). Mở danh sách để **Mở** sửa tiếp, **Đổi tên**, **Xoá** (chỉ xoá bản edit đã lưu; video gốc và video đã xuất giữ nguyên).
+
 ## Ghi chú
 
 - Khung xem mẫu chữ sử dụng tư liệu mẫu đi kèm. Nút Dựng thử tạo video thật từ những file đang chọn.
