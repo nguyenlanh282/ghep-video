@@ -42,12 +42,17 @@ def synthesize(text, job, key):
     host = os.environ.get('MINIMAX_API_BASE') or HOSTS.get(job.get('region'), HOSTS['intl'])  # override only for tests
     req = urllib.request.Request(host + '/v1/t2a_v2', data=json.dumps(body).encode(),
                                  headers={'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'})
-    try:
-        with urllib.request.urlopen(req, timeout=300) as r: out = json.loads(r.read())
-    except urllib.error.HTTPError as e:
-        raise RuntimeError(ERRORS[1004] if e.code in (401, 403) else f'MiniMax trả lỗi HTTP {e.code}.') from None
-    except urllib.error.URLError:
-        raise RuntimeError('Không kết nối được MiniMax. Kiểm tra mạng (hoặc thử đổi khu vực Quốc tế / Trung Quốc).') from None
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(req, timeout=300) as r: out = json.loads(r.read())
+            break
+        except urllib.error.HTTPError as e:
+            if e.code >= 500 and attempt < 3: time.sleep(3 * (attempt + 1)); continue
+            raise RuntimeError(ERRORS[1004] if e.code in (401, 403) else f'MiniMax trả lỗi HTTP {e.code}.') from None
+        except (urllib.error.URLError, ConnectionError, TimeoutError) as e:
+            # MiniMax now and then drops a connection (more so with several requests in a row): wait and try again.
+            if attempt < 3: time.sleep(3 * (attempt + 1)); continue
+            raise RuntimeError(f'Không kết nối được MiniMax sau 4 lần thử ({getattr(e, "reason", e)}). Kiểm tra mạng (hoặc thử đổi khu vực Quốc tế / Trung Quốc).') from None
     base = out.get('base_resp') or {}
     code = base.get('status_code', -1)
     if code != 0:

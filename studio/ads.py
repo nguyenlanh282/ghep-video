@@ -212,7 +212,7 @@ def voice_for(parts, job, cache):
     tjob = dict(voice=job['minimaxVoice'].strip(), model=job.get('minimaxModel') if job.get('minimaxModel') in tts.MODELS else tts.MODELS[0],
                 speed=max(.5, min(2, float(job.get('minimaxSpeed', 1) or 1))), region=job.get('minimaxRegion'))
     folder = cache / 'ad-voice'; folder.mkdir(parents=True, exist_ok=True); files = []
-    for p in parts:
+    for n, p in enumerate(parts):
         f = folder / (hashlib.sha1(json.dumps([p['loi'], tjob['voice'], tjob['model'], tjob['speed']], ensure_ascii=False).encode()).hexdigest()[:20] + '.mp3')
         if not (f.is_file() and f.stat().st_size > 800):
             for attempt in range(3):
@@ -220,7 +220,7 @@ def voice_for(parts, job, cache):
                 except RuntimeError as e:
                     if 'giới hạn tốc độ' not in str(e) or attempt == 2: raise
                     time.sleep(20)
-            f.write_bytes(data)
+            f.write_bytes(data); time.sleep(.6)   # a short breath between requests: fewer dropped connections
         p['dur'] = round(media_duration(f), 3); files.append(f)
     out = folder / ('ghep-' + hashlib.sha1('|'.join(f.name for f in files).encode()).hexdigest()[:16] + '.m4a')
     args = [FFMPEG, '-v', 'error', '-y']
