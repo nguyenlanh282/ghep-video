@@ -68,6 +68,9 @@ DEFAULTS=dict(mediaFolder=str(find_child(ROOT,'Video - ảnh')),audio=first_audi
  # Video chia sẻ (talking-video editor)
  talkVideo='',talkVideos='[]',talkBrollFolder=str(find_child(ROOT,'Video - ảnh')),talkBroll=True,talkDensity='vua',talkAspects='9:16',
  talkPunchIn=True,talkDenoise=True,talkRetakes=True,talkKeywords=True,talkShorts=True,
+ # Video quảng cáo: the product brief, the kind of ad, the script (JSON, see ads.py) and which hooks to export
+ adProduct='',adAudience='',adProblem='',adBenefits='',adProof='',adOffer='',adCta='',adNotes='',adType='van-de',adLength='30',
+ adKnowledgeFolder='',adMediaFolder=str(find_child(ROOT,'Video - ảnh')),adScript='',adHooks='0,1,2',adVoiceSource='minimax',adAudio='',adAspect='9:16',
  talkFill=True)  # upright video in a 16:9 / 1:1 frame: fill it (crop top and bottom) or keep the whole picture on a blurred copy
 TALK_DENSITY={'it':.18,'vua':.3,'nhieu':.45}
 SECRET_KEYS={'pexelsKey','pixabayKey','minimaxKey'}
@@ -97,7 +100,7 @@ class Studio:
   # A fresh copy on a new computer: create the project's media and output folders.
   for k in ('mediaFolder','outputFolder'):
    if self.settings[k]==DEFAULTS[k]:Path(self.settings[k]).mkdir(parents=True,exist_ok=True)
-  self.update_info=None;self.thumbs=[];self.thumb_saved=None
+  self.update_info=None;self.thumbs=[];self.thumb_saved=None;self.ad_results=[]
   self.window=None;self.proc=None;self.lock=threading.Lock();self.media={}
   self.job=dict(running=False,task='',progress=0,status='Sẵn sàng dựng video',error=None,result=None,cancelled=False)
 
@@ -153,8 +156,9 @@ class Studio:
  def choose(self,kind):
   if not self.window:return dict(error='Hộp thoại chọn file chỉ có trong cửa sổ app. Hãy dán đường dẫn vào ô.')
   import webview
-  keys={'media':'mediaFolder','output':'outputFolder','audio':'audio','music':'music','talkVideo':'talkVideo','talkBroll':'talkBrollFolder'}
-  folder=kind in ('media','output','talkBroll')
+  keys={'media':'mediaFolder','output':'outputFolder','audio':'audio','music':'music','talkVideo':'talkVideo','talkBroll':'talkBrollFolder','adMedia':'adMediaFolder','adKnowledge':'adKnowledgeFolder','adAudio':'adAudio'}
+  if kind not in keys:return dict(error='Không rõ cần chọn gì.')
+  folder=kind in ('media','output','talkBroll','adMedia','adKnowledge')
   current=self.settings.get(keys[kind]) or str(ROOT)
   start=current if Path(current).is_dir() else str(Path(current).parent) if Path(current).parent.is_dir() else str(ROOT)
   dialog=getattr(webview,'FileDialog',None)
@@ -233,6 +237,33 @@ class Studio:
               stockEnabled=s['stockEnabled'] and match,context=s['title']+(' · '+s['subtitle'] if s['subtitle'] else ''),aiPython=sys.executable)
    job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
    args=[str(ENGINE/'renderer.py'),str(job_file)];log='render.log';cleanup=lambda:job_file.unlink(missing_ok=True)
+  elif task in ('ad-script','ad-render'):
+   import ads
+   if not s['adProduct'].strip():return self.fail('Hãy nhập tên sản phẩm.')
+   if task=='ad-script':
+    out=self.cache()/'ad-script.json'
+    job=dict({k:s[k] for k in ads.BRIEF},adType=s['adType'],adLength=s['adLength'],adKnowledgeFolder=s['adKnowledgeFolder'],scriptFile=str(out))
+   else:
+    script=self.ad_script()
+    if not script:return self.fail('Chưa có kịch bản. Bấm “AI viết kịch bản” hoặc “Tự viết theo khung”.')
+    folder=Path(s['adMediaFolder'])
+    if not folder.is_dir() or not any(p.suffix.lower() in MEDIA_EXT for p in folder.iterdir() if p.is_file()):return self.fail('Hãy chọn thư mục có ảnh hoặc video sản phẩm.')
+    if not Path(s['outputFolder']).is_dir():return self.fail('Hãy chọn thư mục lưu video (ở trang Ghép ảnh + lời đọc, mục 03).')
+    if s['adVoiceSource']=='minimax':
+     if not s['minimaxKey']:return self.fail('Hãy dán API key MiniMax rồi bấm Lưu (hoặc đổi sang File ghi âm).')
+     if not s['minimaxVoice'].strip():return self.fail('Hãy nhập Voice ID MiniMax.')
+    elif not Path(s['adAudio']).is_file():return self.fail('Hãy chọn file ghi âm lời đọc.')
+    analysed=(folder/'_phan-tich.json').is_file();ai_ready=self.ai_state()['ready'];match=analysed or ai_ready
+    render={k:s[k] for k in ('music','titleStyle','subStyle','musicVolume','resolution','removeSilence','faceAwareFill','fixesText','voiceVolume','normalizeVoice','stockSource','captionY','titleScale','titleEffect','subScale','subFont','aiSpelling')}
+    # Ads cut faster than a story (a new picture about every 2 seconds) and always plan afresh from the script.
+    render.update(mediaFolder=str(folder),aspect=s['adAspect'],shotSeconds=2.0,grade=self.grade(),cacheFolder=str(self.cache()),matchScenes=match,autoAnalyze=match and ai_ready,
+                  stockEnabled=False,useTimeline=False,context=s['adProduct'],aiPython=sys.executable)
+    try:hooks=[int(x) for x in s['adHooks'].split(',') if x.strip().isdigit()]
+    except ValueError:hooks=[0]
+    job=dict(script=script,hooks=hooks or [0],adProduct=s['adProduct'],adVoiceSource=s['adVoiceSource'],adAudio=s['adAudio'],minimaxVoice=s['minimaxVoice'],minimaxModel=s['minimaxModel'],
+             minimaxSpeed=s['minimaxSpeed'],minimaxRegion=s['minimaxRegion'],outputFolder=s['outputFolder'],cacheFolder=str(self.cache()),preview=bool(preview),render=render)
+   job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
+   args=[str(ENGINE/'ads.py'),task[3:],str(job_file)];log='ads.log';cleanup=lambda:job_file.unlink(missing_ok=True)
   elif task=='tts':
    if not s['minimaxKey']:return self.fail('Hãy dán API key MiniMax rồi bấm Lưu.')
    if not s['ttsText'].strip():return self.fail('Hãy nhập nội dung cần đọc.')
@@ -249,10 +280,11 @@ class Studio:
   # API keys travel only through the environment, never into job or result files.
   if s['pexelsKey']:env['PEXELS_API_KEY']=s['pexelsKey']
   if s['pixabayKey']:env['PIXABAY_API_KEY']=s['pixabayKey']
-  if task=='tts':env['MINIMAX_API_KEY']=s['minimaxKey']
+  if task in ('tts','ad-render') and s['minimaxKey']:env['MINIMAX_API_KEY']=s['minimaxKey']
   logf=open(self.cache()/log,'wb')
   self.proc=subprocess.Popen([sys.executable,'-u',*args],stdout=subprocess.PIPE,stderr=logf,env=env,cwd=str(ENGINE),**NOWIN)
-  self.job=dict(running=True,task=task,progress=0,status='Đang chuẩn bị…',error=None,result=None if task=='render' else self.job.get('result'),cancelled=False,log=log)
+  self.job=dict(running=True,task=task,progress=0,status='Đang chuẩn bị…',error=None,result=None if task in ('render','ad-render') else self.job.get('result'),cancelled=False,log=log)
+  if task=='ad-render':self.ad_results=[]
   threading.Thread(target=self.watch,args=(self.proc,logf,cleanup),daemon=True).start()
   return self.state()
 
@@ -268,11 +300,13 @@ class Studio:
     if msg.get('message'):self.job['status']=msg['message']
     if msg.get('error'):self.job['error']=msg['message']
     if msg.get('output'):self.job['result']=msg['output']
+    if msg.get('adScript') and Path(msg['adScript']).is_file():self.settings['adScript']=Path(msg['adScript']).read_text(encoding='utf-8');self.save()  # the AI's script goes to the editor
+    if isinstance(msg.get('adResults'),list):self.ad_results=[r for r in msg['adResults'] if isinstance(r,dict) and Path(str(r.get('path',''))).is_file()]
     if msg.get('audio') and Path(msg['audio']).is_file():self.settings['audio']=msg['audio'];self.save()  # the new voice-over becomes the recording
   code=proc.wait();logf.close();cleanup()
   with self.lock:
    self.job['running']=False
-   if self.job['cancelled']:self.job['status']={'render':'Đã dừng xuất video','tts':'Đã dừng tạo giọng đọc'}.get(self.job['task'],'Đã dừng phân tích')
+   if self.job['cancelled']:self.job['status']={'render':'Đã dừng xuất video','tts':'Đã dừng tạo giọng đọc','ad-render':'Đã dừng xuất video quảng cáo','ad-script':'Đã dừng viết kịch bản'}.get(self.job['task'],'Đã dừng phân tích')
    elif code!=0 and not self.job['error']:self.job['error']=f"Chưa thành công. Xem chi tiết tại {self.cache()/self.job['log']}";self.job['status']='Cần kiểm tra lại'
 
  def cancel(self):
@@ -348,6 +382,36 @@ class Studio:
    vids.sort(key=natural)
   elif op=='clear':vids=[]
   return self.set_talk_videos(vids)
+
+ # ---- Video quảng cáo ----
+ def ad_script(self):
+  import ads
+  try:raw=json.loads(self.settings['adScript'] or 'null')
+  except json.JSONDecodeError:raw=None
+  if not isinstance(raw,dict):return None
+  return dict(ads.clean(raw,self.settings['adType'],int(self.settings['adLength'] or 30)),nguon=[str(x) for x in raw.get('nguon') or []][:8])
+
+ def ad_state(self):
+  import ads
+  folder=Path(self.settings['adMediaFolder']);kb=Path(self.settings['adKnowledgeFolder']) if self.settings['adKnowledgeFolder'] else None
+  try:count=sum(1 for p in folder.iterdir() if p.is_file() and not p.name.startswith(('.','_')) and p.suffix.lower() in MEDIA_EXT)
+  except OSError:count=0
+  return dict(meta=ads.meta(),script=self.ad_script(),mediaCount=count,analysed=(folder/'_phan-tich.json').is_file(),knowledgeOk=bool(kb and kb.is_dir()),
+              wordsPerSecond=ads.WORDS_PER_SECOND,results=[dict(r,url=self.url(r['path'])) for r in self.ad_results if Path(r['path']).is_file()])
+
+ def ad_save(self,script):
+  """The script as edited by hand (None clears it)."""
+  import ads
+  if script is None:self.settings['adScript']=''
+  else:
+   old=self.ad_script() or {}
+   self.settings['adScript']=json.dumps(dict(ads.clean(script,self.settings['adType'],int(self.settings['adLength'] or 30)),nguon=old.get('nguon') or []),ensure_ascii=False)
+  self.save();return self.ad_state()
+
+ def ad_skeleton(self):
+  import ads
+  self.settings['adScript']=json.dumps(ads.skeleton(self.settings['adType'],int(self.settings['adLength'] or 30),self.settings),ensure_ascii=False)
+  self.save();return self.ad_state()
 
  # ---- projects: everything worked on is kept, so it can be opened and edited again ----
  STORY_KEYS=('mediaFolder','audio','music','title','subtitle','titleStyle','titleEffect','titleScale','titleSeconds','subStyle','subScale','subFont','captionY',
@@ -713,6 +777,7 @@ API={'state':lambda b:studio.state(),'set':lambda b:studio.set(b.get('values',{}
  'thumbSave':lambda b:studio.thumb_save(b.get('ids',[]),b.get('text',True)),'thumbReveal':lambda b:studio.reveal(studio.thumb_saved),
  'timelineState':lambda b:studio.timeline_state(),'timelineEdit':lambda b:studio.timeline_edit(b),'timelineReset':lambda b:studio.timeline_reset(),
  'mediaList':lambda b:dict(files=studio.media_list(studio.settings['talkBrollFolder' if b.get('which')=='broll' else 'mediaFolder'])),
+ 'adState':lambda b:studio.ad_state(),'adSave':lambda b:studio.ad_save(b.get('script')),'adSkeleton':lambda b:studio.ad_skeleton(),
  'projects':lambda b:studio.projects(),'projectOpen':lambda b:studio.project_open(b.get('kind'),b.get('id','')),
  'projectRename':lambda b:studio.project_rename(b.get('kind'),b.get('id',''),b.get('name','')),'projectDelete':lambda b:studio.project_delete(b.get('kind'),b.get('id',''))}
 

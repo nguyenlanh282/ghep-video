@@ -465,6 +465,60 @@ def make_title(job,W,H):
  shadow.putalpha(alpha);out=Image.new('RGBA',layer.size);out.alpha_composite(shadow,(0,round(6*scale)));out.alpha_composite(layer)
  return out
 
+def wrap_lines(text,font,max_w,max_lines=2):
+ """Break a short on-screen line into at most max_lines of about equal width."""
+ words=text.split();lines=[];cur=''
+ for w in words:
+  if cur and font.getlength(cur+' '+w)>max_w:lines.append(cur);cur=w
+  else:cur=(cur+' '+w).strip()
+ lines.append(cur)
+ if len(lines)>max_lines:lines=lines[:max_lines-1]+[' '.join(lines[max_lines-1:])]
+ if len(lines)==2:  # two lines of about the same width read better than a full line and one stray word
+  k=min(range(1,len(words)),key=lambda i:max(font.getlength(' '.join(words[:i])),font.getlength(' '.join(words[i:]))))
+  lines=[' '.join(words[:k]),' '.join(words[k:])]
+ return [l for l in lines if l]
+
+def make_super(text,W,S,cta=False):
+ """On-screen line of an ad segment (the point of that part, readable with the sound off). cta: the closing call to
+ action, drawn as a yellow button. Sized to the short side S, never wider than the frame."""
+ scale=S/720;size=round((50 if cta else 44)*scale);font=ImageFont.truetype(FONT,size);max_w=min(W,S*1.25)*.84
+ lines=wrap_lines(' '.join(text.split()).upper() if not cta else ' '.join(text.split()),font,max_w)
+ while max(font.getlength(l) for l in lines)>max_w and font.size>18:font=ImageFont.truetype(FONT,font.size-2)
+ lh=round(font.size*1.28);pad_x=round(30*scale);pad_y=round(20*scale);tw=max(font.getlength(l) for l in lines)
+ w=round(tw+2*pad_x);h=lh*len(lines)+2*pad_y;m=round(22*scale)
+ layer=Image.new('RGBA',(w+2*m,h+2*m));d=ImageDraw.Draw(layer)
+ d.rounded_rectangle((m,m,m+w,m+h),radius=round((34 if cta else 20)*scale),fill='#ffd54a' if cta else (15,18,26,232))
+ if not cta:d.rounded_rectangle((m,m,m+round(9*scale),m+h),radius=round(4*scale),fill='#ffd54a')
+ for i,l in enumerate(lines):d.text((m+w/2,m+pad_y+lh*i+lh/2),l,font=font,anchor='mm',fill='#151a22' if cta else 'white')
+ from PIL import ImageFilter
+ shadow=Image.new('RGBA',layer.size,(0,0,0,0));shadow.putalpha(layer.getchannel('A').point(lambda v:int(v*.6)).filter(ImageFilter.GaussianBlur(6*scale)))
+ out=Image.new('RGBA',layer.size);out.alpha_composite(shadow,(0,round(5*scale)));out.alpha_composite(layer)
+ return out
+
+def ad_times(segments,words,duration):
+ """Start/end of every ad segment on the voice-over. Exact when each segment was synthesised on its own ('dur');
+ otherwise the recording is split in proportion to how many words each segment's text has."""
+ out=[];t=0
+ if segments and all(s.get('dur') for s in segments):
+  for s in segments:out.append((t,min(duration,t+float(s['dur']))));t+=float(s['dur'])
+ else:
+  counts=[max(1,len(str(s.get('loi','')).split())) for s in segments];total=sum(counts);done=0
+  for c in counts:
+   a=done/total;done+=c;b=done/total
+   if words:
+    ia=min(len(words)-1,round(a*len(words)));ib=min(len(words),round(b*len(words)))
+    out.append((words[ia]['start'] if ia else 0,words[ib]['start'] if ib<len(words) else duration))
+   else:out.append((a*duration,b*duration))
+ if out:out[-1]=(out[-1][0],duration)
+ return out
+
+def super_overlay(img,t,start):
+ """Pop in over 0.25 s."""
+ p=(t-start)/.25
+ if p>=1:return img,0
+ k=max(.05,_back(max(0,p),1.4));w=max(2,round(img.width*k));h=max(2,round(img.height*k))
+ return _alpha(img.resize((w,h),Image.Resampling.BILINEAR),min(1,p*1.6)),0
+
 def _back(p,c=1.9):return 1+(c+1)*(p-1)**3+c*(p-1)**2  # ease-out with a small overshoot
 def _bounce(p):
  n,dd=7.5625,2.75
@@ -699,13 +753,22 @@ def render(job):
    enc=subprocess.Popen(cmd,stdin=subprocess.PIPE,stderr=enc_log,**NOWIN);CHILDREN.append(enc)
    style=job.get('subStyle','active');title_style=job.get('titleStyle','pop');effect=title_effect(job)
    font=ImageFont.truetype(sub_font,round(40*S/720*sub_scale));cap_y=STORY_ASPECTS[aspect] or max(.5,min(.9,float(job.get('captionY',CAPTION_Y))));positions=[caption_layout(g,font,W,H,cap_y) for g in groups];band_top,band_h=caption_band(font,H,cap_y)
-   title=make_title(job,S,H);title_y=round(H*(.21875 if aspect=='9:16' else .12));title_secs=max(.5,min(6,float(job.get('titleSeconds',3))));gi=0;nframes=round(duration*fps);cached_key=None;cached=None
+   title=make_title(job,S,H);title_y=round(H*(.21875 if aspect=='9:16' else .12))
+   # Video quảng cáo: every part of the script shows its own line on screen; the last one is the call-to-action button.
+   ad=job.get('ad') or {};supers=[]
+   for seg,(a,b) in zip(ad.get('segments') or [],ad_times(ad.get('segments') or [],words,audio_duration)):
+    if seg.get('role')!='hook' and str(seg.get('chu','')).strip() and b-a>.4:
+     cta=seg.get('role')=='cta';supers.append((a,b,make_super(seg['chu'].strip(),W,S,cta),round(H*((.40 if aspect=='9:16' else .34) if cta else (.13 if aspect=='9:16' else .08)))))
+   si=0;title_secs=max(.5,min(6,float(job.get('titleSeconds',3))));gi=0;nframes=round(duration*fps);cached_key=None;cached=None
    for n in range(nframes):
     data=dec.stdout.read(W*H*3)
     if len(data)!=W*H*3:raise RuntimeError(f'Video nguồn kết thúc ở khung {n}/{nframes} ({len(data)} byte).')
     im=Image.frombytes('RGB',(W,H),data);t=n/fps
     shown=title_overlay(title,effect,t,title_secs,W) if title_style!='none' else None
     if shown:im.paste(shown[0],(shown[1],title_y+shown[2]),shown[0])
+    while si<len(supers) and t>=supers[si][1]:si+=1
+    if si<len(supers) and supers[si][0]<=t and not (shown and supers[si][3]<title_y+title.height):
+     sp,_=super_overlay(supers[si][2],t,supers[si][0]);im.paste(sp,((W-sp.width)//2,supers[si][3]+(supers[si][2].height-sp.height)//2),sp)
     if style!='none' and groups:
      while gi+1<len(groups) and groups[gi+1][0]['start']<=t:gi+=1
      g=groups[gi]
@@ -735,6 +798,7 @@ def render(job):
  dest.with_suffix('.json').write_text(json.dumps(job,ensure_ascii=False,indent=2),encoding='utf-8')
  write_project(job,lastExport=dict(path=str(dest),preview=bool(job.get('preview')),at=time.strftime('%Y-%m-%d %H:%M')))
  emit(100,'Đã xuất xong video',output=str(dest),srt=str(srt))
+ return dest
 
 if __name__=='__main__':
  import signal

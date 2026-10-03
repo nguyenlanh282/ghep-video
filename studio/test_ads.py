@@ -1,0 +1,53 @@
+"""Video quảng cáo: script shape, the frame to fill in, knowledge search, segment timing (no AI, no media)."""
+import sys, tempfile, unittest
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import ads, renderer
+
+class AdsTests(unittest.TestCase):
+    def test_every_kind_of_ad_has_a_frame_to_fill_in(self):
+        for kind, (name, when, parts) in ads.AD_TYPES.items():
+            s = ads.skeleton(kind, 30, dict(adCta='Nhắn Zalo'))
+            self.assertEqual([p['vai'] for p in s['phan']], [p[0] for p in parts], name)
+            self.assertEqual(len(s['hooks']), 3); self.assertEqual(s['cta']['chu'], 'Nhắn Zalo'); self.assertEqual(len(s['luu_y']), len(parts))
+
+    def test_script_from_anywhere_becomes_well_formed(self):
+        s = ads.clean(dict(kieu='la', hooks=[dict(loi=' Bón  hoài\nkhông lớn? ', chu='x' * 99), 'rác'] + [dict(loi=str(i)) for i in range(9)],
+                           phan=[dict(vai='Vấn đề', loi='a'), 7], cta='rác', hashtags=['#a', '', 3]), 'liet-ke', 45)
+        self.assertEqual((s['kieu'], s['giay']), ('liet-ke', 45))
+        self.assertEqual(s['hooks'][0]['loi'], 'Bón hoài không lớn?'); self.assertEqual(len(s['hooks'][0]['chu']), 60); self.assertEqual(len(s['hooks']), 6)
+        self.assertEqual(len(s['phan']), 1); self.assertEqual(s['cta'], dict(loi='', chu='', hinh='')); self.assertEqual(s['hashtags'], ['#a', '3'])
+        self.assertEqual(ads.clean(None)['phan'], [])
+
+    def test_versions_share_the_body_and_differ_in_the_hook(self):
+        s = ads.clean(dict(hooks=[dict(loi='Hook một', chu='MỘT'), dict(loi='Hook hai', chu='HAI')], phan=[dict(vai='A', loi='thân bài', chu='ý'), dict(vai='B', loi='', chu='bỏ')],
+                           cta=dict(loi='nhắn tin', chu='Nhắn ngay')))
+        a, b = ads.spoken(s, 0), ads.spoken(s, 1)
+        self.assertEqual([p['role'] for p in a], ['hook', 'part', 'cta']); self.assertEqual(a[1:], b[1:]); self.assertNotEqual(a[0], b[0])
+        self.assertEqual(ads.title_lines('Đất chai rễ không ăn phân'), ('ĐẤT CHAI RỄ', 'không ăn phân')); self.assertEqual(ads.title_lines('Bón hoài không lớn'), ('BÓN HOÀI KHÔNG LỚN', ''))
+
+    def test_knowledge_prefers_notes_about_the_product(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); (root / '.obsidian').mkdir(); (root / 'wiki').mkdir()
+            (root / 'wiki/organic-pro.md').write_text('# Organic Pro\n\nOrganic Pro cải tạo đất, tạo môi trường cho rễ mới.\n\nKhông đọc tên chất.', encoding='utf-8')
+            (root / 'wiki/khac.md').write_text('Chuyện giá cả thị trường tuần này, không liên quan.', encoding='utf-8')
+            (root / '.obsidian/organic-pro.md').write_text('Organic Pro ' * 50, encoding='utf-8')
+            got = ads.knowledge(root, dict(adProduct='Organic Pro', adProblem='đất chai', adBenefits='cải tạo đất'))
+            self.assertEqual([k['file'] for k in got], [str(Path('wiki/organic-pro.md'))]); self.assertIn('rễ mới', got[0]['text'])
+            self.assertEqual(ads.knowledge(root / 'khong-co', dict(adProduct='Organic Pro')), [])
+        q = ads.question(dict(adProduct='Organic Pro', adOffer='mua 3 tặng 1'), 'truoc-sau', 30, got)
+        self.assertIn('Trước / Sau', q); self.assertIn('mua 3 tặng 1', q); self.assertIn('organic-pro.md', q); self.assertIn('108 chữ', q)
+
+    def test_each_part_gets_its_stretch_of_the_voice(self):
+        segs = [dict(role='hook', loi='a b c'), dict(role='part', loi='a b c d e f'), dict(role='cta', loi='a b c')]
+        words = [dict(start=i * .5, end=i * .5 + .4, text='w') for i in range(12)]
+        self.assertEqual(renderer.ad_times(segs, words, 6.0), [(0, 1.5), (1.5, 4.5), (4.5, 6.0)])            # a recording: by word count
+        self.assertEqual(renderer.ad_times([dict(s, dur=d) for s, d in zip(segs, (2, 3, 1.5))], words, 6.4), [(0, 2.0), (2.0, 5.0), (5.0, 6.4)])  # synthesised: exact
+        self.assertEqual(renderer.ad_times([], words, 6), [])
+
+    def test_on_screen_line_fits_the_frame(self):
+        for text, cta in (('Đất chai → rễ không ăn phân', False), ('Mua 3 chai tặng 1 PH Pro · Nhắn Zalo 0828 351 994 để kỹ sư tư vấn riêng cho vườn', True)):
+            for W, S in ((720, 720), (1920, 1080)):
+                self.assertLessEqual(renderer.make_super(text, W, S, cta).width, W)
+
+if __name__ == '__main__': unittest.main()

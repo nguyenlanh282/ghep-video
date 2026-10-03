@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ghép Video · Video quảng cáo</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h11a2 2 0 0 1 2 2v1.5l3.4-2.3a1 1 0 0 1 1.6.8v10a1 1 0 0 1-1.6.8L17 15.5V17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg>
+    <div><h1>GHÉP VIDEO</h1><p>Từ câu chuyện đến thước phim</p></div>
+  </div>
+  <nav class="modes" aria-label="Chế độ">
+    <a data-mode-link="index.html">Ghép ảnh + lời đọc</a>
+    <a data-mode-link="talk.html">✂ Edit video chia sẻ</a>
+    <a class="on" aria-current="page">📣 Video quảng cáo</a>
+  </nav>
+  <div class="row gap"><button class="btn small" id="projBtn" title="Mở lại các video đã làm">📂 Dự án</button></div>
+</header>
+
+<main id="main" class="ads">
+  <section class="panel a-brief" aria-labelledby="a1">
+    <h2 id="a1"><span class="num">01</span>Sản phẩm &amp; ưu đãi</h2>
+    <label class="afield"><span>Sản phẩm <b>*</b></span><input type="text" data-text="adProduct" placeholder="vd: Organic Pro 1 lít"></label>
+    <label class="afield"><span>Khách hàng</span><input type="text" data-text="adAudience" placeholder="vd: nhà vườn sầu riêng miền Tây"></label>
+    <label class="afield"><span>Vấn đề của khách</span><textarea data-text="adProblem" rows="2" placeholder="vd: bón phân đủ mà cây vẫn èo uột, đất chai, rễ ít"></textarea></label>
+    <label class="afield"><span>Lợi ích / điểm mạnh</span><textarea data-text="adBenefits" rows="3" placeholder="Mỗi dòng một ý. vd: cải tạo đất · tạo môi trường cho rễ mới · cây ăn phân tốt hơn"></textarea></label>
+    <label class="afield"><span>Bằng chứng có thật</span><textarea data-text="adProof" rows="2" placeholder="vd: vườn anh Ba ở Phong Điền dùng 2 vụ; không có thì để trống"></textarea></label>
+    <label class="afield"><span>Ưu đãi</span><input type="text" data-text="adOffer" placeholder="vd: mua 3 chai tặng 1 chai PH Pro"></label>
+    <label class="afield"><span>Lời kêu gọi</span><input type="text" data-text="adCta" placeholder="vd: Nhắn Zalo 08xx để được tư vấn"></label>
+    <label class="afield"><span>Lưu ý riêng</span><textarea data-text="adNotes" rows="2" placeholder="vd: xưng em, gọi anh chị; không đọc tên chất và phần trăm"></textarea></label>
+    <hr>
+    <button class="filebox" data-choose="adKnowledge"><span class="ico">🧠</span><span class="fb-text"><b>Thư mục kiến thức (tuỳ chọn)</b><small data-path="adKnowledgeFolder">Chọn thư mục ghi chú về sản phẩm (.md)</small></span><span class="fb-go">＋</span></button>
+    <p class="hint">AI tìm trong thư mục này các ghi chú nói về sản phẩm để viết đúng sự thật. Đoạn ghi chú liên quan sẽ được gửi lên Claude / ChatGPT của bạn. <a href="#" id="kbClear">Bỏ chọn</a></p>
+  </section>
+
+  <section class="panel a-script" aria-labelledby="a2">
+    <h2 id="a2"><span class="num">02</span>Kiểu quảng cáo &amp; kịch bản</h2>
+    <div class="adtypes" id="adTypes" role="radiogroup" aria-label="Kiểu quảng cáo"></div>
+    <div class="row between"><span>Độ dài</span><div class="seg" data-seg="adLength"><button data-value="15">15 giây</button><button data-value="30">30 giây</button><button data-value="45">45 giây</button><button data-value="60">60 giây</button></div></div>
+    <div class="row gap wrap">
+      <button class="btn primary" id="aiWrite">✨ AI viết kịch bản</button>
+      <button class="btn" id="handWrite">✍ Tự viết theo khung</button>
+      <span class="hint" id="aiNote"></span>
+    </div>
+    <div id="scriptBox" hidden>
+      <div class="row between"><h3>Hook 3 giây đầu <small>chọn tối đa 3, mỗi hook xuất một video</small></h3><button class="btn small" id="addHook">＋ Hook</button></div>
+      <div class="hooks" id="hooks"></div>
+      <div class="row between"><h3>Các phần của video</h3><span class="hint" id="lenNote"></span></div>
+      <div class="parts" id="parts"></div>
+      <div class="row gap"><button class="btn small" id="addPart">＋ Thêm phần</button></div>
+      <h3>Kêu gọi hành động <small>3–5 giây cuối</small></h3>
+      <div class="part cta" id="cta"></div>
+      <div class="warns" id="warns" hidden></div>
+      <h3>Lời mô tả &amp; hashtag khi đăng</h3>
+      <textarea id="caption" rows="3" aria-label="Lời mô tả khi đăng"></textarea>
+      <input type="text" id="hashtags" aria-label="Hashtag" placeholder="#hashtag …">
+      <p class="hint" id="srcNote"></p>
+    </div>
+    <p class="hint" id="noScript">Chưa có kịch bản. Điền thông tin sản phẩm, chọn kiểu quảng cáo rồi bấm “AI viết kịch bản”, hoặc “Tự viết theo khung” để tự điền từng phần.</p>
+  </section>
+
+  <section class="panel a-out" aria-labelledby="a3">
+    <h2 id="a3"><span class="num">03</span>Tư liệu, giọng đọc &amp; xuất</h2>
+    <button class="filebox" data-choose="adMedia"><span class="ico">🖼️</span><span class="fb-text"><b>Ảnh &amp; video sản phẩm</b><small data-path="adMediaFolder">Chọn thư mục</small></span><span class="fb-go">＋</span></button>
+    <p class="hint" id="mediaNote"></p>
+    <div class="seg full" data-seg="adVoiceSource"><button data-value="minimax">🗣 Giọng MiniMax</button><button data-value="file">🎤 File ghi âm</button></div>
+    <div id="voiceTts">
+      <label class="afield"><span>Voice ID</span><input type="text" data-text="minimaxVoice" placeholder="Voice ID giọng đã clone"></label>
+      <p class="hint" id="keyNote"></p>
+    </div>
+    <div id="voiceFile" hidden>
+      <button class="filebox" data-choose="adAudio"><span class="ico">〰</span><span class="fb-text"><b>File ghi âm lời đọc</b><small data-path="adAudio">Chọn file</small></span><span class="fb-go">＋</span></button>
+      <p class="hint">Đọc đúng theo kịch bản (hook đầu tiên được chọn, rồi các phần, rồi lời kêu gọi). Các bản khác hook dùng chung file này, chỉ đổi chữ mở đầu.</p>
+    </div>
+    <div class="row between"><span>Khung hình</span><div class="seg" data-seg="adAspect"><button data-value="9:16">Dọc 9:16</button><button data-value="1:1">Vuông 1:1</button><button data-value="16:9">Ngang 16:9</button></div></div>
+    <p class="hint">Kiểu tiêu đề, kiểu phụ đề, màu, nhạc nền và thư mục lưu lấy theo cài đặt ở trang “Ghép ảnh + lời đọc”.</p>
+    <hr>
+    <div class="row between"><span class="eyebrow" id="pv">XEM VIDEO</span><span class="ratio" id="ratio"></span></div>
+    <div class="frame talkframe" id="frame"><video id="player" playsinline controls preload="metadata"></video></div>
+    <div class="adresults" id="results"></div>
+    <div class="row gap" id="resultRow" hidden><button class="btn primary" id="revealBtn">📁 Mở nơi lưu</button></div>
+  </section>
+</main>
+
+<footer class="bar">
+  <div class="error" id="error" hidden><span id="errorText"></span><button class="btn small" id="errorClose">Đóng</button></div>
+  <progress id="progress" max="1" value="0" hidden></progress>
+  <div class="row between">
+    <div><b id="status">Sẵn sàng</b><small id="substatus">Thông tin sản phẩm → kịch bản → video quảng cáo theo từng hook</small></div>
+    <div class="row gap" id="actions">
+      <button class="btn large" id="previewBtn" title="Dựng 20 giây đầu của bản hook thứ nhất">Dựng thử 20 giây</button>
+      <button class="btn large primary" id="exportBtn">Xuất video quảng cáo ↗</button>
+    </div>
+    <button class="btn large" id="cancelBtn" hidden>Dừng</button>
+  </div>
+</footer>
+<script src="projects.js"></script>
+<script src="ads.js"></script>
+</body>
+</html>
