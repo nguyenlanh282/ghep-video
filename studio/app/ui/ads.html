@@ -40,6 +40,8 @@
     <h2 id="a2"><span class="num">02</span>Kiểu quảng cáo &amp; kịch bản</h2>
     <div class="adtypes" id="adTypes" role="radiogroup" aria-label="Kiểu quảng cáo"></div>
     <div class="row between"><span>Độ dài</span><div class="seg" data-seg="adLength"><button data-value="15">15 giây</button><button data-value="30">30 giây</button><button data-value="45">45 giây</button><button data-value="60">60 giây</button></div></div>
+    <div class="row between"><span>Giọng điệu</span><div class="seg" data-seg="adEnergy"><button data-value="thuong">Tự nhiên</button><button data-value="soi-noi">Sôi nổi</button><button data-value="rat-soi-noi">Rất sôi nổi</button></div></div>
+    <p class="hint">Giọng điệu quyết định cách AI viết lời (câu ngắn, cảm thán) và cách MiniMax đọc (vui, nhanh và cao hơn một chút). Đổi giọng điệu rồi xuất lại thì MiniMax đọc lại, có tính phí.</p>
     <div class="row gap wrap">
       <button class="btn primary" id="aiWrite">✨ AI viết kịch bản</button>
       <button class="btn" id="handWrite">✍ Tự viết theo khung</button>
@@ -54,6 +56,7 @@
       <h3>Kêu gọi hành động <small>3–5 giây cuối</small></h3>
       <div class="part cta" id="cta"></div>
       <div class="warns" id="warns" hidden></div>
+      <div class="row gap"><button class="btn" data-full>📄 Xem toàn bộ kịch bản</button></div>
       <h3>Lời mô tả &amp; hashtag khi đăng</h3>
       <textarea id="caption" rows="3" aria-label="Lời mô tả khi đăng"></textarea>
       <input type="text" id="hashtags" aria-label="Hashtag" placeholder="#hashtag …">
@@ -91,12 +94,19 @@
   <div class="row between">
     <div><b id="status">Sẵn sàng</b><small id="substatus">Thông tin sản phẩm → kịch bản → video quảng cáo theo từng hook</small></div>
     <div class="row gap" id="actions">
+      <button class="btn large" data-full title="Đọc lại toàn bộ kịch bản của từng bản trước khi xuất">📄 Xem kịch bản</button>
       <button class="btn large" id="previewBtn" title="Dựng 20 giây đầu của bản hook thứ nhất">Dựng thử 20 giây</button>
       <button class="btn large primary" id="exportBtn">Xuất video quảng cáo ↗</button>
     </div>
     <button class="btn large" id="cancelBtn" hidden>Dừng</button>
   </div>
 </footer>
+<dialog class="projdlg fulldlg" id="fullDlg" aria-labelledby="fullTitle">
+  <div class="row between"><h2 id="fullTitle">📄 Toàn bộ kịch bản</h2><div class="row gap"><div class="seg" id="fullTabs"></div><button class="btn small" id="fullCopy">Sao chép</button><button class="btn small" id="fullClose">Đóng</button></div></div>
+  <p class="hint" id="fullInfo"></p>
+  <div class="fullwrap" id="fullBody"></div>
+  <div class="row between"><span class="hint">Muốn sửa: đóng lại rồi sửa ở các ô kịch bản.</span><button class="btn primary" id="fullExport">Kịch bản ổn, xuất video ↗</button></div>
+</dialog>
 <script src="projects.js"></script>
 <script src="ads.js"></script>
 </body>

@@ -70,7 +70,7 @@ DEFAULTS=dict(mediaFolder=str(find_child(ROOT,'Video - ảnh')),audio=first_audi
  talkPunchIn=True,talkDenoise=True,talkRetakes=True,talkKeywords=True,talkShorts=True,
  # Video quảng cáo: the product brief, the kind of ad, the script (JSON, see ads.py) and which hooks to export
  adProduct='',adAudience='',adProblem='',adBenefits='',adProof='',adOffer='',adCta='',adNotes='',adType='van-de',adLength='30',
- adKnowledgeFolder='',adMediaFolder=str(find_child(ROOT,'Video - ảnh')),adScript='',adHooks='0,1,2',adVoiceSource='minimax',adAudio='',adAspect='9:16',
+ adKnowledgeFolder='',adMediaFolder=str(find_child(ROOT,'Video - ảnh')),adScript='',adHooks='0,1,2',adVoiceSource='minimax',adAudio='',adAspect='9:16',adEnergy='soi-noi',
  talkFill=True)  # upright video in a 16:9 / 1:1 frame: fill it (crop top and bottom) or keep the whole picture on a blurred copy
 TALK_DENSITY={'it':.18,'vua':.3,'nhieu':.45}
 SECRET_KEYS={'pexelsKey','pixabayKey','minimaxKey'}
@@ -242,7 +242,7 @@ class Studio:
    if not s['adProduct'].strip():return self.fail('Hãy nhập tên sản phẩm.')
    if task=='ad-script':
     out=self.cache()/'ad-script.json'
-    job=dict({k:s[k] for k in ads.BRIEF},adType=s['adType'],adLength=s['adLength'],adKnowledgeFolder=s['adKnowledgeFolder'],scriptFile=str(out))
+    job=dict({k:s[k] for k in ads.BRIEF},adType=s['adType'],adLength=s['adLength'],adEnergy=s['adEnergy'],adKnowledgeFolder=s['adKnowledgeFolder'],scriptFile=str(out))
    else:
     script=self.ad_script()
     if not script:return self.fail('Chưa có kịch bản. Bấm “AI viết kịch bản” hoặc “Tự viết theo khung”.')
@@ -260,7 +260,7 @@ class Studio:
                   stockEnabled=False,useTimeline=False,context=s['adProduct'],aiPython=sys.executable)
     try:hooks=[int(x) for x in s['adHooks'].split(',') if x.strip().isdigit()]
     except ValueError:hooks=[0]
-    job=dict(script=script,hooks=hooks or [0],adProduct=s['adProduct'],adVoiceSource=s['adVoiceSource'],adAudio=s['adAudio'],minimaxVoice=s['minimaxVoice'],minimaxModel=s['minimaxModel'],
+    job=dict(script=script,hooks=hooks or [0],adProduct=s['adProduct'],adVoiceSource=s['adVoiceSource'],adAudio=s['adAudio'],adEnergy=s['adEnergy'],minimaxVoice=s['minimaxVoice'],minimaxModel=s['minimaxModel'],
              minimaxSpeed=s['minimaxSpeed'],minimaxRegion=s['minimaxRegion'],outputFolder=s['outputFolder'],cacheFolder=str(self.cache()),preview=bool(preview),render=render)
    job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
    args=[str(ENGINE/'ads.py'),task[3:],str(job_file)];log='ads.log';cleanup=lambda:job_file.unlink(missing_ok=True)

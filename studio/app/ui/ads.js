@@ -8,6 +8,7 @@ const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&
 const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 const base = p => p ? p.split(/[\\/]/).pop() : '';
 const count = t => (String(t || '').trim().match(/\S+/g) || []).length;
+const clock = s => { s = Math.round(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 let S = null, A = null, script = null, shown = '';
 
 async function api(name, body = {}) {
@@ -59,7 +60,7 @@ function paintNotes() {
   $('#mediaNote').textContent = A.mediaCount ? `${A.mediaCount} ảnh/video${A.analysed ? ' · đã phân tích nội dung' : ' · chưa phân tích: app tự phân tích khi xuất để chọn cảnh đúng lời đọc'}` : 'Thư mục chưa có ảnh/video.';
   if (!script) return;
   const sel = picked().filter(i => script.hooks[i]), first = script.hooks[sel[0] ?? 0] || {loi: ''};
-  const words = count(first.loi) + script.phan.reduce((n, p) => n + count(p.loi), 0) + count(script.cta.loi), secs = Math.round(words / A.wordsPerSecond);
+  const words = count(first.loi) + script.phan.reduce((n, p) => n + count(p.loi), 0) + count(script.cta.loi), secs = Math.round(words / rate());
   $('#lenNote').textContent = `${words} chữ ≈ ${secs} giây đọc (mục tiêu ${script.giay} giây)`;
   $('#lenNote').classList.toggle('warn', secs > script.giay * 1.2);
   $('#exportBtn').textContent = `Xuất ${Math.max(1, Math.min(3, sel.length))} video quảng cáo ↗`;
@@ -102,6 +103,31 @@ function edited(e) {
   else if (cta) script.cta[f] = e.target.value;
   counts(); paintNotes(); save();
 }
+
+// Words per second at the chosen energy (a livelier voice reads faster).
+const rate = () => A.wordsPerSecond * ((A.meta.energy.find(e => e.id === S.settings.adEnergy) || {speed: 1}).speed);
+
+/* ---------- the whole script of each version, to read before exporting ---------- */
+let fullTab = 0;
+function fullRows(h) {
+  const rows = [{vai: 'Hook', ...script.hooks[h]}, ...script.phan.filter(p => p.loi.trim()), ...(script.cta.loi.trim() ? [{vai: 'Kêu gọi', ...script.cta}] : [])];
+  let t = 0;
+  return rows.map(r => { const d = count(r.loi) / rate(), row = {...r, from: t, to: t + d}; t += d; return row; });
+}
+function fullPicks() { const sel = picked().filter(i => script.hooks[i]).slice(0, 3); return sel.length ? sel : [0]; }
+function paintFull() {
+  const sel = fullPicks(); fullTab = Math.min(fullTab, sel.length - 1);
+  $('#fullTabs').innerHTML = sel.length > 1 ? sel.map((h, k) => `<button data-k="${k}" class="${k === fullTab ? 'on' : ''}">Bản ${'ABC'[k]}</button>`).join('') : '';
+  const rows = fullRows(sel[fullTab]), total = rows.length ? rows[rows.length - 1].to : 0, type = A.meta.types.find(t => t.id === script.kieu), energy = A.meta.energy.find(e => e.id === S.settings.adEnergy);
+  $('#fullInfo').textContent = `${S.settings.adProduct} · ${type ? type.name : ''} · giọng ${energy ? energy.name.toLowerCase() : ''} · khoảng ${Math.round(total)} giây (mục tiêu ${script.giay} giây) · khung ${S.settings.adAspect}. Thời gian là ước tính theo số chữ.`;
+  $('#fullBody').innerHTML = `<table class="fulltable"><thead><tr><th>Giây</th><th>Phần</th><th>Hình</th><th>Lời đọc</th><th>Chữ trên màn hình</th></tr></thead><tbody>${rows.map(r =>
+      `<tr><td>${clock(r.from)}–${clock(r.to)}</td><td><b>${esc(r.vai)}</b></td><td>${esc(r.hinh || '')}</td><td>${esc(r.loi)}</td><td><span class="chu">${esc(r.chu || '')}</span></td></tr>`).join('')}</tbody></table>
+    <p class="fullread"><b>Lời đọc liền mạch:</b> ${esc(rows.map(r => r.loi).join(' '))}</p>
+    ${script.luu_y.length ? `<div class="warns"><b>Cần bạn kiểm tra</b><ul>${script.luu_y.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+    ${script.caption ? `<p class="fullread"><b>Lời mô tả khi đăng:</b> ${esc(script.caption)} ${esc(script.hashtags.join(' '))}</p>` : ''}`;
+}
+const fullText = () => fullPicks().map((h, k) => `BẢN ${'ABC'[k]}\n` + fullRows(h).map(r => `[${clock(r.from)}–${clock(r.to)}] ${r.vai}\n  Hình: ${r.hinh || ''}\n  Lời: ${r.loi}\n  Chữ: ${r.chu || ''}`).join('\n')).join('\n\n')
+  + (script.caption ? `\n\nLỜI MÔ TẢ\n${script.caption}\n${script.hashtags.join(' ')}` : '');
 
 function paintResults() {
   const r = A.results || [];
@@ -165,6 +191,11 @@ async function boot() {
   $('#addPart').addEventListener('click', () => { if (script.phan.length >= 8) return alert('Tối đa 8 phần.'); script.phan.push({vai: 'Phần mới', hinh: '', loi: '', chu: ''}); paintScript(); save(); });
   $('#caption').addEventListener('input', () => { script.caption = $('#caption').value; save(); });
   $('#hashtags').addEventListener('input', () => { script.hashtags = $('#hashtags').value.split(/\s+/).filter(Boolean); save(); });
+  $$('[data-full]').forEach(b => b.addEventListener('click', async () => { if (!script) return alert('Chưa có kịch bản.'); await flush(); fullTab = 0; paintFull(); $('#fullDlg').showModal(); }));
+  $('#fullTabs').addEventListener('click', e => { const b = e.target.closest('button[data-k]'); if (b) { fullTab = +b.dataset.k; paintFull(); } });
+  $('#fullClose').addEventListener('click', () => $('#fullDlg').close());
+  $('#fullCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(fullText()); $('#fullCopy').textContent = 'Đã chép ✓'; } catch (e) { $('#fullCopy').textContent = 'Không chép được'; } setTimeout(() => $('#fullCopy').textContent = 'Sao chép', 1500); });
+  $('#fullExport').addEventListener('click', () => { $('#fullDlg').close(); start('ad-render'); });
   $('#results').addEventListener('click', e => { const b = e.target.closest('.adres'); if (b) play(+b.dataset.i); });
   $('#previewBtn').addEventListener('click', () => start('ad-render', true));
   $('#exportBtn').addEventListener('click', () => start('ad-render'));

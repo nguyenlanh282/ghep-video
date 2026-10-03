@@ -35,7 +35,7 @@ class AdsTests(unittest.TestCase):
             got = ads.knowledge(root, dict(adProduct='Organic Pro', adProblem='đất chai', adBenefits='cải tạo đất'))
             self.assertEqual([k['file'] for k in got], [str(Path('wiki/organic-pro.md'))]); self.assertIn('rễ mới', got[0]['text'])
             self.assertEqual(ads.knowledge(root / 'khong-co', dict(adProduct='Organic Pro')), [])
-        q = ads.question(dict(adProduct='Organic Pro', adOffer='mua 3 tặng 1'), 'truoc-sau', 30, got)
+        q = ads.question(dict(adProduct='Organic Pro', adOffer='mua 3 tặng 1'), 'truoc-sau', 30, got, 'thuong')
         self.assertIn('Trước / Sau', q); self.assertIn('mua 3 tặng 1', q); self.assertIn('organic-pro.md', q); self.assertIn('108 chữ', q)
 
     def test_each_part_gets_its_stretch_of_the_voice(self):
@@ -49,5 +49,21 @@ class AdsTests(unittest.TestCase):
         for text, cta in (('Đất chai → rễ không ăn phân', False), ('Mua 3 chai tặng 1 PH Pro · Nhắn Zalo 0828 351 994 để kỹ sư tư vấn riêng cho vườn', True)):
             for W, S in ((720, 720), (1920, 1080)):
                 self.assertLessEqual(renderer.make_super(text, W, S, cta).width, W)
+
+    def test_lively_voice_is_asked_for_in_words_and_in_the_voice_settings(self):
+        import tts, json, urllib.request
+        self.assertIn('hào hứng', ads.question(dict(adProduct='X'), 'van-de', 30, [], 'soi-noi')); self.assertIn('điềm đạm', ads.question(dict(adProduct='X'), 'van-de', 30, [], 'thuong'))
+        sent = []
+        class Reply:
+            def __enter__(self): return self
+            def __exit__(self, *a): pass
+            def read(self): return json.dumps(dict(base_resp=dict(status_code=0), data=dict(audio='00ff'))).encode()
+        real = urllib.request.urlopen; urllib.request.urlopen = lambda req, timeout=0: (sent.append(json.loads(req.data)), Reply())[1]
+        try:
+            tts.synthesize('Xin chào', dict(voice='v', model='speech-2.8-hd', speed=1.06, pitch=1, emotion='happy'), 'k')
+            tts.synthesize('Xin chào', dict(voice='v', model='speech-2.8-hd', speed=1), 'k')
+        finally: urllib.request.urlopen = real
+        self.assertEqual((sent[0]['voice_setting']['emotion'], sent[0]['voice_setting']['pitch'], sent[0]['voice_setting']['speed']), ('happy', 1, 1.06))
+        self.assertNotIn('emotion', sent[1]['voice_setting']); self.assertEqual(sent[1]['voice_setting']['pitch'], 0)
 
 if __name__ == '__main__': unittest.main()

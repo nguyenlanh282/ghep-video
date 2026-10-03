@@ -65,6 +65,12 @@ HOOKS = {
     'nguoi-trong-nghe': ('Người trong nghề khuyên', 'lời khuyên từ người làm nghề lâu năm'),
 }
 LENGTHS = (15, 30, 45, 60)
+# How lively the ad sounds: (name, how the script is worded, MiniMax emotion, speed ×, pitch in semitones)
+ENERGY = {
+    'thuong': ('Tự nhiên', 'giọng kể tự nhiên, điềm đạm, như đang nói chuyện', None, 1.0, 0),
+    'soi-noi': ('Sôi nổi', 'giọng sôi nổi, hào hứng, câu ngắn, nhịp nhanh, có câu cảm thán nhưng không la hét', 'happy', 1.06, 1),
+    'rat-soi-noi': ('Rất sôi nổi', 'giọng rất hào hứng như người bán hàng đang livestream, câu rất ngắn, dồn dập, nhiều câu cảm thán, nhấn mạnh ưu đãi', 'happy', 1.12, 2),
+}
 WORDS_PER_SECOND = 3.6   # Vietnamese voice-over at a natural pace
 BRIEF = ('adProduct', 'adAudience', 'adProblem', 'adBenefits', 'adProof', 'adOffer', 'adCta', 'adNotes')
 
@@ -74,7 +80,8 @@ def emit(progress, message, **extra):
 def nfc(s): return unicodedata.normalize('NFC', str(s or ''))
 def plain(s): return ''.join(c for c in unicodedata.normalize('NFD', nfc(s).lower().replace('đ', 'd')) if unicodedata.category(c) != 'Mn')
 def meta(): return dict(types=[dict(id=k, name=v[0], when=v[1], parts=[p[0] for p in v[2]]) for k, v in AD_TYPES.items()],
-                        hooks=[dict(id=k, name=v[0], how=v[1]) for k, v in HOOKS.items()], lengths=list(LENGTHS))
+                        hooks=[dict(id=k, name=v[0], how=v[1]) for k, v in HOOKS.items()], lengths=list(LENGTHS),
+                        energy=[dict(id=k, name=v[0], speed=v[3]) for k, v in ENERGY.items()])
 
 # ---------- script ----------
 def clean(script, kind='van-de', seconds=30):
@@ -132,8 +139,8 @@ def knowledge(folder, brief, budget=12000, top=6):
         if left < 400: break
     return out
 
-def question(brief, kind, seconds, notes):
-    name, when, parts = AD_TYPES[kind]; words = round(seconds * WORDS_PER_SECOND)
+def question(brief, kind, seconds, notes, energy='soi-noi'):
+    name, when, parts = AD_TYPES[kind]; tone = ENERGY.get(energy, ENERGY['soi-noi']); words = round(seconds * WORDS_PER_SECOND * tone[3])
     info = '\n'.join(f'- {label}: {nfc(brief.get(k, "")).strip()}' for k, label in (
         ('adProduct', 'Sản phẩm'), ('adAudience', 'Khách hàng'), ('adProblem', 'Vấn đề của khách'), ('adBenefits', 'Lợi ích / điểm mạnh'),
         ('adProof', 'Bằng chứng có thật'), ('adOffer', 'Ưu đãi'), ('adCta', 'Lời kêu gọi / cách liên hệ'), ('adNotes', 'Lưu ý riêng')) if nfc(brief.get(k, '')).strip())
@@ -145,6 +152,7 @@ THÔNG TIN SẢN PHẨM
 {("TÀI LIỆU CỦA DOANH NGHIỆP (chỉ lấy sự thật từ đây, làm theo các quy định về lời nói nếu tài liệu có ghi):" + chr(10) + kb) if kb else "(Không có tài liệu kèm theo.)"}
 
 YÊU CẦU
+Giọng điệu của lời đọc: {tone[1]}.
 Kiểu quảng cáo: {name} ({when}). Video dài khoảng {seconds} giây: toàn bộ lời đọc (1 hook + các phần + kêu gọi) khoảng {words} chữ, không quá {round(words * 1.12)} chữ.
 Các phần theo thứ tự, mỗi phần chỉ làm một việc:
 {chr(10).join(f"- {label}: lời nói {say}; hình: {show}." for label, say, show in parts)}
@@ -175,7 +183,7 @@ def write_script(job):
     emit(8, 'Đang đọc tài liệu về sản phẩm…')
     notes = knowledge(job.get('adKnowledgeFolder'), brief)
     emit(25, f'AI đang viết kịch bản{f" (dựa trên {len(notes)} tài liệu)" if notes else ""}, thường mất 1–4 phút…')
-    text = vlm_ask(question(brief, kind, seconds, notes), ())
+    text = vlm_ask(question(brief, kind, seconds, notes, job.get('adEnergy')), ())
     m = re.search(r'\{.*\}', text or '', re.S)
     try: got = json.loads(m.group(0)) if m else None
     except json.JSONDecodeError: got = None
@@ -211,9 +219,11 @@ def voice_for(parts, job, cache):
     if not key: raise ValueError('Chưa có API key MiniMax.')
     tjob = dict(voice=job['minimaxVoice'].strip(), model=job.get('minimaxModel') if job.get('minimaxModel') in tts.MODELS else tts.MODELS[0],
                 speed=max(.5, min(2, float(job.get('minimaxSpeed', 1) or 1))), region=job.get('minimaxRegion'))
+    name, _, emotion, faster, pitch = ENERGY.get(job.get('adEnergy'), ENERGY['thuong'])
+    tjob.update(speed=round(min(2, tjob['speed'] * faster), 2), pitch=pitch, emotion=emotion)
     folder = cache / 'ad-voice'; folder.mkdir(parents=True, exist_ok=True); files = []
     for n, p in enumerate(parts):
-        f = folder / (hashlib.sha1(json.dumps([p['loi'], tjob['voice'], tjob['model'], tjob['speed']], ensure_ascii=False).encode()).hexdigest()[:20] + '.mp3')
+        f = folder / (hashlib.sha1(json.dumps([p['loi'], tjob['voice'], tjob['model'], tjob['speed'], tjob['pitch'], tjob['emotion']], ensure_ascii=False).encode()).hexdigest()[:20] + '.mp3')
         if not (f.is_file() and f.stat().st_size > 800):
             for attempt in range(3):
                 try: data = tts.synthesize(p['loi'], tjob, key); break

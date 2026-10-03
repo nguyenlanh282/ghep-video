@@ -37,7 +37,7 @@ def pieces(text, limit=PIECE):
 
 def synthesize(text, job, key):
     body = dict(model=job['model'], text=text, stream=False, language_boost='Vietnamese', output_format='hex',
-                voice_setting=dict(voice_id=job['voice'], speed=job['speed'], vol=1.0, pitch=0),
+                voice_setting=dict(voice_id=job['voice'], speed=job['speed'], vol=1.0, pitch=int(job.get('pitch') or 0), **({'emotion': job['emotion']} if job.get('emotion') else {})),
                 audio_setting=dict(sample_rate=44100, bitrate=256000, format='mp3', channel=1))  # bitrate: 32000/64000/128000/256000 only
     host = os.environ.get('MINIMAX_API_BASE') or HOSTS.get(job.get('region'), HOSTS['intl'])  # override only for tests
     req = urllib.request.Request(host + '/v1/t2a_v2', data=json.dumps(body).encode(),
