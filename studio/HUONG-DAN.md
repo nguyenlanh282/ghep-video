@@ -66,6 +66,18 @@ Biến 1 video thô quay người nói (chưa cắt, có ậm ừ, im lặng, n�
 
 Ghi chú: video quay dọc khi xuất 16:9 giữ trọn người nói ở giữa trên nền mờ. Không có Claude/ChatGPT vẫn cắt và làm phụ đề được, nhưng không có soát chính tả, tiêu đề gợi ý, cảnh trám, clip ngắn.
 
+## Video quảng cáo (tab thứ ba)
+
+Nhập thông tin sản phẩm → kịch bản → mỗi câu hook một video quảng cáo.
+
+1. **01 Sản phẩm & ưu đãi**: sản phẩm, khách hàng, vấn đề, lợi ích, bằng chứng, ưu đãi, lời kêu gọi, lưu ý riêng. **Thư mục kiến thức** (tuỳ chọn): thư mục ghi chú `.md`; AI lấy các đoạn nói về sản phẩm để viết đúng sự thật (đoạn đó được gửi lên Claude / ChatGPT của bạn).
+2. **02 Kiểu quảng cáo & kịch bản**: chọn 1 trong 8 kiểu (Vấn đề → Giải pháp, Trước / Sau, Chỉ ra tính năng, Liệt kê, Hướng dẫn, Người dùng kể lại, Ghép nhiều người dùng, Chuyện người làm ra), độ dài 15–60 giây, giọng điệu (Tự nhiên / Sôi nổi / Rất sôi nổi). **✨ AI viết kịch bản** hoặc **✍ Tự viết theo khung**. Sửa từng ô Lời đọc và Chữ trên màn hình; tick tối đa 3 hook; **📄 Xem kịch bản** để đọc toàn bộ từng bản trước khi xuất.
+3. **03 Tư liệu, giọng đọc & xuất**: thư mục ảnh/video sản phẩm, giọng MiniMax (hoặc file ghi âm), khung hình 9:16 / 1:1 / 16:9.
+
+Video có chữ hook từ giây đầu, chữ ý chính từng phần, nút kêu gọi ở cuối, phụ đề. Kết quả: thư mục `<sản phẩm> - quảng cáo <ngày giờ>` gồm các bản Hook A/B/C và `kich-ban-va-caption.txt`.
+
+Máy chưa có FFmpeg (hoặc app không tìm thấy): app tự tải trước tác vụ đầu tiên, rồi nhắc bấm lại.
+
 ## Timeline và Dự án
 
 **Timeline** (khung đầu màn hình, cả hai chế độ) để chỉnh từng cảnh theo ý mình trước khi xuất.

@@ -115,7 +115,9 @@ footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);fon
     <a href="#sua-bang-chu">04 · Sửa bằng chữ</a>
     <a href="#noi-dung-dang">Tiêu đề, caption, hashtag, clip ngắn</a>
     <a href="#xem-xuat">Phân tích, xem trước &amp; xuất</a>
-    <b>DÙNG CHUNG 2 CHẾ ĐỘ</b>
+    <b>VIDEO QUẢNG CÁO</b>
+    <a href="#quang-cao">📣 Làm video quảng cáo</a>
+    <b>DÙNG CHUNG</b>
     <a href="#tieu-de">Tiêu đề mở đầu</a>
     <a href="#phu-de">Phụ đề karaoke</a>
     <a href="#mau-sac">🎨 Chỉnh màu</a>
@@ -359,6 +361,47 @@ footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);fon
     <li><span class="ui">📁 Mở thư mục video đã xuất</span>: mở nơi lưu.</li>
   </ul>
   <div class="clear"></div>
+</section>
+
+<!-- ======================= VIDEO QUẢNG CÁO ======================= -->
+<section id="quang-cao">
+  <h2><span class="n">📣</span>Video quảng cáo</h2>
+  <p class="lead">Chế độ thứ ba, nút <span class="ui">📣 Video quảng cáo</span> trên cùng. Bạn nhập thông tin sản phẩm, app lo kịch bản, giọng đọc, chữ trên hình và xuất mỗi câu hook một video để chạy thử xem bản nào hiệu quả hơn.</p>
+  <figure><img src="/hd/ads.jpg" alt="Trang Video quảng cáo: thông tin sản phẩm, kịch bản, tư liệu và xuất" loading="lazy" width="1400" height="875"><figcaption>Ba cột: 01 Sản phẩm &amp; ưu đãi · 02 Kiểu quảng cáo &amp; kịch bản · 03 Tư liệu, giọng đọc &amp; xuất</figcaption></figure>
+  <h3>01 · Sản phẩm &amp; ưu đãi</h3>
+  <ul class="list">
+    <li>Điền <b>Sản phẩm</b> (bắt buộc), khách hàng, vấn đề của khách, lợi ích, bằng chứng có thật, ưu đãi, lời kêu gọi. Càng cụ thể, kịch bản càng đúng.</li>
+    <li><b>Lưu ý riêng</b>: cách xưng hô, điều không được nói (vd “xưng em, gọi anh chị; không đọc tên chất”).</li>
+    <li><span class="ui">🧠 Thư mục kiến thức</span> (tuỳ chọn): chọn thư mục ghi chú <code>.md</code> của bạn. AI tìm các ghi chú nói về sản phẩm để viết đúng sự thật; đoạn liên quan được gửi lên Claude / ChatGPT của bạn.</li>
+  </ul>
+  <h3>02 · Kiểu quảng cáo &amp; kịch bản</h3>
+  <table>
+    <tr><th>Kiểu</th><th>Dùng khi</th></tr>
+    <tr><td>Vấn đề → Giải pháp</td><td>Dễ ra đơn nhất, hợp hầu hết sản phẩm.</td></tr>
+    <tr><td>Trước / Sau</td><td>Sản phẩm cho kết quả nhìn thấy được.</td></tr>
+    <tr><td>Chỉ ra tính năng</td><td>Giới thiệu sản phẩm mới, quay cận cảnh.</td></tr>
+    <tr><td>Liệt kê “3 lý do”</td><td>Nhiều ý, dễ quay.</td></tr>
+    <tr><td>Hướng dẫn từng bước</td><td>Trông ít giống quảng cáo, tăng lòng tin.</td></tr>
+    <tr><td>Người dùng kể lại · Ghép nhiều người dùng</td><td>Có khách thật, kết quả thật.</td></tr>
+    <tr><td>Chuyện người làm ra</td><td>Xây lòng tin cho thương hiệu.</td></tr>
+  </table>
+  <ol class="steps">
+    <li>Chọn <b>kiểu</b>, <b>độ dài</b> (15 / 30 / 45 / 60 giây) và <b>giọng điệu</b>: Tự nhiên, Sôi nổi, Rất sôi nổi. Giọng điệu quyết định cách AI viết lời và cách MiniMax đọc (vui, nhanh và cao hơn một chút).</li>
+    <li>Bấm <span class="ui">✨ AI viết kịch bản</span> (thường mất 1–4 phút), hoặc <span class="ui">✍ Tự viết theo khung</span> để app dựng sẵn các phần cho bạn tự điền.</li>
+    <li>Kịch bản gồm: <b>Hook 3 giây đầu</b> (AI viết 5 câu), <b>các phần</b> của video và <b>Kêu gọi hành động</b>. Mỗi ô có <b>Lời đọc</b> và <b>Chữ trên màn hình</b>, sửa được hết; dòng 🎬 gợi ý cảnh nên quay.</li>
+    <li>Tick <b>tối đa 3 hook</b>: mỗi hook xuất một video (Bản A, B, C), phần thân giống nhau.</li>
+    <li>Đọc mục <b>Cần bạn kiểm tra</b>: AI ghi ở đây những điều nó không chắc (giá, hạn ưu đãi, số điện thoại) thay vì tự bịa.</li>
+    <li>Bấm <span class="ui">📄 Xem kịch bản</span> để đọc liền mạch toàn bộ từng bản theo giây, kèm lời mô tả khi đăng; <span class="ui">Sao chép</span> để gửi người khác duyệt.</li>
+  </ol>
+  <h3>03 · Tư liệu, giọng đọc &amp; xuất</h3>
+  <ul class="list">
+    <li><b>Ảnh &amp; video sản phẩm</b>: chọn thư mục. App tự phân tích nội dung khi xuất để chọn cảnh hợp lời đọc.</li>
+    <li><b>Giọng MiniMax</b>: nhập Voice ID (API key dán ở trang Ghép ảnh + lời đọc). Mỗi phần chỉ tạo giọng một lần; các bản khác hook dùng chung phần thân nên không tốn thêm.</li>
+    <li><b>File ghi âm</b>: đọc đúng theo kịch bản. Các bản khác hook dùng chung file, chỉ đổi chữ mở đầu.</li>
+    <li><b>Khung hình</b>: Dọc 9:16, Vuông 1:1, Ngang 16:9.</li>
+    <li><span class="ui">Dựng thử 20 giây</span> để xem nhanh, <span class="ui">Xuất video quảng cáo ↗</span> để xuất đủ các bản.</li>
+  </ul>
+  <div class="tip">Video xuất ra có: chữ hook hiện ngay giây đầu, chữ ý chính của từng phần, nút kêu gọi màu vàng ở cuối, phụ đề, đổi cảnh khoảng 2 giây một lần. Kết quả nằm trong thư mục <b>“&lt;sản phẩm&gt; - quảng cáo &lt;ngày giờ&gt;”</b> kèm file <b>kich-ban-va-caption.txt</b>. Kiểu tiêu đề, phụ đề, màu, nhạc nền và thư mục lưu lấy theo cài đặt ở trang Ghép ảnh + lời đọc.</div>
 </section>
 
 <!-- ======================= DÙNG CHUNG ======================= -->
