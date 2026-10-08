@@ -20,10 +20,46 @@ else:DATA=Path(os.environ.get('XDG_DATA_HOME',Path.home()/'.local'/'share'))/'Gh
 NOWIN={'creationflags':0x08000000} if WINDOWS else {}
 
 def tool(name):
+ """Full path of ffmpeg / ffprobe. An app opened from Finder or a shortcut does not get the Terminal's PATH, so the
+ usual install places are checked too; the bare name comes back when it is nowhere (see missing_tools)."""
  exe=name+('.exe' if WINDOWS else '')
- for candidate in (shutil.which(name),DATA/'bin'/exe,Path('/opt/homebrew/bin')/name,Path('/usr/local/bin')/name):
-  if candidate and Path(candidate).exists():return str(candidate)
+ places=[DATA/'bin'/exe]+([] if WINDOWS else [Path(d)/name for d in ('/opt/homebrew/bin','/usr/local/bin','/opt/local/bin',Path.home()/'bin',Path.home()/'.local'/'bin')])
+ for candidate in (shutil.which(name),*places):
+  if candidate and Path(candidate).is_file():return str(candidate)
  return name
+
+def missing_tools():
+ return [n for n in ('ffmpeg','ffprobe') if not Path(tool(n)).is_file()]
+
+def install_tools(progress=lambda p,m:None):
+ """Download FFmpeg + ffprobe into the app's own folder (the same builds the installers use)."""
+ import tempfile, urllib.request, zipfile
+ dest=DATA/'bin';dest.mkdir(parents=True,exist_ok=True)
+ if MAC:
+  arch='arm64' if platform.machine()=='arm64' else 'amd64'
+  jobs=[(f'https://ffmpeg.martin-riedl.de/redirect/latest/macos/{arch}/release/{n}.zip',[n]) for n in ('ffmpeg','ffprobe')]
+ elif WINDOWS:jobs=[('https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip',['ffmpeg.exe','ffprobe.exe'])]
+ else:raise RuntimeError('Máy này chưa có FFmpeg. Hãy cài FFmpeg (vd: sudo apt install ffmpeg) rồi mở lại app.')
+ with tempfile.TemporaryDirectory(prefix='ghepvideo-ffmpeg-') as tmp:
+  for k,(url,names) in enumerate(jobs):
+   z=Path(tmp)/f'{k}.zip';req=urllib.request.Request(url,headers={'User-Agent':'GhepVideo'})
+   try:
+    with urllib.request.urlopen(req,timeout=60) as r,open(z,'wb') as f:
+     total=int(r.headers.get('Content-Length') or 0);got=0
+     while True:
+      chunk=r.read(1<<18)
+      if not chunk:break
+      f.write(chunk);got+=len(chunk)
+      progress(100*(k+(got/total if total else .5))/len(jobs)*.95,f'Đang tải FFmpeg (công cụ xử lý video), chỉ cần 1 lần… {got>>20} MB'+(f' / {total>>20} MB' if total else ''))
+   except OSError as e:raise RuntimeError(f'Không tải được FFmpeg ({getattr(e,"reason",e)}). Kiểm tra mạng rồi bấm lại.') from None
+   with zipfile.ZipFile(z) as zf:
+    for info in zf.infolist():
+     if Path(info.filename).name in names:
+      out=dest/Path(info.filename).name;out.write_bytes(zf.read(info))
+      if not WINDOWS:os.chmod(out,0o755)
+ if MAC:subprocess.run(['xattr','-c',str(dest/'ffmpeg'),str(dest/'ffprobe')],capture_output=True)  # downloaded files: let macOS run them
+ left=missing_tools()
+ if left:raise RuntimeError('Đã tải nhưng chưa thấy '+', '.join(left)+'. Hãy chạy lại file cài đặt.')
 
 FFMPEG=tool('ffmpeg');FFPROBE=tool('ffprobe')
 

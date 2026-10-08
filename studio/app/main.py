@@ -207,6 +207,8 @@ class Studio:
  def start(self,task,preview=False):
   if self.job['running']:return dict(error='Đang có tác vụ chạy.')
   s=self.settings;names=self.media_names()
+  # A computer without FFmpeg (or with one only the Terminal can see): fetch it first, then the user presses again.
+  if task not in ('tools','ad-script') and platform_tools.missing_tools():task='tools'
   if not names and task in ('render','analyze','undo'):return self.fail('Hãy chọn thư mục có ảnh hoặc video.')
   if task in ('talk-analyze','talk-render'):
    if not self.talk_videos():return self.fail('Hãy chọn video thô.')
@@ -264,6 +266,8 @@ class Studio:
              minimaxSpeed=s['minimaxSpeed'],minimaxRegion=s['minimaxRegion'],outputFolder=s['outputFolder'],cacheFolder=str(self.cache()),preview=bool(preview),render=render)
    job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
    args=[str(ENGINE/'ads.py'),task[3:],str(job_file)];log='ads.log';cleanup=lambda:job_file.unlink(missing_ok=True)
+  elif task=='tools':
+   args=[str(ENGINE/'fix_tools.py')];log='tools.log';cleanup=self.refresh_tools
   elif task=='tts':
    if not s['minimaxKey']:return self.fail('Hãy dán API key MiniMax rồi bấm Lưu.')
    if not s['ttsText'].strip():return self.fail('Hãy nhập nội dung cần đọc.')
@@ -288,6 +292,14 @@ class Studio:
   threading.Thread(target=self.watch,args=(self.proc,logf,cleanup),daemon=True).start()
   return self.state()
 
+ def refresh_tools(self):
+  """After FFmpeg was fetched: the modules already loaded in this process learn where it is."""
+  ff,fp=platform_tools.tool('ffmpeg'),platform_tools.tool('ffprobe')
+  for name in ('platform_tools','renderer','thumbnail','talk','analyzer','tts','ads'):
+   m=sys.modules.get(name)
+   if m is not None and hasattr(m,'FFMPEG'):m.FFMPEG=ff
+   if m is not None and hasattr(m,'FFPROBE'):m.FFPROBE=fp
+
  def fail(self,message):
   self.job.update(error=message);return self.state()
 
@@ -306,7 +318,7 @@ class Studio:
   code=proc.wait();logf.close();cleanup()
   with self.lock:
    self.job['running']=False
-   if self.job['cancelled']:self.job['status']={'render':'Đã dừng xuất video','tts':'Đã dừng tạo giọng đọc','ad-render':'Đã dừng xuất video quảng cáo','ad-script':'Đã dừng viết kịch bản'}.get(self.job['task'],'Đã dừng phân tích')
+   if self.job['cancelled']:self.job['status']={'render':'Đã dừng xuất video','tts':'Đã dừng tạo giọng đọc','ad-render':'Đã dừng xuất video quảng cáo','ad-script':'Đã dừng viết kịch bản','tools':'Đã dừng tải FFmpeg'}.get(self.job['task'],'Đã dừng phân tích')
    elif code!=0 and not self.job['error']:self.job['error']=f"Chưa thành công. Xem chi tiết tại {self.cache()/self.job['log']}";self.job['status']='Cần kiểm tra lại'
 
  def cancel(self):

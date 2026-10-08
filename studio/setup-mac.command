@@ -21,7 +21,12 @@ print -P "%B== Ghép Video · cài đặt cho macOS ==%b"
 [ "$(uname -m)" = "arm64" ] || fail "Máy này không dùng chip Apple (M1 trở lên). Bản macOS cần chip Apple để chạy AI trên máy."
 
 step "1/5 FFmpeg (xử lý video)"
-if command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null; then echo "Đã có sẵn: $(command -v ffmpeg)"
+if command -v ffmpeg >/dev/null && command -v ffprobe >/dev/null; then
+  echo "Đã có sẵn: $(command -v ffmpeg)"
+  # The app is opened from Finder, without this Terminal's PATH: leave links where it always looks.
+  for tool in ffmpeg ffprobe; do
+    case "$(command -v $tool)" in /opt/homebrew/bin/*|/usr/local/bin/*|"$BIN"/*) ;; *) ln -sf "$(command -v $tool)" "$BIN/$tool" ;; esac
+  done
 elif [ -x "$BIN/ffmpeg" ] && [ -x "$BIN/ffprobe" ]; then echo "Đã có sẵn trong thư mục cài đặt."
 else
   tmp=$(mktemp -d)
