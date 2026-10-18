@@ -60,7 +60,21 @@ function renderAds(a) {
 
 function paintMedia() {
   const m = A.media || [];
-  $('#adMediaGrid').innerHTML = m.map(f => `<figure title="${esc(f.name)}"><img loading="lazy" src="${f.thumb}" alt=""><figcaption>${f.kind === 'video' ? '▶ ' : ''}${esc(f.name)}</figcaption></figure>`).join('');
+  $('#adMediaGrid').innerHTML = m.map((f, i) => `<figure data-i="${i}" title="Bấm để xem: ${esc(f.name)}"><button class="mview" data-i="${i}" aria-label="Xem ${esc(f.name)}"><img loading="lazy" src="${f.thumb}" alt="">${f.kind === 'video' ? '<i>▶</i>' : ''}</button>
+      <button class="mdel" data-del="${i}" aria-label="Bỏ ${esc(f.name)} khỏi tư liệu" title="Bỏ khỏi tư liệu">✕</button><figcaption>${esc(f.name)}</figcaption></figure>`).join('');
+  $('#mediaRestore').hidden = !A.removedCount; $('#mediaRestore').textContent = `↺ Khôi phục ${A.removedCount} file đã bỏ`;
+}
+let viewing = -1;
+function view(i) {
+  const f = (A.media || [])[i]; if (!f) return; viewing = i; const box = $('#mediaStage');
+  box.innerHTML = f.kind === 'video' ? `<video src="${f.url}" controls autoplay playsinline></video>` : `<img src="${f.url}" alt="${esc(f.name)}">`;
+  $('#mediaName').textContent = f.name + (f.kind === 'video' && f.d ? ` · ${clock(f.d)}` : '');
+  $('#mediaPrev').disabled = i <= 0; $('#mediaNext').disabled = i >= A.media.length - 1;
+  if (!$('#mediaDlg').open) $('#mediaDlg').showModal();
+}
+async function removeMedia(i) {
+  const f = (A.media || [])[i]; if (!f || !confirm(`Bỏ “${f.name}” khỏi tư liệu quảng cáo?\nFile được cất vào thư mục ẩn “.da-xoa” cạnh đó, khôi phục lại được.`)) return false;
+  const out = await api('adRemove', {name: f.name}); if (out.error) alert(out.error); return true;
 }
 function paintUnderstood() {
   const a = script && script.phan_tich, box = $('#understood');
@@ -184,6 +198,16 @@ async function boot() {
     }
     await api('state'); api('adState');
   }));
+  $('#adMediaGrid').addEventListener('click', e => {
+    const v = e.target.closest('.mview'), d = e.target.closest('[data-del]');
+    if (d) removeMedia(+d.dataset.del); else if (v) view(+v.dataset.i);
+  });
+  $('#mediaRestore').addEventListener('click', e => { e.preventDefault(); api('adRestore'); });
+  $('#mediaClose').addEventListener('click', () => $('#mediaDlg').close());
+  $('#mediaDlg').addEventListener('close', () => { $('#mediaStage').innerHTML = ''; viewing = -1; });
+  $('#mediaPrev').addEventListener('click', () => view(viewing - 1));
+  $('#mediaNext').addEventListener('click', () => view(viewing + 1));
+  $('#mediaDel').addEventListener('click', async () => { const i = viewing; if (await removeMedia(i)) { if ((A.media || []).length) view(Math.min(i, A.media.length - 1)); else $('#mediaDlg').close(); } });
   $('#adInfo').addEventListener('toggle', () => $('#adInfo').dataset.touched = '1');
   $('#kbClear').addEventListener('click', e => { e.preventDefault(); set({adKnowledgeFolder: ''}); });
   $('#adTypes').addEventListener('click', e => { const b = e.target.closest('button[data-type]'); if (b) set({adType: b.dataset.type}); });

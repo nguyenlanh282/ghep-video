@@ -27,6 +27,7 @@
     <div class="row gap wrap"><button class="btn small primary" data-choose="adFiles">＋ Thêm ảnh / video sản phẩm</button><button class="btn small" data-choose="adMedia">📁 Chọn cả thư mục</button></div>
     <p class="hint" id="mediaNote"></p>
     <div class="admedia" id="adMediaGrid"></div>
+    <a href="#" class="hint" id="mediaRestore" hidden></a>
     <details class="adinfo" id="adInfo"><summary>Thông tin chi tiết <small>(tuỳ chọn, bổ sung cho brief)</small></summary>
     <label class="afield"><span>Sản phẩm</span><input type="text" data-text="adProduct" placeholder="vd: Organic Pro 1 lít"></label>
     <label class="afield"><span>Khách hàng</span><input type="text" data-text="adAudience" placeholder="vd: nhà vườn sầu riêng miền Tây"></label>
@@ -107,6 +108,12 @@
     <button class="btn large" id="cancelBtn" hidden>Dừng</button>
   </div>
 </footer>
+<dialog class="projdlg mediadlg" id="mediaDlg" aria-labelledby="mediaName">
+  <div class="row between"><b id="mediaName"></b><button class="btn small" id="mediaClose">Đóng</button></div>
+  <div class="mediastage" id="mediaStage"></div>
+  <div class="row between"><div class="row gap"><button class="btn small" id="mediaPrev">◀ Trước</button><button class="btn small" id="mediaNext">Sau ▶</button></div>
+    <button class="btn small" id="mediaDel">🗑 Bỏ khỏi tư liệu</button></div>
+</dialog>
 <dialog class="projdlg fulldlg" id="fullDlg" aria-labelledby="fullTitle">
   <div class="row between"><h2 id="fullTitle">📄 Toàn bộ kịch bản</h2><div class="row gap"><div class="seg" id="fullTabs"></div><button class="btn small" id="fullCopy">Sao chép</button><button class="btn small" id="fullClose">Đóng</button></div></div>
   <p class="hint" id="fullInfo"></p>

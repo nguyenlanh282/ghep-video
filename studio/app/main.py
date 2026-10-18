@@ -72,6 +72,7 @@ DEFAULTS=dict(mediaFolder=str(find_child(ROOT,'Video - ảnh')),audio=first_audi
  adBrief='',adProduct='',adAudience='',adProblem='',adBenefits='',adProof='',adOffer='',adCta='',adNotes='',adType='van-de',adLength='30',
  adKnowledgeFolder='',adMediaFolder=str(find_child(ROOT,'Video - ảnh')),adScript='',adHooks='0,1,2',adVoiceSource='minimax',adAudio='',adAspect='9:16',adEnergy='soi-noi',
  talkFill=True)  # upright video in a 16:9 / 1:1 frame: fill it (crop top and bottom) or keep the whole picture on a blurred copy
+AD_BIN='.da-xoa'  # photos/videos taken out of an ad are kept here (hidden), not deleted
 TALK_DENSITY={'it':.18,'vua':.3,'nhieu':.45}
 SECRET_KEYS={'pexelsKey','pixabayKey','minimaxKey'}
 
@@ -422,8 +423,10 @@ class Studio:
   folder=Path(self.settings['adMediaFolder'] or '/nonexistent-ghepvideo');kb=Path(self.settings['adKnowledgeFolder']) if self.settings['adKnowledgeFolder'] else None
   try:count=sum(1 for p in folder.iterdir() if p.is_file() and not p.name.startswith(('.','_')) and p.suffix.lower() in MEDIA_EXT)
   except OSError:count=0
-  media=[dict(name=f['name'],kind=f['kind'],thumb=f['thumb']) for f in self.media_list(folder)][:60] if count else []
-  return dict(meta=ads.meta(),script=self.ad_script(),mediaCount=count,media=media,analysed=(folder/'_phan-tich.json').is_file(),knowledgeOk=bool(kb and kb.is_dir()),
+  media=[dict(name=f['name'],kind=f['kind'],thumb=f['thumb'],d=f.get('d',0),url=self.url(f['path'])) for f in self.media_list(folder)][:60] if count else []
+  try:removed=sum(1 for p in (folder/AD_BIN).iterdir() if p.is_file())
+  except OSError:removed=0
+  return dict(meta=ads.meta(),script=self.ad_script(),mediaCount=count,media=media,removedCount=removed,analysed=(folder/'_phan-tich.json').is_file(),knowledgeOk=bool(kb and kb.is_dir()),
               wordsPerSecond=ads.WORDS_PER_SECOND,results=[dict(r,url=self.url(r['path'])) for r in self.ad_results if Path(r['path']).is_file()])
 
  def ad_save(self,script):
@@ -449,6 +452,27 @@ class Studio:
    dest=folder/p.name;n=2
    while dest.exists():dest=folder/f'{p.stem} ({n}){p.suffix}';n+=1
    shutil.copy2(p,dest)
+  return self.ad_state()
+
+ def ad_remove(self,name):
+  """Take one photo/video out of the ad's material. It is moved into a hidden '.da-xoa' folder next to it, never
+  deleted, so 'Khôi phục' can bring it back (the folder may hold the user's own originals)."""
+  folder=Path(self.settings['adMediaFolder'] or '/nonexistent-ghepvideo');src=folder/Path(str(name)).name
+  if not src.is_file() or src.parent.resolve()!=folder.resolve():return dict(self.ad_state(),error='Không tìm thấy file này.')
+  dest=folder/AD_BIN;dest.mkdir(exist_ok=True);target=dest/src.name;n=2
+  while target.exists():target=dest/f'{src.stem} ({n}){src.suffix}';n+=1
+  src.replace(target);return self.ad_state()
+
+ def ad_restore(self):
+  folder=Path(self.settings['adMediaFolder'] or '/nonexistent-ghepvideo');bin_=folder/AD_BIN
+  if not bin_.is_dir():return self.ad_state()
+  for p in sorted(bin_.iterdir()):
+   if not p.is_file():continue
+   target=folder/p.name;n=2
+   while target.exists():target=folder/f'{p.stem} ({n}){p.suffix}';n+=1
+   p.replace(target)
+  try:bin_.rmdir()
+  except OSError:pass
   return self.ad_state()
 
  def ad_skeleton(self):
@@ -820,7 +844,7 @@ API={'state':lambda b:studio.state(),'set':lambda b:studio.set(b.get('values',{}
  'thumbSave':lambda b:studio.thumb_save(b.get('ids',[]),b.get('text',True)),'thumbReveal':lambda b:studio.reveal(studio.thumb_saved),
  'timelineState':lambda b:studio.timeline_state(),'timelineEdit':lambda b:studio.timeline_edit(b),'timelineReset':lambda b:studio.timeline_reset(),
  'mediaList':lambda b:dict(files=studio.media_list(studio.settings['talkBrollFolder' if b.get('which')=='broll' else 'mediaFolder'])),
- 'adState':lambda b:studio.ad_state(),'adSave':lambda b:studio.ad_save(b.get('script')),'adSkeleton':lambda b:studio.ad_skeleton(),'adAddFiles':lambda b:studio.ad_add_files(b.get('paths') or []),
+ 'adState':lambda b:studio.ad_state(),'adSave':lambda b:studio.ad_save(b.get('script')),'adSkeleton':lambda b:studio.ad_skeleton(),'adAddFiles':lambda b:studio.ad_add_files(b.get('paths') or []),'adRemove':lambda b:studio.ad_remove(b.get('name','')),'adRestore':lambda b:studio.ad_restore(),
  'projects':lambda b:studio.projects(),'projectOpen':lambda b:studio.project_open(b.get('kind'),b.get('id','')),
  'projectRename':lambda b:studio.project_rename(b.get('kind'),b.get('id',''),b.get('name','')),'projectDelete':lambda b:studio.project_delete(b.get('kind'),b.get('id',''))}
 
