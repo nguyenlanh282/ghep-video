@@ -12,6 +12,9 @@ from pathlib import Path
 
 # kind → (name, when to use it, parts as (label, what the voice does, what the picture shows))
 AD_TYPES = {
+    'san-pham': ('Quảng cáo sản phẩm', 'Dán brief + ảnh/video: AI rút nỗi đau làm hook, rồi công dụng, lợi ích', [
+        ('Công dụng', 'sản phẩm là gì và làm được gì: 2–3 công dụng chính, đúng như brief', 'cận cảnh sản phẩm, đang dùng sản phẩm'),
+        ('Lợi ích', 'khách được gì khi dùng: giải quyết đúng nỗi đau ở hook, đạt điều họ mong muốn', 'kết quả sau khi dùng, khách hàng hài lòng')]),
     'van-de': ('Vấn đề → Giải pháp', 'Dễ ra đơn nhất, hợp hầu hết sản phẩm', [
         ('Vấn đề', 'tả đúng tình trạng người xem đang gặp, bằng chữ của họ', 'cảnh thật đang gặp vấn đề'),
         ('Vì sao', 'nguyên nhân thật sự, ngắn gọn', 'cận cảnh chỗ gây ra vấn đề'),
@@ -72,10 +75,14 @@ ENERGY = {
     'rat-soi-noi': ('Rất sôi nổi', 'giọng rất hào hứng như người bán hàng đang livestream, câu rất ngắn, dồn dập, nhiều câu cảm thán, nhấn mạnh ưu đãi', 'happy', 1.12, 2),
 }
 WORDS_PER_SECOND = 3.6   # Vietnamese voice-over at a natural pace
-BRIEF = ('adProduct', 'adAudience', 'adProblem', 'adBenefits', 'adProof', 'adOffer', 'adCta', 'adNotes')
+BRIEF = ('adBrief', 'adProduct', 'adAudience', 'adProblem', 'adBenefits', 'adProof', 'adOffer', 'adCta', 'adNotes')
 
 def emit(progress, message, **extra):
     print(json.dumps(dict(progress=progress, message=message, **extra), ensure_ascii=False), flush=True)
+
+def short_name(name):
+    """'AMINO PLUS – phân bón axit amin (AGRIVOVA)' → 'AMINO PLUS': the product's name without the description."""
+    return re.split(r'\s[–—-]\s|\(|,', nfc(name).strip())[0].strip()[:60]
 
 def nfc(s): return unicodedata.normalize('NFC', str(s or ''))
 def plain(s): return ''.join(c for c in unicodedata.normalize('NFD', nfc(s).lower().replace('đ', 'd')) if unicodedata.category(c) != 'Mn')
@@ -95,7 +102,14 @@ def clean(script, kind='van-de', seconds=30):
                 hooks=hooks, phan=[p for p in (part(x) for x in (s.get('phan') or [])[:8]) if p],
                 cta=dict(loi=text(cta.get('loi'), 300), chu=text(cta.get('chu'), 60), hinh=text(cta.get('hinh'), 200)),
                 caption=nfc(s.get('caption'))[:1500].strip(), hashtags=[text(h, 40) for h in (s.get('hashtags') or []) if str(h).strip()][:15],
-                luu_y=[text(x, 300) for x in (s.get('luu_y') or []) if str(x).strip()][:8])
+                luu_y=[text(x, 300) for x in (s.get('luu_y') or []) if str(x).strip()][:8], phan_tich=understood(s.get('phan_tich')))
+
+def understood(a):
+    """What the AI read in the brief and the product pictures: product, customer, pains, wishes, uses, benefits."""
+    a = a if isinstance(a, dict) else {}
+    lst = lambda k: [' '.join(nfc(x).split())[:200] for x in (a.get(k) or []) if str(x).strip()][:6] if isinstance(a.get(k), list) else []
+    return dict(san_pham=' '.join(nfc(a.get('san_pham')).split())[:80], khach_hang=' '.join(nfc(a.get('khach_hang')).split())[:160],
+                noi_dau=lst('noi_dau'), mong_muon=lst('mong_muon'), cong_dung=lst('cong_dung'), loi_ich=lst('loi_ich'))
 
 def skeleton(kind, seconds, brief):
     """The frame to write by hand: the parts of this kind of ad, with what each should say and show."""
@@ -111,7 +125,7 @@ def knowledge(folder, brief, budget=12000, top=6):
     root = Path(folder) if folder else None
     if not root or not root.is_dir(): return []
     product = plain(brief.get('adProduct', '')).strip()
-    terms = {t for t in re.findall(r'[a-z0-9]{3,}', plain(' '.join(brief.get(k, '') for k in ('adProduct', 'adProblem', 'adBenefits'))))}
+    terms = {t for t in re.findall(r'[a-z0-9]{3,}', plain(' '.join(brief.get(k, '') for k in ('adProduct', 'adProblem', 'adBenefits')) or nfc(brief.get('adBrief', ''))[:200]))}
     if not terms: return []
     scored = []
     for n, f in enumerate(root.rglob('*.md')):
@@ -139,19 +153,27 @@ def knowledge(folder, brief, budget=12000, top=6):
         if left < 400: break
     return out
 
-def question(brief, kind, seconds, notes, energy='soi-noi'):
+def question(brief, kind, seconds, notes, energy='soi-noi', media='', pictures=0):
     name, when, parts = AD_TYPES[kind]; tone = ENERGY.get(energy, ENERGY['soi-noi']); words = round(seconds * WORDS_PER_SECOND * tone[3])
     info = '\n'.join(f'- {label}: {nfc(brief.get(k, "")).strip()}' for k, label in (
         ('adProduct', 'Sản phẩm'), ('adAudience', 'Khách hàng'), ('adProblem', 'Vấn đề của khách'), ('adBenefits', 'Lợi ích / điểm mạnh'),
         ('adProof', 'Bằng chứng có thật'), ('adOffer', 'Ưu đãi'), ('adCta', 'Lời kêu gọi / cách liên hệ'), ('adNotes', 'Lưu ý riêng')) if nfc(brief.get(k, '')).strip())
     kb = '\n\n'.join(f'[Tài liệu: {n["file"]}]\n{n["text"]}' for n in notes)
+    raw = nfc(brief.get('adBrief', '')).strip()[:8000]
+    look = (f'Có {pictures} ảnh sản phẩm kèm theo: xem kỹ để biết sản phẩm trông thế nào, bao bì, cách dùng, bối cảnh.\n' if pictures else '') + (f'Mô tả các ảnh/video sản phẩm có sẵn:\n{media}\n' if media else '')
+    steps = ('''CÁCH LÀM (kiểu Quảng cáo sản phẩm)
+Bước 1: đọc brief và ảnh, ghi vào "phan_tich": sản phẩm, khách hàng, nỗi đau / vấn đề họ đang gặp, điều họ mong muốn, công dụng của sản phẩm, lợi ích khách nhận được.
+Bước 2: hook lấy từ nỗi đau hoặc mong muốn mạnh nhất (không mở bằng tên sản phẩm).
+Bước 3: phần "Công dụng" nói sản phẩm làm được gì; phần "Lợi ích" nói khách được gì, nối đúng nỗi đau ở hook.
+Bước 4: kêu gọi hành động rõ ràng, có ưu đãi nếu brief có.
+''' if kind == 'san-pham' else '')
     return f'''Bạn là người viết kịch bản video quảng cáo ngắn (TikTok, Reels, Shorts) bằng tiếng Việt, giọng nói đời thường, câu ngắn, dễ đọc thành tiếng.
 
 THÔNG TIN SẢN PHẨM
-{info}
-{("TÀI LIỆU CỦA DOANH NGHIỆP (chỉ lấy sự thật từ đây, làm theo các quy định về lời nói nếu tài liệu có ghi):" + chr(10) + kb) if kb else "(Không có tài liệu kèm theo.)"}
+{info or '(xem brief)'}
+{('BRIEF / NỘI DUNG MẪU CỦA NGƯỜI LÀM:' + chr(10) + raw + chr(10)) if raw else ''}{look}{("TÀI LIỆU CỦA DOANH NGHIỆP (chỉ lấy sự thật từ đây, làm theo các quy định về lời nói nếu tài liệu có ghi):" + chr(10) + kb) if kb else "(Không có tài liệu kèm theo.)"}
 
-YÊU CẦU
+{steps}YÊU CẦU
 Giọng điệu của lời đọc: {tone[1]}.
 Kiểu quảng cáo: {name} ({when}). Video dài khoảng {seconds} giây: toàn bộ lời đọc (1 hook + các phần + kêu gọi) khoảng {words} chữ, không quá {round(words * 1.12)} chữ.
 Các phần theo thứ tự, mỗi phần chỉ làm một việc:
@@ -160,7 +182,7 @@ Viết 5 hook khác nhau cho 3 giây đầu, mỗi hook dưới 14 chữ, mỗi 
 Hook nào cũng phải nối liền mạch với phần đầu tiên.
 
 QUY TẮC
-1. Chỉ dùng thông tin có trong phần trên. Không bịa số liệu, lời khách hàng, giải thưởng, hạn chót hay giá.
+1. Chỉ dùng thông tin có trong phần trên (brief, ảnh, tài liệu). Không bịa số liệu, lời khách hàng, giải thưởng, hạn chót hay giá; không tự thêm lời hứa mà brief không có (“miễn phí”, “giao ngay”, “vượt trội”…). Brief và nhãn trong ảnh khác nhau thì ghi vào “luu_y”.
 2. Không hứa kết quả tuyệt đối (“100%”, “chắc chắn”, “trị dứt”, “tăng gấp đôi”). Nói về vấn đề, không phán xét người xem.
 3. Với phân bón, thuốc, thực phẩm, sức khoẻ: không nói thay lời khuyên chuyên môn; nhắc dùng theo hướng dẫn trên nhãn khi nói liều dùng.
 4. “chu” là dòng chữ hiện trên màn hình: dưới 8 chữ, là ý chính của phần đó, người tắt tiếng vẫn hiểu. Ưu đãi phải có trong “chu”.
@@ -169,7 +191,8 @@ QUY TẮC
 7. Số viết sao cho đọc thành tiếng được (“ba chai”, “một trăm tám mươi lăm nghìn”) trong “loi”; trong “chu” viết số bình thường.
 
 Trả về DUY NHẤT một JSON:
-{{"hooks":[{{"kieu":"tên cơ chế","loi":"câu nói","chu":"chữ trên màn hình","hinh":"cảnh mở đầu"}}],
+{{"phan_tich":{{"san_pham":"tên sản phẩm","khach_hang":"...","noi_dau":["..."],"mong_muon":["..."],"cong_dung":["..."],"loi_ich":["..."]}},
+"hooks":[{{"kieu":"tên cơ chế","loi":"câu nói","chu":"chữ trên màn hình","hinh":"cảnh mở đầu"}}],
 "phan":[{{"vai":"tên phần","hinh":"...","loi":"...","chu":"..."}}],
 "cta":{{"loi":"lời kêu gọi cuối","chu":"chữ trên nút","hinh":"..."}},
 "caption":"lời mô tả khi đăng, 2–4 câu","hashtags":["#..."],"luu_y":["điều cần người làm kiểm tra hoặc bổ sung"]}}'''
@@ -178,12 +201,14 @@ def write_script(job):
     from platform_tools import vlm_ask, ai_provider
     kind = job.get('adType') if job.get('adType') in AD_TYPES else 'van-de'; seconds = int(job.get('adLength') or 30)
     brief = {k: job.get(k, '') for k in BRIEF}
-    if not nfc(brief['adProduct']).strip(): raise ValueError('Hãy nhập tên sản phẩm.')
+    if not nfc(brief['adProduct']).strip() and not nfc(brief['adBrief']).strip(): raise ValueError('Hãy dán brief hoặc nhập tên sản phẩm.')
     if not ai_provider(): raise RuntimeError('Chưa có AI để viết kịch bản. Cài Claude Code hoặc Codex rồi đăng nhập, hoặc bấm “Tự viết theo khung”.')
     emit(8, 'Đang đọc tài liệu về sản phẩm…')
     notes = knowledge(job.get('adKnowledgeFolder'), brief)
     emit(25, f'AI đang viết kịch bản{f" (dựa trên {len(notes)} tài liệu)" if notes else ""}, thường mất 1–4 phút…')
-    text = vlm_ask(question(brief, kind, seconds, notes, job.get('adEnergy')), ())
+    pictures, media = look_at(job.get('adMediaFolder'), Path(job.get('cacheFolder') or Path(job['scriptFile']).parent))
+    if pictures: emit(20, f'AI xem {len(pictures)} ảnh sản phẩm…')
+    text = vlm_ask(question(brief, kind, seconds, notes, job.get('adEnergy'), media, len(pictures)), pictures)
     m = re.search(r'\{.*\}', text or '', re.S)
     try: got = json.loads(m.group(0)) if m else None
     except json.JSONDecodeError: got = None
@@ -191,6 +216,28 @@ def write_script(job):
     script = clean(dict(got, kieu=kind, giay=seconds), kind, seconds); script['nguon'] = [n['file'] for n in notes]
     Path(job['scriptFile']).write_text(json.dumps(script, ensure_ascii=False, indent=1), encoding='utf-8')
     emit(100, f'Đã viết kịch bản: {len(script["hooks"])} hook, {len(script["phan"])} phần.', done=True, adScript=job['scriptFile'])
+
+def look_at(folder, cache, limit=4):
+    """Up to `limit` small pictures of the product for the AI (photos first, then a frame of each video), plus the
+    descriptions the media analysis already wrote."""
+    from platform_tools import FFMPEG, NOWIN
+    root = Path(folder) if folder else None
+    if not root or not root.is_dir(): return [], ''
+    files = sorted(p for p in root.iterdir() if p.is_file() and not p.name.startswith(('.', '_')))
+    photos = [p for p in files if p.suffix.lower() in ('.jpg', '.jpeg', '.png', '.webp', '.heic')]
+    videos = [p for p in files if p.suffix.lower() in ('.mp4', '.mov', '.m4v', '.mkv', '.webm')]
+    out = cache / 'ad-look'; out.mkdir(parents=True, exist_ok=True); picked = []
+    for p in (photos + videos)[:limit]:
+        dest = out / (hashlib.sha1(f'{p}|{p.stat().st_size}'.encode()).hexdigest()[:16] + '.jpg')
+        if not dest.is_file():
+            seek = ['-ss', '1'] if p in videos else []
+            r = subprocess.run([FFMPEG, '-v', 'error', '-y', *seek, '-i', str(p), '-frames:v', '1', '-vf', 'scale=768:768:force_original_aspect_ratio=decrease', '-q:v', '4', str(dest)], capture_output=True, **NOWIN)
+            if r.returncode and p in videos: subprocess.run([FFMPEG, '-v', 'error', '-y', '-i', str(p), '-frames:v', '1', '-vf', 'scale=768:768:force_original_aspect_ratio=decrease', '-q:v', '4', str(dest)], capture_output=True, **NOWIN)
+        if dest.is_file(): picked.append(dest)
+    try: notes = json.loads((root / '_phan-tich.json').read_text(encoding='utf-8')).get('files') or {}
+    except Exception: notes = {}
+    media = '\n'.join(f'- {k}: {v.get("mo_ta", "")}' for k, v in sorted(notes.items()) if v.get('mo_ta'))[:2500]
+    return picked, media
 
 # ---------- export ----------
 def spoken(script, hook):

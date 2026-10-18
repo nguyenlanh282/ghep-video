@@ -69,11 +69,15 @@ DEFAULTS=dict(mediaFolder=str(find_child(ROOT,'Video - ảnh')),audio=first_audi
  talkVideo='',talkVideos='[]',talkBrollFolder=str(find_child(ROOT,'Video - ảnh')),talkBroll=True,talkDensity='vua',talkAspects='9:16',
  talkPunchIn=True,talkDenoise=True,talkRetakes=True,talkKeywords=True,talkShorts=True,
  # Video quảng cáo: the product brief, the kind of ad, the script (JSON, see ads.py) and which hooks to export
- adProduct='',adAudience='',adProblem='',adBenefits='',adProof='',adOffer='',adCta='',adNotes='',adType='van-de',adLength='30',
+ adBrief='',adProduct='',adAudience='',adProblem='',adBenefits='',adProof='',adOffer='',adCta='',adNotes='',adType='van-de',adLength='30',
  adKnowledgeFolder='',adMediaFolder=str(find_child(ROOT,'Video - ảnh')),adScript='',adHooks='0,1,2',adVoiceSource='minimax',adAudio='',adAspect='9:16',adEnergy='soi-noi',
  talkFill=True)  # upright video in a 16:9 / 1:1 frame: fill it (crop top and bottom) or keep the whole picture on a blurred copy
 TALK_DENSITY={'it':.18,'vua':.3,'nhieu':.45}
 SECRET_KEYS={'pexelsKey','pixabayKey','minimaxKey'}
+
+def ads_short(name):
+ import ads
+ return ads.short_name(name)
 
 def check_key(source,key):
  """One tiny search on the platform: 'ok', 'invalid', 'busy' (rate-limited / anti-bot page) or 'offline'."""
@@ -156,6 +160,10 @@ class Studio:
  def choose(self,kind):
   if not self.window:return dict(error='Hộp thoại chọn file chỉ có trong cửa sổ app. Hãy dán đường dẫn vào ô.')
   import webview
+  if kind=='adFiles':  # product photos / videos picked one by one: copied into the ad's media folder
+   picked=self.window.create_file_dialog(webview.FileDialog.OPEN if getattr(webview,'FileDialog',None) else webview.OPEN_DIALOG,allow_multiple=True,
+                                         file_types=('Ảnh và video (*.jpg;*.jpeg;*.png;*.webp;*.heic;*.mp4;*.mov;*.m4v;*.mkv;*.webm)','Tất cả (*.*)'))
+   return self.ad_add_files(list(picked or []))
   keys={'media':'mediaFolder','output':'outputFolder','audio':'audio','music':'music','talkVideo':'talkVideo','talkBroll':'talkBrollFolder','adMedia':'adMediaFolder','adKnowledge':'adKnowledgeFolder','adAudio':'adAudio'}
   if kind not in keys:return dict(error='Không rõ cần chọn gì.')
   folder=kind in ('media','output','talkBroll','adMedia','adKnowledge')
@@ -241,14 +249,14 @@ class Studio:
    args=[str(ENGINE/'renderer.py'),str(job_file)];log='render.log';cleanup=lambda:job_file.unlink(missing_ok=True)
   elif task in ('ad-script','ad-render'):
    import ads
-   if not s['adProduct'].strip():return self.fail('Hãy nhập tên sản phẩm.')
+   if task=='ad-script' and not s['adProduct'].strip() and not s['adBrief'].strip():return self.fail('Hãy dán brief (nội dung mẫu) hoặc nhập tên sản phẩm.')
    if task=='ad-script':
     out=self.cache()/'ad-script.json'
-    job=dict({k:s[k] for k in ads.BRIEF},adType=s['adType'],adLength=s['adLength'],adEnergy=s['adEnergy'],adKnowledgeFolder=s['adKnowledgeFolder'],scriptFile=str(out))
+    job=dict({k:s[k] for k in ads.BRIEF},adType=s['adType'],adLength=s['adLength'],adEnergy=s['adEnergy'],adKnowledgeFolder=s['adKnowledgeFolder'],adMediaFolder=s['adMediaFolder'],cacheFolder=str(self.cache()),scriptFile=str(out))
    else:
     script=self.ad_script()
     if not script:return self.fail('Chưa có kịch bản. Bấm “AI viết kịch bản” hoặc “Tự viết theo khung”.')
-    folder=Path(s['adMediaFolder'])
+    folder=Path(s['adMediaFolder'] or '/nonexistent-ghepvideo')
     if not folder.is_dir() or not any(p.suffix.lower() in MEDIA_EXT for p in folder.iterdir() if p.is_file()):return self.fail('Hãy chọn thư mục có ảnh hoặc video sản phẩm.')
     if not Path(s['outputFolder']).is_dir():return self.fail('Hãy chọn thư mục lưu video (ở trang Ghép ảnh + lời đọc, mục 03).')
     if s['adVoiceSource']=='minimax':
@@ -262,7 +270,8 @@ class Studio:
                   stockEnabled=False,useTimeline=False,context=s['adProduct'],aiPython=sys.executable)
     try:hooks=[int(x) for x in s['adHooks'].split(',') if x.strip().isdigit()]
     except ValueError:hooks=[0]
-    job=dict(script=script,hooks=hooks or [0],adProduct=s['adProduct'],adVoiceSource=s['adVoiceSource'],adAudio=s['adAudio'],adEnergy=s['adEnergy'],minimaxVoice=s['minimaxVoice'],minimaxModel=s['minimaxModel'],
+    product=s['adProduct'].strip() or ads.short_name((script.get('phan_tich') or {}).get('san_pham','')) or 'Quảng cáo'
+    job=dict(script=script,hooks=hooks or [0],adProduct=product,adVoiceSource=s['adVoiceSource'],adAudio=s['adAudio'],adEnergy=s['adEnergy'],minimaxVoice=s['minimaxVoice'],minimaxModel=s['minimaxModel'],
              minimaxSpeed=s['minimaxSpeed'],minimaxRegion=s['minimaxRegion'],outputFolder=s['outputFolder'],cacheFolder=str(self.cache()),preview=bool(preview),render=render)
    job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
    args=[str(ENGINE/'ads.py'),task[3:],str(job_file)];log='ads.log';cleanup=lambda:job_file.unlink(missing_ok=True)
@@ -312,7 +321,12 @@ class Studio:
     if msg.get('message'):self.job['status']=msg['message']
     if msg.get('error'):self.job['error']=msg['message']
     if msg.get('output'):self.job['result']=msg['output']
-    if msg.get('adScript') and Path(msg['adScript']).is_file():self.settings['adScript']=Path(msg['adScript']).read_text(encoding='utf-8');self.save()  # the AI's script goes to the editor
+    if msg.get('adScript') and Path(msg['adScript']).is_file():  # the AI's script goes to the editor; a product name read from the brief fills an empty field
+     self.settings['adScript']=Path(msg['adScript']).read_text(encoding='utf-8')
+     try:name=(json.loads(self.settings['adScript']).get('phan_tich') or {}).get('san_pham','').strip()
+     except Exception:name=''
+     if name and not self.settings['adProduct'].strip():self.settings['adProduct']=ads_short(name)
+     self.save()
     if isinstance(msg.get('adResults'),list):self.ad_results=[r for r in msg['adResults'] if isinstance(r,dict) and Path(str(r.get('path',''))).is_file()]
     if msg.get('audio') and Path(msg['audio']).is_file():self.settings['audio']=msg['audio'];self.save()  # the new voice-over becomes the recording
   code=proc.wait();logf.close();cleanup()
@@ -405,10 +419,11 @@ class Studio:
 
  def ad_state(self):
   import ads
-  folder=Path(self.settings['adMediaFolder']);kb=Path(self.settings['adKnowledgeFolder']) if self.settings['adKnowledgeFolder'] else None
+  folder=Path(self.settings['adMediaFolder'] or '/nonexistent-ghepvideo');kb=Path(self.settings['adKnowledgeFolder']) if self.settings['adKnowledgeFolder'] else None
   try:count=sum(1 for p in folder.iterdir() if p.is_file() and not p.name.startswith(('.','_')) and p.suffix.lower() in MEDIA_EXT)
   except OSError:count=0
-  return dict(meta=ads.meta(),script=self.ad_script(),mediaCount=count,analysed=(folder/'_phan-tich.json').is_file(),knowledgeOk=bool(kb and kb.is_dir()),
+  media=[dict(name=f['name'],kind=f['kind'],thumb=f['thumb']) for f in self.media_list(folder)][:60] if count else []
+  return dict(meta=ads.meta(),script=self.ad_script(),mediaCount=count,media=media,analysed=(folder/'_phan-tich.json').is_file(),knowledgeOk=bool(kb and kb.is_dir()),
               wordsPerSecond=ads.WORDS_PER_SECOND,results=[dict(r,url=self.url(r['path'])) for r in self.ad_results if Path(r['path']).is_file()])
 
  def ad_save(self,script):
@@ -419,6 +434,22 @@ class Studio:
    old=self.ad_script() or {}
    self.settings['adScript']=json.dumps(dict(ads.clean(script,self.settings['adType'],int(self.settings['adLength'] or 30)),nguon=old.get('nguon') or []),ensure_ascii=False)
   self.save();return self.ad_state()
+
+ def ad_add_files(self,paths):
+  """Copy picked photos/videos into the ad's media folder (a new 'Tư liệu quảng cáo' folder when none is chosen). Never overwrites."""
+  import shutil
+  paths=[Path(p) for p in paths if Path(p).is_file() and Path(p).suffix.lower() in MEDIA_EXT]
+  if not paths:return self.ad_state()
+  folder=Path(self.settings['adMediaFolder']) if self.settings['adMediaFolder'].strip() else None  # Path('') would be the app's own folder
+  if not folder or not folder.is_dir():
+   base=Path(self.settings['outputFolder']) if Path(self.settings['outputFolder']).is_dir() else ROOT
+   folder=base/'Tư liệu quảng cáo';folder.mkdir(parents=True,exist_ok=True);self.settings['adMediaFolder']=str(folder);self.save()
+  for p in paths:
+   if p.parent.resolve()==folder.resolve():continue
+   dest=folder/p.name;n=2
+   while dest.exists():dest=folder/f'{p.stem} ({n}){p.suffix}';n+=1
+   shutil.copy2(p,dest)
+  return self.ad_state()
 
  def ad_skeleton(self):
   import ads
@@ -789,7 +820,7 @@ API={'state':lambda b:studio.state(),'set':lambda b:studio.set(b.get('values',{}
  'thumbSave':lambda b:studio.thumb_save(b.get('ids',[]),b.get('text',True)),'thumbReveal':lambda b:studio.reveal(studio.thumb_saved),
  'timelineState':lambda b:studio.timeline_state(),'timelineEdit':lambda b:studio.timeline_edit(b),'timelineReset':lambda b:studio.timeline_reset(),
  'mediaList':lambda b:dict(files=studio.media_list(studio.settings['talkBrollFolder' if b.get('which')=='broll' else 'mediaFolder'])),
- 'adState':lambda b:studio.ad_state(),'adSave':lambda b:studio.ad_save(b.get('script')),'adSkeleton':lambda b:studio.ad_skeleton(),
+ 'adState':lambda b:studio.ad_state(),'adSave':lambda b:studio.ad_save(b.get('script')),'adSkeleton':lambda b:studio.ad_skeleton(),'adAddFiles':lambda b:studio.ad_add_files(b.get('paths') or []),
  'projects':lambda b:studio.projects(),'projectOpen':lambda b:studio.project_open(b.get('kind'),b.get('id','')),
  'projectRename':lambda b:studio.project_rename(b.get('kind'),b.get('id',''),b.get('name','')),'projectDelete':lambda b:studio.project_delete(b.get('kind'),b.get('id',''))}
 

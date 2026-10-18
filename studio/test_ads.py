@@ -66,4 +66,22 @@ class AdsTests(unittest.TestCase):
         self.assertEqual((sent[0]['voice_setting']['emotion'], sent[0]['voice_setting']['pitch'], sent[0]['voice_setting']['speed']), ('happy', 1, 1.06))
         self.assertNotIn('emotion', sent[1]['voice_setting']); self.assertEqual(sent[1]['voice_setting']['pitch'], 0)
 
+    def test_product_ad_reads_the_brief_and_the_pictures(self):
+        q = ads.question(dict(adBrief='Amino chai 1 lít cho vườn sầu riêng. Cây suy kiệt sau thu hoạch.'), 'san-pham', 30, [], 'soi-noi', '- a.jpg: chai Amino trên bàn', 2)
+        for want in ('BRIEF / NỘI DUNG MẪU', 'cây suy kiệt'.capitalize()[:4], 'Có 2 ảnh sản phẩm', 'chai Amino trên bàn', 'Bước 2: hook lấy từ nỗi đau', '"phan_tich"'): self.assertIn(want, q)
+        self.assertNotIn('Bước 2: hook', ads.question(dict(adProduct='X'), 'van-de', 30, []))
+        self.assertEqual([p['vai'] for p in ads.skeleton('san-pham', 30, {})['phan']], ['Công dụng', 'Lợi ích'])
+        u = ads.clean(dict(phan_tich=dict(san_pham='AMINO PLUS – phân bón axit amin', noi_dau=['lá vàng', ''], loi_ich='không phải danh sách')))['phan_tich']
+        self.assertEqual((u['noi_dau'], u['loi_ich'], u['cong_dung']), (['lá vàng'], [], []))
+        self.assertEqual(ads.short_name(u['san_pham']), 'AMINO PLUS'); self.assertEqual(ads.short_name('Organic Pro (1 lít)'), 'Organic Pro')
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / 'media'; root.mkdir()
+            from PIL import Image
+            for i in range(6): Image.new('RGB', (1600, 900), (40 * i, 90, 120)).save(root / f'anh {i}.jpg')
+            (root / '_phan-tich.json').write_text('{"files": {"anh 0.jpg": {"mo_ta": "chai trên bàn gỗ"}}}', encoding='utf-8')
+            pics, media = ads.look_at(root, Path(tmp) / 'cache')
+            self.assertEqual(len(pics), 4); self.assertIn('chai trên bàn gỗ', media)
+            self.assertLessEqual(max(Image.open(pics[0]).size), 768)
+            self.assertEqual(ads.look_at(Path(tmp) / 'khong-co', Path(tmp)), ([], ''))
+
 if __name__ == '__main__': unittest.main()

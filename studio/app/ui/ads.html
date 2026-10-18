@@ -22,8 +22,13 @@
 
 <main id="main" class="ads">
   <section class="panel a-brief" aria-labelledby="a1">
-    <h2 id="a1"><span class="num">01</span>Sản phẩm &amp; ưu đãi</h2>
-    <label class="afield"><span>Sản phẩm <b>*</b></span><input type="text" data-text="adProduct" placeholder="vd: Organic Pro 1 lít"></label>
+    <h2 id="a1"><span class="num">01</span>Brief &amp; sản phẩm</h2>
+    <label class="afield"><span>Nội dung mẫu (Brief)</span><textarea data-text="adBrief" rows="7" placeholder="Dán brief vào đây: sản phẩm là gì, bán cho ai, khách đang gặp vấn đề gì, công dụng, ưu đãi, cách liên hệ… Viết tự do, AI sẽ tự đọc và rút ý."></textarea></label>
+    <div class="row gap wrap"><button class="btn small primary" data-choose="adFiles">＋ Thêm ảnh / video sản phẩm</button><button class="btn small" data-choose="adMedia">📁 Chọn cả thư mục</button></div>
+    <p class="hint" id="mediaNote"></p>
+    <div class="admedia" id="adMediaGrid"></div>
+    <details class="adinfo" id="adInfo"><summary>Thông tin chi tiết <small>(tuỳ chọn, bổ sung cho brief)</small></summary>
+    <label class="afield"><span>Sản phẩm</span><input type="text" data-text="adProduct" placeholder="vd: Organic Pro 1 lít"></label>
     <label class="afield"><span>Khách hàng</span><input type="text" data-text="adAudience" placeholder="vd: nhà vườn sầu riêng miền Tây"></label>
     <label class="afield"><span>Vấn đề của khách</span><textarea data-text="adProblem" rows="2" placeholder="vd: bón phân đủ mà cây vẫn èo uột, đất chai, rễ ít"></textarea></label>
     <label class="afield"><span>Lợi ích / điểm mạnh</span><textarea data-text="adBenefits" rows="3" placeholder="Mỗi dòng một ý. vd: cải tạo đất · tạo môi trường cho rễ mới · cây ăn phân tốt hơn"></textarea></label>
@@ -31,6 +36,7 @@
     <label class="afield"><span>Ưu đãi</span><input type="text" data-text="adOffer" placeholder="vd: mua 3 chai tặng 1 chai PH Pro"></label>
     <label class="afield"><span>Lời kêu gọi</span><input type="text" data-text="adCta" placeholder="vd: Nhắn Zalo 08xx để được tư vấn"></label>
     <label class="afield"><span>Lưu ý riêng</span><textarea data-text="adNotes" rows="2" placeholder="vd: xưng em, gọi anh chị; không đọc tên chất và phần trăm"></textarea></label>
+    </details>
     <hr>
     <button class="filebox" data-choose="adKnowledge"><span class="ico">🧠</span><span class="fb-text"><b>Thư mục kiến thức (tuỳ chọn)</b><small data-path="adKnowledgeFolder">Chọn thư mục ghi chú về sản phẩm (.md)</small></span><span class="fb-go">＋</span></button>
     <p class="hint">AI tìm trong thư mục này các ghi chú nói về sản phẩm để viết đúng sự thật. Đoạn ghi chú liên quan sẽ được gửi lên Claude / ChatGPT của bạn. <a href="#" id="kbClear">Bỏ chọn</a></p>
@@ -48,6 +54,7 @@
       <span class="hint" id="aiNote"></span>
     </div>
     <div id="scriptBox" hidden>
+      <div class="understood" id="understood" hidden></div>
       <div class="row between"><h3>Hook 3 giây đầu <small>chọn tối đa 3, mỗi hook xuất một video</small></h3><button class="btn small" id="addHook">＋ Hook</button></div>
       <div class="hooks" id="hooks"></div>
       <div class="row between"><h3>Các phần của video</h3><span class="hint" id="lenNote"></span></div>
@@ -67,8 +74,7 @@
 
   <section class="panel a-out" aria-labelledby="a3">
     <h2 id="a3"><span class="num">03</span>Tư liệu, giọng đọc &amp; xuất</h2>
-    <button class="filebox" data-choose="adMedia"><span class="ico">🖼️</span><span class="fb-text"><b>Ảnh &amp; video sản phẩm</b><small data-path="adMediaFolder">Chọn thư mục</small></span><span class="fb-go">＋</span></button>
-    <p class="hint" id="mediaNote"></p>
+    <p class="hint">Ảnh &amp; video sản phẩm: <b data-path="adMediaFolder">chưa chọn</b> (thêm ở mục 01).</p>
     <div class="seg full" data-seg="adVoiceSource"><button data-value="minimax">🗣 Giọng MiniMax</button><button data-value="file">🎤 File ghi âm</button></div>
     <div id="voiceTts">
       <label class="afield"><span>Voice ID</span><input type="text" data-text="minimaxVoice" placeholder="Voice ID giọng đã clone"></label>

@@ -26,7 +26,9 @@ function renderState(st) {
   const prev = S && S.job; S = st; const s = st.settings, job = st.job;
   $$('[data-text]').forEach(el => { if (document.activeElement !== el && !el.dataset.dirty) el.value = s[el.dataset.text] ?? ''; });
   $$('[data-seg]').forEach(seg => $$('button', seg).forEach(b => b.classList.toggle('on', s[seg.dataset.seg] === b.dataset.value)));
-  $$('[data-path]').forEach(el => { const p = s[el.dataset.path]; el.textContent = p ? base(p) : el.dataset.empty; el.closest('button').title = p || ''; });
+  $$('[data-path]').forEach(el => { const p = s[el.dataset.path]; el.textContent = p ? base(p) : el.dataset.empty; el.closest('button, p').title = p || ''; });
+  $('#aiWrite').textContent = s.adType === 'san-pham' ? '✨ Tạo nội dung' : '✨ AI viết kịch bản';
+  if (s.adType !== 'san-pham' && !s.adBrief && !$('#adInfo').dataset.touched) $('#adInfo').open = true;
   $$('#adTypes button').forEach(b => { b.classList.toggle('on', b.dataset.type === s.adType); b.setAttribute('aria-checked', b.dataset.type === s.adType); });
   const tts = s.adVoiceSource === 'minimax'; $('#voiceTts').hidden = !tts; $('#voiceFile').hidden = tts;
   $('#keyNote').textContent = s.minimaxKeySet ? `Đã có API key MiniMax (${s.minimaxKeyHint}). Mỗi phần chỉ tạo giọng một lần, các bản khác hook dùng chung phần thân.`
@@ -53,9 +55,19 @@ function renderAds(a) {
   }
   const key = JSON.stringify(a.script);
   if (key !== shown && !document.activeElement.closest('#scriptBox')) { shown = key; script = a.script ? JSON.parse(key) : null; paintScript(); }
-  paintNotes(); paintResults();
+  paintNotes(); paintMedia(); paintResults();
 }
 
+function paintMedia() {
+  const m = A.media || [];
+  $('#adMediaGrid').innerHTML = m.map(f => `<figure title="${esc(f.name)}"><img loading="lazy" src="${f.thumb}" alt=""><figcaption>${f.kind === 'video' ? '▶ ' : ''}${esc(f.name)}</figcaption></figure>`).join('');
+}
+function paintUnderstood() {
+  const a = script && script.phan_tich, box = $('#understood');
+  const rows = a ? [['Nỗi đau / vấn đề', a.noi_dau], ['Khách mong muốn', a.mong_muon], ['Công dụng', a.cong_dung], ['Lợi ích cho khách', a.loi_ich]].filter(r => r[1].length) : [];
+  box.hidden = !rows.length;
+  box.innerHTML = rows.length ? `<b>AI hiểu brief${a.san_pham ? ` · ${esc(a.san_pham)}` : ''}${a.khach_hang ? ` · cho ${esc(a.khach_hang)}` : ''}</b>` + rows.map(([k, v]) => `<div><span>${k}</span><ul>${v.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('') : '';
+}
 function paintNotes() {
   $('#mediaNote').textContent = A.mediaCount ? `${A.mediaCount} ảnh/video${A.analysed ? ' · đã phân tích nội dung' : ' · chưa phân tích: app tự phân tích khi xuất để chọn cảnh đúng lời đọc'}` : 'Thư mục chưa có ảnh/video.';
   if (!script) return;
@@ -69,6 +81,7 @@ function paintNotes() {
 function paintScript() {
   $('#scriptBox').hidden = !script; $('#noScript').hidden = !!script;
   if (!script) return;
+  paintUnderstood();
   const sel = picked();
   $('#hooks').innerHTML = script.hooks.map((h, i) => `<div class="hook ${sel.includes(i) ? 'on' : ''}" data-i="${i}">
       <label class="hpick"><input type="checkbox" ${sel.includes(i) ? 'checked' : ''} aria-label="Xuất video với hook ${i + 1}"><b>${'ABCDEF'[i]}</b></label>
@@ -164,9 +177,14 @@ async function boot() {
   $$('[data-seg]').forEach(seg => seg.addEventListener('click', e => { const b = e.target.closest('button[data-value]'); if (b) set({[seg.dataset.seg]: b.dataset.value}); }));
   $$('[data-choose]').forEach(b => b.addEventListener('click', async () => {
     const out = await api('choose', {kind: b.dataset.choose});
-    if (out.error) { const key = $('[data-path]', b).dataset.path, path = prompt('Dán đường dẫn đầy đủ:', S.settings[key] || ''); if (path) await set({[key]: path.trim()}); }
-    api('adState');
+    if (out.error) {  // no file dialog (opened in a browser): paste paths instead
+      const kind = b.dataset.choose;
+      if (kind === 'adFiles') { const paths = prompt('Dán đường dẫn ảnh/video (mỗi file cách nhau bằng dấu ;):', ''); if (paths) await api('adAddFiles', {paths: paths.split(';').map(x => x.trim()).filter(Boolean)}); return; }
+      const key = {adMedia: 'adMediaFolder', adKnowledge: 'adKnowledgeFolder', adAudio: 'adAudio'}[kind], path = prompt('Dán đường dẫn đầy đủ:', S.settings[key] || ''); if (path) await set({[key]: path.trim()});
+    }
+    await api('state'); api('adState');
   }));
+  $('#adInfo').addEventListener('toggle', () => $('#adInfo').dataset.touched = '1');
   $('#kbClear').addEventListener('click', e => { e.preventDefault(); set({adKnowledgeFolder: ''}); });
   $('#adTypes').addEventListener('click', e => { const b = e.target.closest('button[data-type]'); if (b) set({adType: b.dataset.type}); });
   $('#aiWrite').addEventListener('click', () => { if (!script || confirm('AI viết lại sẽ thay kịch bản hiện tại. Tiếp tục?')) start('ad-script'); });
