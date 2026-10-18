@@ -15,7 +15,9 @@ MODELS = ('speech-2.8-hd', 'speech-2.8-turbo', 'speech-2.6-hd', 'speech-2.6-turb
 PIECE = 2500  # characters per request (the API allows 10,000; smaller pieces fail less and show progress)
 ERRORS = {1002: 'MiniMax đang giới hạn tốc độ. Chờ 1 phút rồi thử lại.', 1004: 'API key MiniMax không đúng hoặc đã hết hạn.',
           1008: 'Tài khoản MiniMax không đủ số dư.', 1039: 'MiniMax đang giới hạn tốc độ. Chờ 1 phút rồi thử lại.',
-          1042: 'Nội dung có quá nhiều ký tự lạ.', 2013: 'Thông tin gửi lên chưa đúng (kiểm tra Voice ID và mẫu giọng).'}
+          1042: 'Nội dung có quá nhiều ký tự lạ.', 2013: 'Thông tin gửi lên chưa đúng (kiểm tra Voice ID và mẫu giọng).',
+          2049: 'API key MiniMax không đúng (kiểm tra đã dán đủ key, đúng khu vực Quốc tế / Trung Quốc).',
+          2056: 'Gói MiniMax của key này đã hết lượt tạo giọng, hoặc gói (Token / Coding Plan) không có phần giọng nói. Kiểm tra gói trên trang MiniMax, hoặc dùng API key trả theo lượt.'}
 
 def emit(progress, message, **extra):
     print(json.dumps(dict(progress=progress, message=message, **extra), ensure_ascii=False), flush=True)
