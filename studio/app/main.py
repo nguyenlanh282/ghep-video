@@ -71,6 +71,7 @@ DEFAULTS=dict(mediaFolder=str(find_child(ROOT,'Video - ảnh')),audio=first_audi
  # Video quảng cáo: the product brief, the kind of ad, the script (JSON, see ads.py) and which hooks to export
  adBrief='',adProduct='',adAudience='',adProblem='',adBenefits='',adProof='',adOffer='',adCta='',adNotes='',adType='van-de',adLength='30',
  adKnowledgeFolder='',adMediaFolder=str(find_child(ROOT,'Video - ảnh')),adScript='',adHooks='0,1,2',adVoiceSource='minimax',adAudio='',adAspect='9:16',adEnergy='soi-noi',
+ talkOutputFolder='',adOutputFolder='',adResolution='1080',  # each mode can save somewhere else ('' = the common output folder)
  talkFill=True)  # upright video in a 16:9 / 1:1 frame: fill it (crop top and bottom) or keep the whole picture on a blurred copy
 AD_BIN='.da-xoa'  # photos/videos taken out of an ad are kept here (hidden), not deleted
 TALK_DENSITY={'it':.18,'vua':.3,'nhieu':.45}
@@ -172,9 +173,9 @@ class Studio:
    picked=self.window.create_file_dialog(webview.FileDialog.OPEN if getattr(webview,'FileDialog',None) else webview.OPEN_DIALOG,allow_multiple=True,
                                          file_types=('Ảnh và video (*.jpg;*.jpeg;*.png;*.webp;*.heic;*.mp4;*.mov;*.m4v;*.mkv;*.webm)','Tất cả (*.*)'))
    return self.ad_add_files(list(picked or []))
-  keys={'media':'mediaFolder','output':'outputFolder','audio':'audio','music':'music','talkVideo':'talkVideo','talkBroll':'talkBrollFolder','adMedia':'adMediaFolder','adKnowledge':'adKnowledgeFolder','adAudio':'adAudio'}
+  keys={'media':'mediaFolder','output':'outputFolder','audio':'audio','music':'music','talkVideo':'talkVideo','talkBroll':'talkBrollFolder','adMedia':'adMediaFolder','adKnowledge':'adKnowledgeFolder','adAudio':'adAudio','talkOutput':'talkOutputFolder','adOutput':'adOutputFolder'}
   if kind not in keys:return dict(error='Không rõ cần chọn gì.')
-  folder=kind in ('media','output','talkBroll','adMedia','adKnowledge')
+  folder=kind in ('media','output','talkBroll','adMedia','adKnowledge','talkOutput','adOutput')
   current=self.settings.get(keys[kind]) or str(ROOT)
   start=current if Path(current).is_dir() else str(Path(current).parent) if Path(current).parent.is_dir() else str(ROOT)
   dialog=getattr(webview,'FileDialog',None)
@@ -231,7 +232,7 @@ class Studio:
    if task=='talk-render' and not self.talk_project():return self.fail('Hãy bấm “Phân tích video” trước.')
    job=dict(video=self.talk_videos()[0],videos=self.talk_videos(),grade=self.grade(),projectDir=str(self.talk_dir()),cacheFolder=str(self.cache()),brollFolder=s['talkBrollFolder'],broll=s['talkBroll'],
             brollDensity=TALK_DENSITY.get(s['talkDensity'],.3),stockEnabled=s['stockEnabled'],stockSource=s['stockSource'],cutRetakes=s['talkRetakes'],
-            fixesText=s['fixesText'],outputFolder=s['outputFolder'],titleStyle=s['titleStyle'],titleSeconds=s['titleSeconds'],titleScale=s['titleScale'],titleEffect=s['titleEffect'],subScale=s['subScale'],subFont=s['subFont'],aiSpelling=s['aiSpelling'],subStyle=s['subStyle'],captionY=s['captionY'],
+            fixesText=s['fixesText'],outputFolder=self.out_folder('talk'),titleStyle=s['titleStyle'],titleSeconds=s['titleSeconds'],titleScale=s['titleScale'],titleEffect=s['titleEffect'],subScale=s['subScale'],subFont=s['subFont'],aiSpelling=s['aiSpelling'],subStyle=s['subStyle'],captionY=s['captionY'],
             aspects=[a for a in s['talkAspects'].split(',') if a],exportShorts=s['talkShorts'],talkFill=s['talkFill'],punchIn=s['talkPunchIn'],denoise=s['talkDenoise'],
             highlightKeywords=s['talkKeywords'],voiceVolume=s['voiceVolume'],normalizeVoice=s['normalizeVoice'],music=s['music'],musicVolume=s['musicVolume'],aiPython=sys.executable)
    if task=='talk-render':
@@ -266,7 +267,7 @@ class Studio:
     if not script:return self.fail('Chưa có kịch bản. Bấm “AI viết kịch bản” hoặc “Tự viết theo khung”.')
     folder=Path(s['adMediaFolder'] or '/nonexistent-ghepvideo')
     if not folder.is_dir() or not any(p.suffix.lower() in MEDIA_EXT for p in folder.iterdir() if p.is_file()):return self.fail('Hãy chọn thư mục có ảnh hoặc video sản phẩm.')
-    if not Path(s['outputFolder']).is_dir():return self.fail('Hãy chọn thư mục lưu video (ở trang Ghép ảnh + lời đọc, mục 03).')
+    if not Path(self.out_folder('ad')).is_dir():return self.fail('Hãy chọn thư mục lưu video quảng cáo (mục 03).')
     if s['adVoiceSource']=='minimax' and not s['ttsFallback']:  # with the fallback on, Edge reads when MiniMax cannot
      if not s['minimaxKey']:return self.fail('Hãy dán API key MiniMax rồi bấm Lưu (hoặc đổi sang giọng Edge / File ghi âm).')
      if not s['minimaxVoice'].strip():return self.fail('Hãy nhập Voice ID MiniMax.')
@@ -274,13 +275,13 @@ class Studio:
     analysed=(folder/'_phan-tich.json').is_file();ai_ready=self.ai_state()['ready'];match=analysed or ai_ready
     render={k:s[k] for k in ('music','titleStyle','subStyle','musicVolume','resolution','removeSilence','faceAwareFill','fixesText','voiceVolume','normalizeVoice','stockSource','captionY','titleScale','titleEffect','subScale','subFont','aiSpelling')}
     # Ads cut faster than a story (a new picture about every 2 seconds) and always plan afresh from the script.
-    render.update(mediaFolder=str(folder),aspect=s['adAspect'],shotSeconds=2.0,grade=self.grade(),cacheFolder=str(self.cache()),matchScenes=match,autoAnalyze=match and ai_ready,
+    render.update(mediaFolder=str(folder),aspect=s['adAspect'],resolution=s['adResolution'],shotSeconds=2.0,grade=self.grade(),cacheFolder=str(self.cache()),matchScenes=match,autoAnalyze=match and ai_ready,
                   stockEnabled=False,useTimeline=False,context=s['adProduct'],aiPython=sys.executable)
     try:hooks=[int(x) for x in s['adHooks'].split(',') if x.strip().isdigit()]
     except ValueError:hooks=[0]
     product=s['adProduct'].strip() or ads.short_name((script.get('phan_tich') or {}).get('san_pham','')) or 'Quảng cáo'
     job=dict(script=script,hooks=hooks or [0],adProduct=product,adVoiceSource=s['adVoiceSource'],adAudio=s['adAudio'],adEnergy=s['adEnergy'],ttsFallback=s['ttsFallback'],edgeVoice=s['edgeVoice'],minimaxVoice=s['minimaxVoice'],minimaxModel=s['minimaxModel'],
-             minimaxSpeed=s['minimaxSpeed'],minimaxRegion=s['minimaxRegion'],outputFolder=s['outputFolder'],cacheFolder=str(self.cache()),preview=bool(preview),render=render)
+             minimaxSpeed=s['minimaxSpeed'],minimaxRegion=s['minimaxRegion'],outputFolder=self.out_folder('ad'),cacheFolder=str(self.cache()),preview=bool(preview),render=render)
    job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
    args=[str(ENGINE/'ads.py'),task[3:],str(job_file)];log='ads.log';cleanup=lambda:job_file.unlink(missing_ok=True)
   elif task=='tools':
@@ -320,6 +321,11 @@ class Studio:
    m=sys.modules.get(name)
    if m is not None and hasattr(m,'FFMPEG'):m.FFMPEG=ff
    if m is not None and hasattr(m,'FFPROBE'):m.FFPROBE=fp
+
+ def out_folder(self,mode):
+  """Where a mode saves its videos: its own folder when one is chosen and exists, else the common one."""
+  own=self.settings.get({'talk':'talkOutputFolder','ad':'adOutputFolder'}.get(mode,''),'')
+  return own if own and Path(own).is_dir() else self.settings['outputFolder']
 
  def fail(self,message):
   self.job.update(error=message);return self.state()

@@ -58,12 +58,22 @@ function buildValueControls() {
   }
 }
 
+/* Own output folder of this mode: show where videos will really go, and let the user go back to the common folder. */
+function paintOut(s) {
+  document.querySelectorAll('[data-out]').forEach(el => {
+    const own = s[el.dataset.out], common = s.outputFolder || '';
+    el.innerHTML = own ? `Lưu tại: ${own.split(/[\\/]/).pop()} · <a href="#" data-clear-out="${el.dataset.out}">dùng thư mục chung</a>` : `Đang lưu vào thư mục chung: ${common.split(/[\\/]/).pop() || 'chưa chọn'}`;
+  });
+}
+document.addEventListener('click', e => { const a = e.target.closest('[data-clear-out]'); if (a) { e.preventDefault(); set({[a.dataset.clearOut]: ''}); } });
+
 function renderState(st) {
+  paintOut(st.settings);
   const prev = S && S.job; S = st; const s = st.settings, job = st.job;
   $$('input[type=checkbox][data-key]').forEach(cb => cb.checked = !!s[cb.dataset.key]);
   $$('[data-seg]').forEach(seg => $$('button', seg).forEach(b => b.classList.toggle('on', s[seg.dataset.seg] === b.dataset.value)));
   $$('[data-choice]').forEach(box => $$('button', box).forEach(b => b.classList.toggle('on', s[box.dataset.choice] === b.dataset.value)));
-  $$('[data-path]').forEach(el => { const p = s[el.dataset.path]; if (p) { el.textContent = base(p); el.closest('button').title = p; } });
+  $$('[data-path]').forEach(el => { const p = s[el.dataset.path]; if (el.dataset.empty === undefined) el.dataset.empty = el.textContent; el.textContent = p ? base(p) : el.dataset.empty; el.closest('button').title = p || ''; });
   renderVideos(s.talkVideos);
   $('#stockKeyWarn').hidden = !(s.stockEnabled && !s.pexelsKeySet && !s.pixabayKeySet);
   $('#shorts').classList.toggle('off', !s.talkShorts); $('#shortsOff').hidden = !!s.talkShorts;
@@ -265,7 +275,7 @@ function wire() {
   $$('[data-choose]').forEach(b => b.addEventListener('click', async () => {
     const out = await api('choose', {kind: b.dataset.choose});
     if (out.error) {
-      const key = b.dataset.choose === 'talkVideo' ? 'talkVideo' : 'talkBrollFolder';
+      const key = {talkVideo: 'talkVideo', talkOutput: 'talkOutputFolder'}[b.dataset.choose] || 'talkBrollFolder';
       const path = prompt('Dán đường dẫn đầy đủ:', key === 'talkVideo' ? '' : S.settings[key] || '');
       if (path && key === 'talkVideo') { let v = []; try { v = JSON.parse(S.settings.talkVideos || '[]'); } catch (e) {} await set({talkVideos: JSON.stringify([...v, path.trim()])}); }
       else if (path) await set({[key]: path.trim()});

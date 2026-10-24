@@ -22,7 +22,17 @@ const set = values => api('set', {values});
 const picked = () => (S.settings.adHooks || '').split(',').filter(x => /^\d+$/.test(x)).map(Number);
 
 /* ---------- app state: settings, job ---------- */
+/* Own output folder of this mode: show where videos will really go, and let the user go back to the common folder. */
+function paintOut(s) {
+  document.querySelectorAll('[data-out]').forEach(el => {
+    const own = s[el.dataset.out], common = s.outputFolder || '';
+    el.innerHTML = own ? `Lưu tại: ${own.split(/[\\/]/).pop()} · <a href="#" data-clear-out="${el.dataset.out}">dùng thư mục chung</a>` : `Đang lưu vào thư mục chung: ${common.split(/[\\/]/).pop() || 'chưa chọn'}`;
+  });
+}
+document.addEventListener('click', e => { const a = e.target.closest('[data-clear-out]'); if (a) { e.preventDefault(); set({[a.dataset.clearOut]: ''}); } });
+
 function renderState(st) {
+  paintOut(st.settings);
   const prev = S && S.job; S = st; const s = st.settings, job = st.job;
   $$('[data-text]').forEach(el => { if (document.activeElement !== el && !el.dataset.dirty) el.value = s[el.dataset.text] ?? ''; });
   $$('[data-seg]').forEach(seg => $$('button', seg).forEach(b => b.classList.toggle('on', s[seg.dataset.seg] === b.dataset.value)));
@@ -197,7 +207,7 @@ async function boot() {
     if (out.error) {  // no file dialog (opened in a browser): paste paths instead
       const kind = b.dataset.choose;
       if (kind === 'adFiles') { const paths = prompt('Dán đường dẫn ảnh/video (mỗi file cách nhau bằng dấu ;):', ''); if (paths) await api('adAddFiles', {paths: paths.split(';').map(x => x.trim()).filter(Boolean)}); return; }
-      const key = {adMedia: 'adMediaFolder', adKnowledge: 'adKnowledgeFolder', adAudio: 'adAudio'}[kind], path = prompt('Dán đường dẫn đầy đủ:', S.settings[key] || ''); if (path) await set({[key]: path.trim()});
+      const key = {adMedia: 'adMediaFolder', adKnowledge: 'adKnowledgeFolder', adAudio: 'adAudio', adOutput: 'adOutputFolder'}[kind], path = prompt('Dán đường dẫn đầy đủ:', S.settings[key] || ''); if (path) await set({[key]: path.trim()});
     }
     await api('state'); api('adState');
   }));

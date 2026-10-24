@@ -92,7 +92,10 @@
       <p class="hint">Đọc đúng theo kịch bản (hook đầu tiên được chọn, rồi các phần, rồi lời kêu gọi). Các bản khác hook dùng chung file này, chỉ đổi chữ mở đầu.</p>
     </div>
     <div class="row between"><span>Khung hình</span><div class="seg" data-seg="adAspect"><button data-value="9:16">Dọc 9:16</button><button data-value="1:1">Vuông 1:1</button><button data-value="16:9">Ngang 16:9</button></div></div>
-    <p class="hint">Kiểu tiêu đề, kiểu phụ đề, màu, nhạc nền và thư mục lưu lấy theo cài đặt ở trang “Ghép ảnh + lời đọc”.</p>
+    <div class="row between"><span>Độ phân giải</span><div class="seg" data-seg="adResolution"><button data-value="720">720p</button><button data-value="1080">1080p</button></div></div>
+    <button class="filebox" data-choose="adOutput"><span class="ico">📁</span><span class="fb-text"><b>Thư mục lưu video quảng cáo</b><small data-path="adOutputFolder">Chưa chọn: lưu vào thư mục chung</small></span><span class="fb-go">＋</span></button>
+    <p class="hint outnote" data-out="adOutputFolder"></p>
+    <p class="hint">Kiểu tiêu đề, kiểu phụ đề, màu và nhạc nền lấy theo cài đặt ở trang “Ghép ảnh + lời đọc”.</p>
     <hr>
     <div class="row between"><span class="eyebrow" id="pv">XEM VIDEO</span><span class="ratio" id="ratio"></span></div>
     <div class="frame talkframe" id="frame"><video id="player" playsinline controls preload="metadata"></video></div>
