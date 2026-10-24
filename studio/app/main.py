@@ -270,7 +270,7 @@ class Studio:
     if s['adVoiceSource']=='minimax' and not s['ttsFallback']:  # with the fallback on, Edge reads when MiniMax cannot
      if not s['minimaxKey']:return self.fail('Hãy dán API key MiniMax rồi bấm Lưu (hoặc đổi sang giọng Edge / File ghi âm).')
      if not s['minimaxVoice'].strip():return self.fail('Hãy nhập Voice ID MiniMax.')
-    elif not Path(s['adAudio']).is_file():return self.fail('Hãy chọn file ghi âm lời đọc.')
+    elif s['adVoiceSource']=='file' and not Path(s['adAudio']).is_file():return self.fail('Hãy chọn file ghi âm lời đọc (hoặc chọn giọng Edge / MiniMax).')
     analysed=(folder/'_phan-tich.json').is_file();ai_ready=self.ai_state()['ready'];match=analysed or ai_ready
     render={k:s[k] for k in ('music','titleStyle','subStyle','musicVolume','resolution','removeSilence','faceAwareFill','fixesText','voiceVolume','normalizeVoice','stockSource','captionY','titleScale','titleEffect','subScale','subFont','aiSpelling')}
     # Ads cut faster than a story (a new picture about every 2 seconds) and always plan afresh from the script.
