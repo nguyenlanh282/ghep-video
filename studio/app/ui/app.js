@@ -278,7 +278,7 @@ function render(state) {
   const prevJob = S && S.job; S = state; const s = state.settings, job = state.job;
   if (window.Grade) Grade.update(state);
   // Timeline: reload when the project changes (other narration / folder) and when a plan or export finishes.
-  const tlKey = s.audio + '|' + s.mediaFolder + '|' + s.aspect, finished = prevJob && prevJob.running && !job.running && ['plan', 'render'].includes(job.task);
+  const tlKey = s.audio + '|' + s.mediaFolder + '|' + s.aspect + '|' + s.loopMedia, finished = prevJob && prevJob.running && !job.running && ['plan', 'render'].includes(job.task);
   if (timeline && (tlKey !== timelineKey || finished)) { timelineKey = tlKey; timeline.refresh(); }
   paintAspect();
   $$('input[type=checkbox][data-key]').forEach(cb => cb.checked = !!s[cb.dataset.key]);
@@ -306,9 +306,9 @@ function render(state) {
   $('#analysisInfo').textContent = (analysed ? `${state.analyzedCount}/${state.mediaCount} file đã phân tích · ${state.sceneCount} đoạn cảnh.` : 'AI xem từng ảnh/video để hiểu nội dung, đặt tên và ghi chú từng đoạn cảnh.')
     + (left && aiReady && s.matchScenes ? ` Còn ${left} file chưa phân tích: khi xuất, AI tự xem trước rồi mới ghép.` : left && !aiReady ? ' Cần Claude/ChatGPT để phân tích.' : '');
   const match = $('input[data-key=matchScenes]'), stock = $('input[data-key=stockEnabled]');
-  match.disabled = !canMatch; match.closest('.switch').classList.toggle('disabled', !canMatch);
-  stock.disabled = !canMatch || !s.matchScenes; stock.closest('.switch').classList.toggle('disabled', stock.disabled);
-  $('#stockBox').hidden = !(s.stockEnabled && s.matchScenes && canMatch);
+  match.disabled = !canMatch || s.loopMedia; match.closest('.switch').classList.toggle('disabled', match.disabled); $('#loopNote').hidden = !s.loopMedia;
+  stock.disabled = !canMatch || !s.matchScenes || s.loopMedia; stock.closest('.switch').classList.toggle('disabled', stock.disabled);
+  $('#stockBox').hidden = !(s.stockEnabled && s.matchScenes && canMatch && !s.loopMedia);
   $('#stockKeyWarn').hidden = !!(s.pexelsKeySet || s.pixabayKeySet);
   // Opened from "Cấu hình key" on the Video chia sẻ page: show the key boxes even if the switches here are off.
   if (location.hash === '#keys' && !render.keysShown) {

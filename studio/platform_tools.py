@@ -28,6 +28,12 @@ def tool(name):
   if candidate and Path(candidate).is_file():return str(candidate)
  return name
 
+def speech_model_cached():
+ """The Mac speech model (MLX Whisper) is in the Hugging Face cache."""
+ hub=Path(os.environ.get('HF_HOME') or Path.home()/'.cache'/'huggingface')/'hub'/'models--mlx-community--whisper-medium-mlx'/'snapshots'
+ try:return any(hub.iterdir())
+ except OSError:return False
+
 def missing_tools():
  return [n for n in ('ffmpeg','ffprobe') if not Path(tool(n)).is_file()]
 

@@ -58,7 +58,7 @@ def first_audio():
 
 DEFAULTS=dict(mediaFolder=str(find_child(ROOT,'Video - ảnh')),audio=first_audio(),music='',outputFolder=str(ROOT/'output'),
  title='VỢ CHỒNG',subtitle='Ai làm việc nhà?',titleStyle='pop',subStyle='sweep',musicVolume=.15,voiceVolume=1.0,normalizeVoice=True,
- shotSeconds=2.5,removeSilence=True,faceAwareFill=True,resolution='1080',aspect='9:16',fixesText='xòng => sòng\nđận => đần',
+ shotSeconds=2.5,removeSilence=True,faceAwareFill=True,resolution='1080',aspect='9:16',loopMedia=False,fixesText='xòng => sòng\nđận => đần',
  matchScenes=True,stockEnabled=False,stockSource='auto',pexelsKey='',pixabayKey='',updateManifest='',captionY=.73,aiProvider='auto',titleSeconds=3.0,
  titleScale=1.0,titleEffect='bounce',subScale=1.0,subFont='arial',aiSpelling=True,
  # colour grade of both modes (JSON: slider values + chosen look) and the user's saved grades (JSON list)
@@ -75,6 +75,13 @@ DEFAULTS=dict(mediaFolder=str(find_child(ROOT,'Video - ảnh')),audio=first_audi
 AD_BIN='.da-xoa'  # photos/videos taken out of an ad are kept here (hidden), not deleted
 TALK_DENSITY={'it':.18,'vua':.3,'nhieu':.45}
 SECRET_KEYS={'pexelsKey','pixabayKey','minimaxKey'}
+
+def log_reason(log):
+ """The last error line a task wrote, so the message says why it stopped (not only where the log is)."""
+ try:lines=[l.strip() for l in Path(log).read_text(encoding='utf-8',errors='replace').splitlines() if l.strip()]
+ except OSError:return ''
+ err=next((l for l in reversed(lines) if re.match(r'^[A-Za-z_.]*(Error|Exception)\b',l) or 'Error:' in l),'') or (lines[-1] if lines else '')
+ return f': {err[:220]}' if err else ''
 
 def ads_short(name):
  import ads
@@ -236,14 +243,14 @@ class Studio:
    if not Path(s['audio']).is_file():return self.fail('Hãy chọn file ghi âm.')
    if not Path(s['outputFolder']).is_dir():return self.fail('Hãy chọn thư mục lưu video.')
    analysed=len(self.analysis())>0
-   job={k:s[k] for k in ('mediaFolder','audio','music','outputFolder','title','subtitle','titleStyle','subStyle','musicVolume','shotSeconds','resolution','aspect','removeSilence','faceAwareFill','fixesText','voiceVolume','normalizeVoice','stockSource','captionY','titleSeconds','titleScale','titleEffect','subScale','subFont','aiSpelling')}
+   job={k:s[k] for k in ('mediaFolder','audio','music','outputFolder','title','subtitle','titleStyle','subStyle','musicVolume','shotSeconds','resolution','aspect','loopMedia','removeSilence','faceAwareFill','fixesText','voiceVolume','normalizeVoice','stockSource','captionY','titleSeconds','titleScale','titleEffect','subScale','subFont','aiSpelling')}
    pf=self.story_file()
    if pf:self.story_save();job['projectFile']=str(pf)   # settings + timeline of this narration + media folder
    if task=='plan':job['planOnly']=True
    # The MiniMax voice-over's own script is the reference text for the AI spelling check.
    if s['voiceSource']=='minimax' and s['ttsText'].strip() and 'Giọng đọc - ' in Path(s['audio']).name:job['script']=s['ttsText']
    # Matching scenes needs every photo/video analysed: the renderer analyses the new ones first (the AI must be ready).
-   ai_ready=self.ai_state()['ready'];match=s['matchScenes'] and (analysed or ai_ready)
+   ai_ready=self.ai_state()['ready'];match=s['matchScenes'] and not s['loopMedia'] and (analysed or ai_ready)
    job.update(preview=bool(preview),grade=self.grade(),cacheFolder=str(self.cache()),matchScenes=match,autoAnalyze=match and ai_ready,
               stockEnabled=s['stockEnabled'] and match,context=s['title']+(' · '+s['subtitle'] if s['subtitle'] else ''),aiPython=sys.executable)
    job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
@@ -290,7 +297,10 @@ class Studio:
    args=[str(ENGINE/'analyzer.py'),task,s['mediaFolder']];log='analyze.log';cleanup=lambda:None
   else:return dict(error='Tác vụ không hợp lệ.')
   env=dict(os.environ,PYTHONUNBUFFERED='1',PYTHONUTF8='1',PYTHONIOENCODING='utf-8',GHEPVIDEO_AI=s['aiProvider'] if s['aiProvider'] in ('claude','codex') else 'auto')
-  if MAC:env['HF_HUB_OFFLINE']='1';env['PATH']='/opt/homebrew/bin:/usr/local/bin:'+env.get('PATH','')
+  # Offline once the speech model is on disk (no network check on every task); missing (first run, or the cache was
+  # cleaned) means it must be allowed to download again.
+  if MAC:env['PATH']='/opt/homebrew/bin:/usr/local/bin:'+env.get('PATH','')
+  if MAC and platform_tools.speech_model_cached():env['HF_HUB_OFFLINE']='1'
   # API keys travel only through the environment, never into job or result files.
   if s['pexelsKey']:env['PEXELS_API_KEY']=s['pexelsKey']
   if s['pixabayKey']:env['PIXABAY_API_KEY']=s['pixabayKey']
@@ -334,7 +344,7 @@ class Studio:
   with self.lock:
    self.job['running']=False
    if self.job['cancelled']:self.job['status']={'render':'Đã dừng xuất video','tts':'Đã dừng tạo giọng đọc','ad-render':'Đã dừng xuất video quảng cáo','ad-script':'Đã dừng viết kịch bản','tools':'Đã dừng tải FFmpeg'}.get(self.job['task'],'Đã dừng phân tích')
-   elif code!=0 and not self.job['error']:self.job['error']=f"Chưa thành công. Xem chi tiết tại {self.cache()/self.job['log']}";self.job['status']='Cần kiểm tra lại'
+   elif code!=0 and not self.job['error']:self.job['error']=f"Chưa thành công{log_reason(self.cache()/self.job['log'])}. Chi tiết trong {self.cache()/self.job['log']}";self.job['status']='Cần kiểm tra lại'
 
  def cancel(self):
   p=self.proc
@@ -482,7 +492,7 @@ class Studio:
 
  # ---- projects: everything worked on is kept, so it can be opened and edited again ----
  STORY_KEYS=('mediaFolder','audio','music','title','subtitle','titleStyle','titleEffect','titleScale','titleSeconds','subStyle','subScale','subFont','captionY',
-             'musicVolume','voiceVolume','normalizeVoice','shotSeconds','removeSilence','faceAwareFill','resolution','aspect','fixesText','matchScenes','grade',
+             'musicVolume','voiceVolume','normalizeVoice','shotSeconds','removeSilence','faceAwareFill','resolution','aspect','loopMedia','fixesText','matchScenes','grade',
              'voiceSource','ttsText','minimaxVoice','minimaxModel','minimaxSpeed','aiSpelling')
 
  def story_file(self):
@@ -701,9 +711,34 @@ class Studio:
    if Path(r['path']).is_file():exports.append(dict(kind=r['kind'],name=Path(r['path']).name,duration=r.get('duration'),url=self.url(r['path'])))
   vids=self.talk_videos();src=(p or {}).get('source')
   video=src if src and Path(src).is_file() else (vids[0] if vids else None)
-  return dict(project=p,videoUrl=self.url(video) if video else None,exports=exports,
+  shown,pending=self.playable(video) if video else (None,False)
+  return dict(project=p,videoUrl=self.url(shown) if shown else None,previewPending=pending,exports=exports,
               videos=[dict(name=Path(v).name,path=v,url=self.url(v)) for v in vids],
               exportFolder=((p or {}).get('last_export') or {}).get('folder'))
+
+ def playable(self,path):
+  """(file to show, still being made). Phones often record HEVC (H.265): the Windows web view then plays only the
+  sound. A light H.264 copy is made once, in the background, and shown instead; timings are the same as the original."""
+  memo=self.__dict__.setdefault('_playable',{});p=Path(path)
+  try:key=hashlib.sha1(f'{p.resolve()}|{p.stat().st_size}|{p.stat().st_mtime}'.encode()).hexdigest()[:16]
+  except OSError:return path,False
+  out=self.cache()/'xem-truoc'/f'{key}.mp4'
+  if out.is_file():return str(out),False
+  if key not in memo:
+   r=subprocess.run([platform_tools.tool('ffprobe'),'-v','error','-select_streams','v:0','-show_entries','stream=codec_name,pix_fmt','-of','csv=p=0',str(p)],capture_output=True,**NOWIN)
+   codec,_,fmt=r.stdout.decode(errors='replace').strip().partition(',')
+   safe={'h264','vp8','vp9','av1'}|({'hevc'} if MAC else set())
+   memo[key]='ok' if not codec or (codec in safe and fmt in ('yuv420p','yuvj420p','')) else 'make'
+  if memo[key]=='ok':return path,False
+  if memo[key]=='make':
+   memo[key]='making';out.parent.mkdir(parents=True,exist_ok=True)
+   def make():
+    part=out.with_suffix('.part.mp4')
+    r=subprocess.run([platform_tools.tool('ffmpeg'),'-v','error','-y','-i',str(p),'-vf','scale=-2:min(720\\,ih)','-c:v','libx264','-preset','veryfast','-crf','27','-pix_fmt','yuv420p','-c:a','aac','-b:a','128k','-movflags','+faststart',str(part)],capture_output=True,**NOWIN)
+    if r.returncode==0 and part.is_file():part.replace(out)
+    else:memo[key]='ok'  # cannot convert: show the original
+   threading.Thread(target=make,daemon=True).start()
+  return path,memo.get(key)=='making'
 
  def talk_edit(self,b):
   """Edits from the transcript editor: cut flags per word, chosen title, keywords, caption, shorts, B-roll on/off."""

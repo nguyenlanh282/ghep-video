@@ -104,5 +104,11 @@ class GradeTests(unittest.TestCase):
   self.assertEqual((r-x,b-y),(1080,1080));self.assertGreater(x,420)
   x,y,r,b=renderer.face_crop(1080,1920,[[.4,.1,.2,.1]],16/9)                     # upright picture into a wide video: keeps the face near the top
   self.assertEqual(r-x,1080);self.assertLess(y,200)
+ def test_loop_repeats_whole_videos_until_the_narration_ends(self):
+  shots=renderer.loop_shots([('a.mp4',30,'a.mp4')],180,2.5)
+  self.assertEqual([(s['start'],s['end'],s['srcStart']) for s in shots],[(i*30,i*30+30,0) for i in range(6)])
+  shots=renderer.loop_shots([('v.mp4',10,'v.mp4'),('p.jpg',0,'goc.jpg')],26,3)
+  self.assertEqual([(s['file'],s['start'],s['end']) for s in shots],[('v.mp4',0,10),('goc.jpg',10,13),('v.mp4',13,23),('goc.jpg',23,26)])
+  self.assertEqual(renderer.loop_shots([],10,2),[])
 
 if __name__=='__main__':unittest.main()

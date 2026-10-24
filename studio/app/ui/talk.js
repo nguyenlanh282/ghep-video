@@ -192,9 +192,21 @@ function paintExtras() {
   }).join('') || '<p class="hint">Video ngắn hoặc chưa có AI: không có gợi ý clip.</p>';
 }
 
+// A phone video the window cannot show (HEVC on Windows): the app makes a viewable copy; swap it in when ready.
+let previewTimer = null;
+function previewWait(pending) {
+  $('#previewNote').hidden = !pending; clearTimeout(previewTimer);
+  if (pending) previewTimer = setTimeout(async () => {
+    const out = await api('talkState');
+    if (out.videoUrl !== videoUrl) { videoUrl = out.videoUrl; if (view === 'raw') setView('raw'); }
+    previewWait(out.previewPending);
+  }, 3000);
+}
+
 async function loadProject() {
   const out = await api('talkState');
   P = out.project; videoUrl = out.videoUrl; exportsList = out.exports || [];
+  previewWait(out.previewPending);
   $('#emptyEditor').hidden = !!P; $('#editorBody').hidden = !P; $('#exportBtn').disabled = !P;
   $('#resultRow').hidden = !exportsList.length;
   if (window.Donate) Donate.show(exportsList.length > 0);

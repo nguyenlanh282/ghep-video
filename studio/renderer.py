@@ -367,6 +367,16 @@ def media_size(path):
  rot=abs(int(float((vs.get('side_data_list') or [{}])[0].get('rotation',0) or 0)))%180==90
  return (vs['height'],vs['width']) if rot else (vs['width'],vs['height'])
 
+def loop_shots(details,duration,photo_seconds):
+ """Shots that repeat the media back to back: a video lasts its whole length, a photo photo_seconds; the last one is
+ cut where the narration ends. details: (file used, video length or 0, original file)."""
+ out=[];t=0;i=0
+ while details and t<duration-.04:
+  p,d,src=details[i%len(details)];end=min(duration,t+(d if d else photo_seconds))
+  out.append(dict(start=round(t,3),end=round(end,3),file=str(src),d=round(d,3),srcStart=0,text='',scene='',matched=False,frame=None))
+  t=end;i+=1
+ return out
+
 def manual_crop(w,h,frame,W,H):
  """Crop rectangle chosen on the timeline: frame = {zoom ≥ 1, cx, cy} with the centre as fractions of the picture."""
  z=max(1,min(4,float(frame.get('zoom',1) or 1)));cw=min(w,h*W/H)/z;ch=cw*H/W
@@ -668,8 +678,12 @@ def render(job):
    if not details:raise ValueError('Không có ảnh phù hợp để phủ đầy khung dọc mà giữ trọn khuôn mặt. Hãy thêm ảnh dọc hoặc video.')
   framed_of={str(src):p for p,d,src in details if not d and p!=src}   # photos already re-framed to keep faces in 9:16
   auto_of={x['source']:[x['crop'][0]/x['width'],x['crop'][1]/x['height'],x['crop'][2]/x['width'],x['crop'][3]/x['height']] for x in job.get('photoFraming',[]) if x.get('crop')}
-  sig=digest(Path(job['audio']).expanduser().resolve())+('|cut' if job.get('removeSilence',True) else '|full')
+  sig=digest(Path(job['audio']).expanduser().resolve())+('|cut' if job.get('removeSilence',True) else '|full')+('|loop' if job.get('loopMedia') else '')
   shots=saved_shots(job,sig,audio_duration) if job.get('useTimeline',True) else None
+  if shots is None and job.get('loopMedia'):
+   # Lặp lại video: every file plays whole, in name order, again and again until the narration ends (no scene cutting).
+   shots=loop_shots(details,audio_duration,shot);job['stockCredits']=[]
+   write_project(job,timeline=dict(sig=sig,duration=round(audio_duration,3),shots=shots),stockCredits=[])
   if shots is None:
    # Plan the whole narration (also for a 20-second preview), so the timeline is complete.
    analysis=load_analysis(folder) if job.get('matchScenes',True) else {}
