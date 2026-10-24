@@ -66,6 +66,15 @@ Biến 1 video thô quay người nói (chưa cắt, có ậm ừ, im lặng, n�
 
 Ghi chú: video quay dọc khi xuất 16:9 giữ trọn người nói ở giữa trên nền mờ. Không có Claude/ChatGPT vẫn cắt và làm phụ đề được, nhưng không có soát chính tả, tiêu đề gợi ý, cảnh trám, clip ngắn.
 
+## Mới ở bản 2.11.0
+
+- **Quảng cáo sản phẩm** (trang Video quảng cáo): dán brief vào ô **Nội dung mẫu**, thêm ảnh/video sản phẩm, bấm **✨ Tạo nội dung**: AI đọc brief và ảnh, rút nỗi đau / mong muốn làm hook, rồi công dụng, lợi ích, kêu gọi. Bấm ảnh nhỏ để xem; ✕ để bỏ khỏi tư liệu (cất vào `.da-xoa`, khôi phục được).
+- **Giọng Edge miễn phí**: MiniMax lỗi (hết tiền, key sai, mất mạng) thì tự đọc bằng Edge; chọn thẳng Edge ở trang quảng cáo.
+- **Lặp lại video cho đủ độ dài lời đọc** (Ghép ảnh, mục 01): video phát nguyên vẹn, lặp đến hết lời đọc.
+- **Thư mục lưu riêng** cho Video chia sẻ và Video quảng cáo (trống = thư mục chung); độ phân giải riêng cho quảng cáo.
+- **🔌 Kết nối AI (MCP)**: `studio/mcp_server.py` cho Claude Code / Claude Desktop điều khiển app đang mở; nút trong app hiện lệnh cài.
+- Video HEVC quay bằng điện thoại: app tự tạo bản xem trước (Windows trước đây chỉ nghe tiếng). Lỗi “Chưa thành công” ghi luôn lý do.
+
 ## Video quảng cáo (tab thứ ba)
 
 Nhập thông tin sản phẩm → kịch bản → mỗi câu hook một video quảng cáo.

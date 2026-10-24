@@ -124,6 +124,7 @@ footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);fon
     <a href="#timeline">🎞 Timeline: chỉnh từng cảnh</a>
     <a href="#du-an">📂 Dự án: mở lại sửa tiếp</a>
     <b>KHÁC</b>
+    <a href="#ket-noi-ai">🔌 Kết nối Claude (MCP)</a>
     <a href="#ket-qua">File kết quả ở đâu</a>
     <a href="#loi">Lỗi thường gặp</a>
   </div>
@@ -193,6 +194,7 @@ footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);fon
     <li>Bật <b>Tìm ảnh miễn phí cho câu chưa có cảnh hợp</b> nếu muốn app lấy thêm ảnh/video từ Pexels, Pixabay hoặc Openverse. Chọn nguồn (<span class="ui">Tự động</span> dùng mọi key đã lưu), dán API key rồi bấm <span class="ui">Lưu</span>. Bấm <span class="ui">Lấy key miễn phí</span> để đăng ký key. AI xác định <b>bối cảnh chung</b> của video (vd “vườn sầu riêng ở Việt Nam”) và chỉ nhận ảnh đúng bối cảnh đó.</li>
   </ol>
   <div class="tip">Ảnh nên cùng chủ đề với lời kể. Càng nhiều cảnh, video càng ít lặp.</div>
+  <div class="tip"><b>Lặp lại video cho đủ độ dài lời đọc (không cắt cảnh)</b>: bật công tắc này khi bạn chỉ có ít video mà lời đọc dài. Mỗi video phát nguyên vẹn, lần lượt theo tên file, lặp lại đến hết lời đọc (vd video 30 giây + lời đọc 3 phút → phát 6 lần). Khi bật, “Ghép cảnh khớp lời đọc” tự tắt.</div>
   <div class="warn">Chưa có key Pexels/Pixabay thì app chỉ tìm được trên Openverse (ít ảnh, nhiều chủ đề như sầu riêng hầu như không có). App sẽ hiện cảnh báo vàng: nên đăng ký key miễn phí.</div>
   <div class="clear"></div>
 </section>
@@ -217,6 +219,7 @@ footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);fon
 <section id="minimax">
   <h2><span class="n">🗣</span>Giọng đọc MiniMax (không cần thu âm)</h2>
   <p class="lead">Dán kịch bản, app đọc bằng <b>giọng bạn đã clone</b> trên MiniMax. Cần tài khoản MiniMax có số dư (tính phí theo số ký tự).</p>
+  <div class="tip"><b>Giọng Edge dự phòng (miễn phí):</b> MiniMax lỗi (hết tiền, key sai, mất kết nối) hoặc chưa có key thì app tự đọc cả bài bằng giọng Edge của Microsoft (cần mạng). Chọn giọng <b>Nam Minh (nam)</b> hoặc <b>Hoài My (nữ)</b>; tắt công tắc “MiniMax lỗi… thì dùng giọng Edge” nếu muốn app báo lỗi thay vì đổi giọng.</div>
   <figure class="side"><img src="/hd/idx-minimax.jpg" alt="Khung tạo giọng MiniMax" loading="lazy"><figcaption>Khung Tạo giọng MiniMax</figcaption></figure>
   <h3>Chuẩn bị (làm 1 lần)</h3>
   <ol class="steps">
@@ -251,7 +254,7 @@ footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);fon
 <section id="luu-video">
   <h2><span class="n">03</span>Lưu video</h2>
   <ul class="list">
-    <li><b>Thư mục xuất video</b>: nơi lưu video thành phẩm.</li>
+    <li><b>Thư mục xuất video</b>: nơi lưu video thành phẩm. Đây là <b>thư mục chung</b>: trang Video chia sẻ và Video quảng cáo cũng lưu vào đây nếu chưa chọn thư mục riêng.</li>
     <li><b>Độ phân giải</b>: <span class="ui">1080p</span> (nét, nên dùng) hoặc <span class="ui">720p</span> (nhanh, file nhẹ).</li>
     <li><b>Khung hình</b>: <span class="ui">Dọc 9:16</span> cho TikTok, Reels, Shorts; <span class="ui">Vuông 1:1</span>; <span class="ui">Ngang 16:9</span> cho YouTube. Ảnh/video cùng tỉ lệ với khung được giữ nguyên; khác tỉ lệ thì app cắt cho vừa và giữ mặt người. Muốn chọn lại vùng hiện của từng cảnh thì chỉnh ở <a href="#timeline">Timeline</a>.</li>
   </ul>
@@ -306,6 +309,7 @@ footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);fon
   <h2><span class="n">03</span>Cài đặt xuất video</h2>
   <table>
     <tr><th>Cài đặt</th><th>Tác dụng</th></tr>
+    <tr><td>Thư mục lưu video chia sẻ</td><td>Nơi lưu riêng cho chế độ này. Để trống thì lưu vào thư mục chung (trang Ghép ảnh + lời đọc, mục 03).</td></tr>
     <tr><td>9:16 · 1:1 · 16:9</td><td>Tích các tỉ lệ cần xuất: TikTok/Reels/Shorts (9:16), Facebook (1:1), YouTube (16:9). Xuất cùng lúc.</td></tr>
     <tr><td>Lấp đầy khung 16:9 và 1:1</td><td>Video quay dọc: bật thì hình phủ kín khung ngang/vuông (cắt bớt trên dưới, giữ mặt người nói). Tắt thì giữ trọn khung dọc ở giữa, hai bên nền mờ. Cần 16:9 nét nhất thì nên quay ngang.</td></tr>
     <tr><td>Zoom nhẹ ở chỗ cắt</td><td>Phóng nhẹ luân phiên sau mỗi chỗ cắt để chỗ nối không bị giật.</td></tr>
@@ -368,8 +372,11 @@ footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);fon
   <h2><span class="n">📣</span>Video quảng cáo</h2>
   <p class="lead">Chế độ thứ ba, nút <span class="ui">📣 Video quảng cáo</span> trên cùng. Bạn nhập thông tin sản phẩm, app lo kịch bản, giọng đọc, chữ trên hình và xuất mỗi câu hook một video để chạy thử xem bản nào hiệu quả hơn.</p>
   <figure><img src="/hd/ads.jpg" alt="Trang Video quảng cáo: thông tin sản phẩm, kịch bản, tư liệu và xuất" loading="lazy" width="1400" height="876"><figcaption>Ba cột: 01 Sản phẩm &amp; ưu đãi · 02 Kiểu quảng cáo &amp; kịch bản · 03 Tư liệu, giọng đọc &amp; xuất</figcaption></figure>
-  <h3>01 · Sản phẩm &amp; ưu đãi</h3>
+  <h3>01 · Brief &amp; sản phẩm</h3>
   <ul class="list">
+    <li><b>Nội dung mẫu (Brief)</b>: dán brief viết tự do (sản phẩm là gì, bán cho ai, khách gặp vấn đề gì, công dụng, ưu đãi, cách liên hệ). Với kiểu <b>Quảng cáo sản phẩm</b>, chỉ cần ô này và ảnh/video sản phẩm.</li>
+    <li><span class="ui">＋ Thêm ảnh / video sản phẩm</span> (chọn từng file, app chép vào thư mục tư liệu) hoặc <span class="ui">📁 Chọn cả thư mục</span>. Bấm ảnh nhỏ để <b>xem lớn / phát video</b>; nút ✕ để <b>bỏ khỏi tư liệu</b> (file được cất vào thư mục ẩn <code>.da-xoa</code>, bấm “Khôi phục” để lấy lại).</li>
+    <li><b>Thông tin chi tiết</b> (tuỳ chọn) bổ sung cho brief:</li>
     <li>Điền <b>Sản phẩm</b> (bắt buộc), khách hàng, vấn đề của khách, lợi ích, bằng chứng có thật, ưu đãi, lời kêu gọi. Càng cụ thể, kịch bản càng đúng.</li>
     <li><b>Lưu ý riêng</b>: cách xưng hô, điều không được nói (vd “xưng em, gọi anh chị; không đọc tên chất”).</li>
     <li><span class="ui">🧠 Thư mục kiến thức</span> (tuỳ chọn): chọn thư mục ghi chú <code>.md</code> của bạn. AI tìm các ghi chú nói về sản phẩm để viết đúng sự thật; đoạn liên quan được gửi lên Claude / ChatGPT của bạn.</li>
@@ -377,6 +384,7 @@ footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);fon
   <h3>02 · Kiểu quảng cáo &amp; kịch bản</h3>
   <table>
     <tr><th>Kiểu</th><th>Dùng khi</th></tr>
+    <tr><td><b>Quảng cáo sản phẩm</b></td><td>Có brief + ảnh/video: AI đọc cả brief lẫn ảnh, rút <b>nỗi đau / mong muốn</b> của khách làm hook, rồi <b>công dụng</b>, <b>lợi ích</b>, cuối cùng là <b>kêu gọi</b>. Khung “AI hiểu brief” cho bạn soát lại.</td></tr>
     <tr><td>Vấn đề → Giải pháp</td><td>Dễ ra đơn nhất, hợp hầu hết sản phẩm.</td></tr>
     <tr><td>Trước / Sau</td><td>Sản phẩm cho kết quả nhìn thấy được.</td></tr>
     <tr><td>Chỉ ra tính năng</td><td>Giới thiệu sản phẩm mới, quay cận cảnh.</td></tr>
@@ -396,9 +404,10 @@ footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);fon
   <h3>03 · Tư liệu, giọng đọc &amp; xuất</h3>
   <ul class="list">
     <li><b>Ảnh &amp; video sản phẩm</b>: chọn thư mục. App tự phân tích nội dung khi xuất để chọn cảnh hợp lời đọc.</li>
+    <li><b>🆓 Giọng Edge</b>: miễn phí, không cần key (giọng Nam Minh hoặc Hoài My). Chọn MiniMax thì Edge tự đọc thay khi MiniMax lỗi.</li>
     <li><b>Giọng MiniMax</b>: nhập Voice ID (API key dán ở trang Ghép ảnh + lời đọc). Mỗi phần chỉ tạo giọng một lần; các bản khác hook dùng chung phần thân nên không tốn thêm.</li>
     <li><b>File ghi âm</b>: đọc đúng theo kịch bản. Các bản khác hook dùng chung file, chỉ đổi chữ mở đầu.</li>
-    <li><b>Khung hình</b>: Dọc 9:16, Vuông 1:1, Ngang 16:9.</li>
+    <li><b>Khung hình</b>: Dọc 9:16, Vuông 1:1, Ngang 16:9. <b>Độ phân giải</b>: 720p hoặc 1080p. <b>Thư mục lưu video quảng cáo</b>: để trống thì lưu vào thư mục chung.</li>
     <li><span class="ui">Dựng thử 20 giây</span> để xem nhanh, <span class="ui">Xuất video quảng cáo ↗</span> để xuất đủ các bản.</li>
   </ul>
   <div class="tip">Video xuất ra có: chữ hook hiện ngay giây đầu, chữ ý chính của từng phần, nút kêu gọi màu vàng ở cuối, phụ đề, đổi cảnh khoảng 2 giây một lần. Kết quả nằm trong thư mục <b>“&lt;sản phẩm&gt; - quảng cáo &lt;ngày giờ&gt;”</b> kèm file <b>kich-ban-va-caption.txt</b>. Kiểu tiêu đề, phụ đề, màu, nhạc nền và thư mục lưu lấy theo cài đặt ở trang Ghép ảnh + lời đọc.</div>
@@ -499,6 +508,17 @@ footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);fon
   </table>
 </section>
 
+<section id="ket-noi-ai">
+  <h2><span class="n">🔌</span>Kết nối Claude điều khiển app (MCP)</h2>
+  <p class="lead">Cho Claude Code hoặc Claude Desktop điều khiển app Ghép Video đang mở bằng lời thường: “dựng video ghép ảnh với file lời đọc này, khung 16:9, lặp lại video”, “cắt câu thứ hai trong video chia sẻ”, “viết kịch bản quảng cáo cho sản phẩm X rồi xuất 2 hook”.</p>
+  <ol class="steps">
+    <li>Bấm <span class="ui">🔌 Kết nối AI</span> ở góc trên app. Khung hiện sẵn lệnh và đoạn cấu hình đúng đường dẫn máy bạn, có nút <span class="ui">Sao chép</span>.</li>
+    <li><b>Claude Code</b>: dán lệnh vào Terminal (một lần). <b>Claude Desktop</b>: Settings → Developer → Edit Config, thêm phần “ghep-video”, mở lại Claude.</li>
+    <li>Để app đang mở rồi nói với Claude. Việc dựng chạy nền: Claude tự đợi xong rồi báo kết quả.</li>
+  </ol>
+  <div class="tip">API key không bao giờ đi qua Claude: Claude không đọc và không đổi được key, key chỉ dán trong app.</div>
+</section>
+
 <section id="loi">
   <h2><span class="n">?</span>Lỗi thường gặp</h2>
   <details open><summary><b>Windows: app không mở, hoặc báo “No module named …”</b></summary>
@@ -511,6 +531,12 @@ footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);fon
     <p>Bật AI để app tự soát chính tả. Hoặc thêm cặp sửa ở <b>Sửa chữ nhận dạng sai</b> (trang Ghép ảnh + lời đọc): áp dụng cho lần xuất tiếp theo, và cho Edit video chia sẻ khi bấm phân tích lại.</p></details>
   <details><summary><b>Giọng đọc quá nhỏ / quá to, nhạc lấn lời</b></summary>
     <p>Bật <b>Tự cân bằng giọng đọc</b>, chỉnh <b>Âm lượng giọng đọc</b>, giảm <b>Âm lượng nhạc</b> xuống 10–15%. Dùng <span class="ui">▶ Nghe cùng lời đọc</span> để kiểm tra.</p></details>
+  <details><summary><b>Khung xem trước chỉ nghe tiếng, không thấy hình</b></summary>
+    <p>Video quay bằng điện thoại thường ở định dạng HEVC, Windows không hiện được trong khung xem. Từ bản 2.11.0 app tự tạo bản xem trước sau vài giây (có dòng “⏳ App đang tạo bản xem trước”). Xuất video vẫn dùng bản gốc.</p></details>
+  <details><summary><b>Báo “Chưa thành công…”</b></summary>
+    <p>Từ bản 2.11.0, dòng báo lỗi ghi luôn lý do. Cần hỗ trợ thì gửi dòng đó kèm file log (đường dẫn ghi ngay trong dòng báo).</p></details>
+  <details><summary><b>MiniMax báo lỗi 2053 (insufficient credit)</b></summary>
+    <p>Tài khoản MiniMax hết tiền: nạp thêm, hoặc để app tự đọc bằng giọng Edge miễn phí (mặc định bật).</p></details>
   <details><summary><b>Xuất video chậm</b></summary>
     <p>Chọn 720p, ít tỉ lệ hơn, hoặc tắt Khử ồn. Trên Windows có card NVIDIA thì nhận dạng giọng nhanh hơn.</p></details>
   <details><summary><b>Bấm Dừng rồi muốn làm tiếp</b></summary>
