@@ -84,4 +84,28 @@ class AdsTests(unittest.TestCase):
             self.assertLessEqual(max(Image.open(pics[0]).size), 768)
             self.assertEqual(ads.look_at(Path(tmp) / 'khong-co', Path(tmp)), ([], ''))
 
+    def test_minimax_failure_reads_the_whole_ad_with_edge(self):
+        import tts, os, subprocess
+        from platform_tools import FFMPEG
+        calls = []
+        def mp3(tag):
+            with tempfile.TemporaryDirectory() as t:
+                f = Path(t) / 'a.mp3'; subprocess.run([FFMPEG, '-v', 'error', '-y', '-f', 'lavfi', '-i', 'sine=d=0.5', str(f)], check=True); return f.read_bytes()
+        def fail(text, job, key): calls.append(('minimax', text)); raise RuntimeError('MiniMax báo lỗi 2053 (insufficient credit)')
+        def edge(text, voice, speed, pitch): calls.append(('edge', text)); return mp3('e')
+        real = (tts.synthesize, tts.edge_synthesize, os.environ.get('MINIMAX_API_KEY')); tts.synthesize, tts.edge_synthesize = fail, edge; os.environ['MINIMAX_API_KEY'] = 'x'
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                job = dict(adVoiceSource='minimax', ttsFallback=True, minimaxVoice='v', adEnergy='soi-noi')
+                parts = [dict(role='hook', loi='Một'), dict(role='part', loi='Hai'), dict(role='cta', loi='Ba')]
+                ads.voice_for(parts, job, Path(tmp))
+                self.assertEqual([c for c in calls if c[0] == 'edge'], [('edge', 'Một'), ('edge', 'Hai'), ('edge', 'Ba')])
+                self.assertIn('2053', job['voiceNote']); self.assertEqual(job['adVoiceSource'], 'edge')
+                self.assertTrue(all(p['dur'] > 0 for p in parts))
+                with self.assertRaises(RuntimeError): ads.voice_for([dict(role='hook', loi='Bốn')], dict(adVoiceSource='minimax', ttsFallback=False, minimaxVoice='v'), Path(tmp))
+        finally:
+            tts.synthesize, tts.edge_synthesize = real[0], real[1]
+            if real[2] is None: os.environ.pop('MINIMAX_API_KEY', None)
+            else: os.environ['MINIMAX_API_KEY'] = real[2]
+
 if __name__ == '__main__': unittest.main()

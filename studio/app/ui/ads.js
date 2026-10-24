@@ -30,7 +30,9 @@ function renderState(st) {
   $('#aiWrite').textContent = s.adType === 'san-pham' ? '✨ Tạo nội dung' : '✨ AI viết kịch bản';
   if (s.adType !== 'san-pham' && !s.adBrief && !$('#adInfo').dataset.touched) $('#adInfo').open = true;
   $$('#adTypes button').forEach(b => { b.classList.toggle('on', b.dataset.type === s.adType); b.setAttribute('aria-checked', b.dataset.type === s.adType); });
-  const tts = s.adVoiceSource === 'minimax'; $('#voiceTts').hidden = !tts; $('#voiceFile').hidden = tts;
+  const tts = s.adVoiceSource === 'minimax', edge = s.adVoiceSource === 'edge'; $('#voiceTts').hidden = !tts; $('#voiceFile').hidden = tts || edge;
+  $('#voiceEdge').hidden = !(tts || edge); $('#fallbackRow').hidden = !tts; $('#edgeNote').hidden = !edge;
+  $$('input[type=checkbox][data-key]').forEach(cb => cb.checked = !!s[cb.dataset.key]);
   $('#keyNote').textContent = s.minimaxKeySet ? `Đã có API key MiniMax (${s.minimaxKeyHint}). Mỗi phần chỉ tạo giọng một lần, các bản khác hook dùng chung phần thân.`
     : 'Chưa có API key MiniMax: dán key ở trang “Ghép ảnh + lời đọc” → “Tạo giọng MiniMax”.';
   $('#aiNote').textContent = st.ai.ready ? `AI viết: ${st.ai.used === 'codex' ? 'ChatGPT' : 'Claude'}` : 'Chưa có AI (Claude / ChatGPT): dùng “Tự viết theo khung”.';
@@ -188,6 +190,7 @@ async function boot() {
     const send = debounce(async () => { await set({[el.dataset.text]: el.value}); delete el.dataset.dirty; }, 500);
     el.addEventListener('input', () => { el.dataset.dirty = '1'; send(); });
   });
+  $$('input[type=checkbox][data-key]').forEach(cb => cb.addEventListener('change', () => set({[cb.dataset.key]: cb.checked})));
   $$('[data-seg]').forEach(seg => seg.addEventListener('click', e => { const b = e.target.closest('button[data-value]'); if (b) set({[seg.dataset.seg]: b.dataset.value}); }));
   $$('[data-choose]').forEach(b => b.addEventListener('click', async () => {
     const out = await api('choose', {kind: b.dataset.choose});

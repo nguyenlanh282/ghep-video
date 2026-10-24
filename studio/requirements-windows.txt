@@ -4,3 +4,4 @@ pillow
 numpy
 faster-whisper
 opencv-python>=4.8
+edge-tts

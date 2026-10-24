@@ -64,7 +64,7 @@ DEFAULTS=dict(mediaFolder=str(find_child(ROOT,'Video - ảnh')),audio=first_audi
  # colour grade of both modes (JSON: slider values + chosen look) and the user's saved grades (JSON list)
  grade='{}',gradePresets='[]',
  # voice-over: a recording ('file') or MiniMax Speech from text ('minimax', the user's own key and cloned voice)
- voiceSource='file',ttsText='',minimaxVoice='',minimaxModel='speech-2.8-hd',minimaxSpeed=1.0,minimaxRegion='intl',minimaxKey='',
+ voiceSource='file',ttsText='',ttsFallback=True,edgeVoice='vi-VN-NamMinhNeural',minimaxVoice='',minimaxModel='speech-2.8-hd',minimaxSpeed=1.0,minimaxRegion='intl',minimaxKey='',
  # Video chia sẻ (talking-video editor)
  talkVideo='',talkVideos='[]',talkBrollFolder=str(find_child(ROOT,'Video - ảnh')),talkBroll=True,talkDensity='vua',talkAspects='9:16',
  talkPunchIn=True,talkDenoise=True,talkRetakes=True,talkKeywords=True,talkShorts=True,
@@ -267,8 +267,8 @@ class Studio:
     folder=Path(s['adMediaFolder'] or '/nonexistent-ghepvideo')
     if not folder.is_dir() or not any(p.suffix.lower() in MEDIA_EXT for p in folder.iterdir() if p.is_file()):return self.fail('Hãy chọn thư mục có ảnh hoặc video sản phẩm.')
     if not Path(s['outputFolder']).is_dir():return self.fail('Hãy chọn thư mục lưu video (ở trang Ghép ảnh + lời đọc, mục 03).')
-    if s['adVoiceSource']=='minimax':
-     if not s['minimaxKey']:return self.fail('Hãy dán API key MiniMax rồi bấm Lưu (hoặc đổi sang File ghi âm).')
+    if s['adVoiceSource']=='minimax' and not s['ttsFallback']:  # with the fallback on, Edge reads when MiniMax cannot
+     if not s['minimaxKey']:return self.fail('Hãy dán API key MiniMax rồi bấm Lưu (hoặc đổi sang giọng Edge / File ghi âm).')
      if not s['minimaxVoice'].strip():return self.fail('Hãy nhập Voice ID MiniMax.')
     elif not Path(s['adAudio']).is_file():return self.fail('Hãy chọn file ghi âm lời đọc.')
     analysed=(folder/'_phan-tich.json').is_file();ai_ready=self.ai_state()['ready'];match=analysed or ai_ready
@@ -279,17 +279,18 @@ class Studio:
     try:hooks=[int(x) for x in s['adHooks'].split(',') if x.strip().isdigit()]
     except ValueError:hooks=[0]
     product=s['adProduct'].strip() or ads.short_name((script.get('phan_tich') or {}).get('san_pham','')) or 'Quảng cáo'
-    job=dict(script=script,hooks=hooks or [0],adProduct=product,adVoiceSource=s['adVoiceSource'],adAudio=s['adAudio'],adEnergy=s['adEnergy'],minimaxVoice=s['minimaxVoice'],minimaxModel=s['minimaxModel'],
+    job=dict(script=script,hooks=hooks or [0],adProduct=product,adVoiceSource=s['adVoiceSource'],adAudio=s['adAudio'],adEnergy=s['adEnergy'],ttsFallback=s['ttsFallback'],edgeVoice=s['edgeVoice'],minimaxVoice=s['minimaxVoice'],minimaxModel=s['minimaxModel'],
              minimaxSpeed=s['minimaxSpeed'],minimaxRegion=s['minimaxRegion'],outputFolder=s['outputFolder'],cacheFolder=str(self.cache()),preview=bool(preview),render=render)
    job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
    args=[str(ENGINE/'ads.py'),task[3:],str(job_file)];log='ads.log';cleanup=lambda:job_file.unlink(missing_ok=True)
   elif task=='tools':
    args=[str(ENGINE/'fix_tools.py')];log='tools.log';cleanup=self.refresh_tools
   elif task=='tts':
-   if not s['minimaxKey']:return self.fail('Hãy dán API key MiniMax rồi bấm Lưu.')
    if not s['ttsText'].strip():return self.fail('Hãy nhập nội dung cần đọc.')
-   if not s['minimaxVoice'].strip():return self.fail('Hãy nhập Voice ID (giọng đã clone trên MiniMax).')
-   job=dict(text=s['ttsText'],voice=s['minimaxVoice'],model=s['minimaxModel'],speed=s['minimaxSpeed'],region=s['minimaxRegion'],
+   if not s['ttsFallback']:
+    if not s['minimaxKey']:return self.fail('Hãy dán API key MiniMax rồi bấm Lưu.')
+    if not s['minimaxVoice'].strip():return self.fail('Hãy nhập Voice ID (giọng đã clone trên MiniMax).')
+   job=dict(fallback=s['ttsFallback'],edgeVoice=s['edgeVoice'],engine='minimax' if s['minimaxKey'] and s['minimaxVoice'].strip() else 'edge',text=s['ttsText'],voice=s['minimaxVoice'],model=s['minimaxModel'],speed=s['minimaxSpeed'],region=s['minimaxRegion'],
             outDir=str(Path(s['outputFolder'])/'Giọng đọc MiniMax' if Path(s['outputFolder']).is_dir() else DATA/'giong-doc'))
    job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
    args=[str(ENGINE/'tts.py'),str(job_file)];log='tts.log';cleanup=lambda:job_file.unlink(missing_ok=True)

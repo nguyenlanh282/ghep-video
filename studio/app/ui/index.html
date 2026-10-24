@@ -111,6 +111,10 @@
       <div class="row between"><span class="hint">Chất lượng</span>
         <div class="seg" data-seg="minimaxModel"><button data-value="speech-2.8-hd">Cao (HD)</button><button data-value="speech-2.8-turbo">Nhanh, rẻ</button></div></div>
       <div class="value" data-value-key="minimaxSpeed" data-min="0.5" data-max="2" data-step="0.05" data-format="speed">Tốc độ đọc</div>
+      <label class="switch"><input type="checkbox" data-key="ttsFallback"><span></span>MiniMax lỗi (hết tiền, key sai, mất kết nối) thì dùng giọng Edge miễn phí</label>
+      <div class="row between"><span class="hint">Giọng Edge</span>
+        <div class="seg" data-seg="edgeVoice"><button data-value="vi-VN-NamMinhNeural">Nam Minh (nam)</button><button data-value="vi-VN-HoaiMyNeural">Hoài My (nữ)</button></div></div>
+      <p class="hint">Chưa có API key hay Voice ID MiniMax thì app đọc bằng giọng Edge (của Microsoft, miễn phí, cần mạng).</p>
       <div class="row between"><span class="hint">Tài khoản MiniMax</span>
         <div class="seg" data-seg="minimaxRegion"><button data-value="intl">Quốc tế (minimax.io)</button><button data-value="cn">Trung Quốc</button></div></div>
       <div class="keyrow" data-source="minimax">

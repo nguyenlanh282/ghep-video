@@ -6,9 +6,9 @@ Long text is split at sentence ends into pieces the API accepts, synthesised one
 The same text + voice + settings reuses the file made before, so a second export costs nothing.
 Progress is JSON lines on stdout, like renderer.py; the finished file is reported as {"done": true, "audio": path}.
 """
-import hashlib, json, os, re, subprocess, sys, tempfile, time, unicodedata, urllib.error, urllib.request
+import hashlib, importlib, json, os, re, subprocess, sys, tempfile, time, unicodedata, urllib.error, urllib.request
 from pathlib import Path
-from platform_tools import FFMPEG, NOWIN, utf8_stdio
+from platform_tools import DATA, FFMPEG, NOWIN, WINDOWS, utf8_stdio
 
 HOSTS = {'intl': 'https://api.minimax.io', 'cn': 'https://api.minimaxi.com'}
 MODELS = ('speech-2.8-hd', 'speech-2.8-turbo', 'speech-2.6-hd', 'speech-2.6-turbo', 'speech-02-hd', 'speech-02-turbo')
@@ -66,11 +66,76 @@ def synthesize(text, job, key):
     if not audio: raise RuntimeError('MiniMax không trả về âm thanh.')
     return bytes.fromhex(audio)
 
+# ---------- Edge (Microsoft's free online voices): the fallback when MiniMax fails, or chosen on purpose ----------
+EDGE_VOICES = {'vi-VN-NamMinhNeural': 'Nam Minh (nam)', 'vi-VN-HoaiMyNeural': 'Hoài My (nữ)'}
+
+def edge_module():
+    """The edge-tts library, installed into the app's own Python the first time it is needed."""
+    try: return importlib.import_module('edge_tts')
+    except ImportError: pass
+    uv = DATA / 'bin' / ('uv.exe' if WINDOWS else 'uv')
+    cmd = [str(uv), 'pip', 'install', '--python', sys.executable, '-q', 'edge-tts'] if uv.is_file() else [sys.executable, '-m', 'pip', 'install', '-q', 'edge-tts']
+    r = subprocess.run(cmd, capture_output=True, **NOWIN)
+    importlib.invalidate_caches()
+    try: return importlib.import_module('edge_tts')
+    except ImportError: raise RuntimeError('Chưa cài được giọng Edge (cần mạng lần đầu). ' + r.stderr.decode(errors='replace')[-200:]) from None
+
+def edge_synthesize(text, voice='vi-VN-NamMinhNeural', speed=1.0, pitch=0):
+    """MP3 bytes from Edge. speed 1.06 → +6 %; pitch in semitones (about 5 Hz each). Edge sometimes returns
+    nothing: tried up to 4 times."""
+    import asyncio
+    edge = edge_module(); voice = voice if voice in EDGE_VOICES else 'vi-VN-NamMinhNeural'
+    rate = f'{round((float(speed) - 1) * 100):+d}%'; ph = f'{int(pitch) * 5:+d}Hz'
+    async def go():
+        out = bytearray()
+        async for chunk in edge.Communicate(text, voice, rate=rate, pitch=ph).stream():
+            if chunk.get('type') == 'audio': out += chunk['data']
+        return bytes(out)
+    last = None
+    for attempt in range(4):
+        try:
+            data = asyncio.run(go())
+            if len(data) > 1000: return data
+        except Exception as e: last = e
+        time.sleep(2 * (attempt + 1))
+    raise RuntimeError('Giọng Edge chưa tạo được, kiểm tra mạng rồi thử lại.' + (f' ({last})' if last else ''))
+
+def joined(files, dest):
+    """Join MP3 pieces into dest (one piece is copied as is)."""
+    part = dest.with_suffix('.part.mp3')
+    if len(files) == 1: part.write_bytes(files[0].read_bytes())
+    else:
+        lst = files[0].parent / 'list.txt'; lst.write_text(''.join(f"file '{f.name}'\n" for f in files), encoding='utf-8')
+        p = subprocess.run([FFMPEG, '-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', str(lst), '-c:a', 'libmp3lame', '-b:a', '192k', str(part)], capture_output=True, **NOWIN)
+        if p.returncode: raise RuntimeError('Ghép các đoạn giọng đọc chưa được: ' + p.stderr.decode(errors='replace')[-300:])
+    part.replace(dest)
+
+def run_edge(job, text, reason=''):
+    out_dir = Path(job['outDir']); out_dir.mkdir(parents=True, exist_ok=True)
+    voice = job.get('edgeVoice') if job.get('edgeVoice') in EDGE_VOICES else 'vi-VN-NamMinhNeural'; speed = max(.5, min(2, float(job.get('speed', 1) or 1)))
+    sig = hashlib.sha1(json.dumps(['edge', text, voice, speed], ensure_ascii=False).encode()).hexdigest()[:8]
+    words = re.sub(r'[\\/:*?"<>|\n\r]+', ' ', ' '.join(text.split()[:6])).strip()[:40]
+    dest = out_dir / f'Giọng đọc Edge - {words} - {sig}.mp3'
+    note = f'{reason} Đã dùng giọng Edge (miễn phí) thay thế.' if reason else ''
+    if dest.is_file() and dest.stat().st_size > 1000:
+        emit(100, (note + ' ' if note else '') + 'Đã có sẵn giọng đọc cho nội dung này.', done=True, audio=str(dest)); return
+    parts = pieces(text, 1500)
+    with tempfile.TemporaryDirectory(prefix='tts-edge-') as tmp:
+        files = []
+        for i, p in enumerate(parts):
+            emit(5 + 85 * i / len(parts), (note + ' ' if note else '') + f'Giọng Edge đang đọc đoạn {i + 1}/{len(parts)}…')
+            f = Path(tmp) / f'{i:03}.mp3'; f.write_bytes(edge_synthesize(p, voice, speed)); files.append(f)
+        emit(92, 'Đang ghép và lưu giọng đọc…'); joined(files, dest)
+    emit(100, (note + ' ' if note else '') + f'Đã tạo giọng đọc Edge ({len(text)} ký tự).', done=True, audio=str(dest))
+
 def run(job):
     key = os.environ.get('MINIMAX_API_KEY', '').strip()
-    if not key: raise ValueError('Chưa có API key MiniMax.')
     text = (job.get('text') or '').strip()
     if not text: raise ValueError('Hãy nhập nội dung cần đọc.')
+    if job.get('engine') == 'edge': return run_edge(job, text)
+    if not key:
+        if job.get('fallback', True): return run_edge(job, text, 'Chưa có API key MiniMax.')
+        raise ValueError('Chưa có API key MiniMax.')
     if not (job.get('voice') or '').strip(): raise ValueError('Hãy nhập Voice ID (giọng đã clone trên MiniMax).')
     job = dict(job, voice=job['voice'].strip(), model=job.get('model') if job.get('model') in MODELS else MODELS[0],
                speed=max(.5, min(2, float(job.get('speed', 1) or 1))))
@@ -88,8 +153,9 @@ def run(job):
             for attempt in range(3):
                 try: data = synthesize(p, job, key); break
                 except RuntimeError as e:
-                    if 'giới hạn tốc độ' not in str(e) or attempt == 2: raise
-                    time.sleep(20)
+                    if 'giới hạn tốc độ' in str(e) and attempt < 2: time.sleep(20); continue
+                    if job.get('fallback', True): return run_edge(job, text, f'MiniMax lỗi: {e}')
+                    raise
             f = Path(tmp) / f'{i:03}.mp3'; f.write_bytes(data); files.append(f)
         emit(92, 'Đang ghép và lưu giọng đọc…')
         part = dest.with_suffix('.part.mp3')

@@ -76,10 +76,16 @@
   <section class="panel a-out" aria-labelledby="a3">
     <h2 id="a3"><span class="num">03</span>Tư liệu, giọng đọc &amp; xuất</h2>
     <p class="hint">Ảnh &amp; video sản phẩm: <b data-path="adMediaFolder">chưa chọn</b> (thêm ở mục 01).</p>
-    <div class="seg full" data-seg="adVoiceSource"><button data-value="minimax">🗣 Giọng MiniMax</button><button data-value="file">🎤 File ghi âm</button></div>
+    <div class="seg full" data-seg="adVoiceSource"><button data-value="minimax">🗣 MiniMax</button><button data-value="edge">🆓 Giọng Edge</button><button data-value="file">🎤 File ghi âm</button></div>
     <div id="voiceTts">
       <label class="afield"><span>Voice ID</span><input type="text" data-text="minimaxVoice" placeholder="Voice ID giọng đã clone"></label>
       <p class="hint" id="keyNote"></p>
+    </div>
+    <div id="voiceEdge">
+      <label class="switch" id="fallbackRow"><input type="checkbox" data-key="ttsFallback"><span></span>MiniMax lỗi (hết tiền, key sai, mất kết nối) thì dùng giọng Edge miễn phí</label>
+      <div class="row between"><span class="hint">Giọng Edge</span>
+        <div class="seg" data-seg="edgeVoice"><button data-value="vi-VN-NamMinhNeural">Nam Minh (nam)</button><button data-value="vi-VN-HoaiMyNeural">Hoài My (nữ)</button></div></div>
+      <p class="hint" id="edgeNote">Giọng Edge của Microsoft: miễn phí, cần mạng, không có giọng clone và không đổi được cảm xúc; giọng điệu sôi nổi chỉ làm đọc nhanh và cao hơn một chút.</p>
     </div>
     <div id="voiceFile" hidden>
       <button class="filebox" data-choose="adAudio"><span class="ico">〰</span><span class="fb-text"><b>File ghi âm lời đọc</b><small data-path="adAudio">Chọn file</small></span><span class="fb-go">＋</span></button>

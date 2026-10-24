@@ -262,23 +262,39 @@ def voice_for(parts, job, cache):
     """One MP3 per part (kept per text + voice, so the shared body is made once for all hooks), joined into one file."""
     import tts
     from platform_tools import FFMPEG, NOWIN
-    key = os.environ.get('MINIMAX_API_KEY', '').strip()
-    if not key: raise ValueError('Chưa có API key MiniMax.')
-    tjob = dict(voice=job['minimaxVoice'].strip(), model=job.get('minimaxModel') if job.get('minimaxModel') in tts.MODELS else tts.MODELS[0],
+    key = os.environ.get('MINIMAX_API_KEY', '').strip(); fallback = job.get('ttsFallback', True)
+    engine = 'edge' if job.get('adVoiceSource') == 'edge' else 'minimax'
+    if engine == 'minimax' and not key:
+        if not fallback: raise ValueError('Chưa có API key MiniMax.')
+        engine = 'edge'; job['voiceNote'] = 'Chưa có API key MiniMax: đã dùng giọng Edge (miễn phí).'
+    tjob = dict(voice=(job.get('minimaxVoice') or '').strip(), model=job.get('minimaxModel') if job.get('minimaxModel') in tts.MODELS else tts.MODELS[0],
                 speed=max(.5, min(2, float(job.get('minimaxSpeed', 1) or 1))), region=job.get('minimaxRegion'))
     name, _, emotion, faster, pitch = ENERGY.get(job.get('adEnergy'), ENERGY['thuong'])
     tjob.update(speed=round(min(2, tjob['speed'] * faster), 2), pitch=pitch, emotion=emotion)
-    folder = cache / 'ad-voice'; folder.mkdir(parents=True, exist_ok=True); files = []
-    for n, p in enumerate(parts):
-        f = folder / (hashlib.sha1(json.dumps([p['loi'], tjob['voice'], tjob['model'], tjob['speed'], tjob['pitch'], tjob['emotion']], ensure_ascii=False).encode()).hexdigest()[:20] + '.mp3')
-        if not (f.is_file() and f.stat().st_size > 800):
-            for attempt in range(3):
-                try: data = tts.synthesize(p['loi'], tjob, key); break
-                except RuntimeError as e:
-                    if 'giới hạn tốc độ' not in str(e) or attempt == 2: raise
-                    time.sleep(20)
-            f.write_bytes(data); time.sleep(.6)   # a short breath between requests: fewer dropped connections
-        p['dur'] = round(media_duration(f), 3); files.append(f)
+    edge_voice = job.get('edgeVoice') if job.get('edgeVoice') in tts.EDGE_VOICES else 'vi-VN-NamMinhNeural'
+    folder = cache / 'ad-voice'; folder.mkdir(parents=True, exist_ok=True)
+    def make(engine):
+        files = []
+        for n, p in enumerate(parts):
+            sig = [p['loi'], tjob['voice'], tjob['model'], tjob['speed'], tjob['pitch'], tjob['emotion']] if engine == 'minimax' else ['edge', p['loi'], edge_voice, tjob['speed'], tjob['pitch']]
+            f = folder / (hashlib.sha1(json.dumps(sig, ensure_ascii=False).encode()).hexdigest()[:20] + '.mp3')
+            if not (f.is_file() and f.stat().st_size > 800):
+                if engine == 'edge': data = tts.edge_synthesize(p['loi'], edge_voice, tjob['speed'], tjob['pitch'])
+                else:
+                    for attempt in range(3):
+                        try: data = tts.synthesize(p['loi'], tjob, key); break
+                        except RuntimeError as e:
+                            if 'giới hạn tốc độ' not in str(e) or attempt == 2: raise
+                            time.sleep(20)
+                f.write_bytes(data); time.sleep(.6)   # a short breath between requests: fewer dropped connections
+            p['dur'] = round(media_duration(f), 3); files.append(f)
+        return files
+    try: files = make(engine)
+    except RuntimeError as e:
+        if engine != 'minimax' or not fallback: raise
+        # The whole video in one voice: every part is read again by Edge, not only the ones MiniMax did not finish.
+        job['voiceNote'] = f'MiniMax lỗi ({e}): đã dùng giọng Edge (miễn phí).'; job['adVoiceSource'] = 'edge'   # the other hooks go straight to Edge
+        files = make('edge')
     out = folder / ('ghep-' + hashlib.sha1('|'.join(f.name for f in files).encode()).hexdigest()[:16] + '.m4a')
     args = [FFMPEG, '-v', 'error', '-y']
     for f in files: args += ['-i', str(f)]
@@ -296,7 +312,7 @@ def export(job):
     if not script['hooks'] or not any(h['loi'].strip() or h['chu'].strip() for h in script['hooks']): raise ValueError('Kịch bản chưa có hook.')
     if not any(p['loi'].strip() for p in script['phan']): raise ValueError('Kịch bản chưa có lời đọc cho các phần.')
     picks = [i for i in job.get('hooks') or [0] if 0 <= i < len(script['hooks']) and (script['hooks'][i]['loi'].strip() or script['hooks'][i]['chu'].strip())][:3] or [0]
-    tts_voice = job.get('adVoiceSource') == 'minimax'
+    tts_voice = job.get('adVoiceSource') in ('minimax', 'edge')
     if not tts_voice and not Path(job.get('adAudio') or '').is_file(): raise ValueError('Hãy chọn file ghi âm lời đọc, hoặc đổi sang giọng MiniMax.')
     if job.get('preview'): picks = picks[:1]
     output = Path(job['outputFolder'])
@@ -308,7 +324,7 @@ def export(job):
             base = 100 * n / len(picks); span = 100 / len(picks); label = f'Bản {"ABC"[n]}' if len(picks) > 1 else 'Video quảng cáo'
             parts = spoken(script, hook)
             if tts_voice:
-                emit(base + span * .02, f'{label}: MiniMax đang đọc {len(parts)} đoạn…')
+                emit(base + span * .02, f'{label}: {"giọng Edge" if job.get("adVoiceSource") == "edge" else "MiniMax"} đang đọc {len(parts)} đoạn…')
                 audio = voice_for(parts, job, cache)
             else: audio = Path(job['adAudio'])
             t1, t2 = title_lines(script['hooks'][hook]['chu'] or script['hooks'][hook]['loi'])
@@ -335,7 +351,7 @@ def export(job):
         lines += ['', 'KỊCH BẢN'] + [f'- {p["vai"]}: {p["loi"]}  [chữ: {p["chu"]}]' for p in script['phan']] + [f'- Kêu gọi: {script["cta"]["loi"]}  [chữ: {script["cta"]["chu"]}]', '',
                   'LỜI MÔ TẢ KHI ĐĂNG', script['caption'], ' '.join(script['hashtags'])]
         (folder / 'kich-ban-va-caption.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
-    emit(100, 'Đã xuất bản xem thử.' if job.get('preview') else f'Đã xuất {len(results)} video quảng cáo vào thư mục “{folder.name}”.',
+    emit(100, (job['voiceNote'] + ' ' if job.get('voiceNote') else '') + ('Đã xuất bản xem thử.' if job.get('preview') else f'Đã xuất {len(results)} video quảng cáo vào thư mục “{folder.name}”.'),
          done=True, output=results[0]['path'], adResults=results)
 
 if __name__ == '__main__':
