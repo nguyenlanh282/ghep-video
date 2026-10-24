@@ -396,3 +396,7 @@ main.ads>.a-brief{grid-area:brief}main.ads>.a-script{grid-area:script}main.ads>.
 .mediadlg{width:min(900px,94vw)}
 .mediastage{margin:12px 0;background:#000;border-radius:12px;display:grid;place-items:center;min-height:200px;overflow:hidden}
 .mediastage img,.mediastage video{max-width:100%;max-height:66vh;display:block}
+.mcpdlg{width:min(760px,94vw)}
+.mcpdlg h3{margin:14px 0 6px;font-size:14px}
+.mcpcode{display:flex;gap:8px;align-items:flex-start}
+.mcpcode pre{flex:1;margin:0;padding:10px 12px;border-radius:10px;background:#0f141c;border:1px solid var(--line);font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-all;max-height:220px;overflow:auto}

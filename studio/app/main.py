@@ -863,6 +863,15 @@ class Studio:
   threading.Timer(.5,lambda:os._exit(0)).start()
   return {}
 
+ def mcp_info(self):
+  """How to connect Claude to this app (MCP over stdio), with this computer's own paths."""
+  py=Path(sys.executable)
+  if WINDOWS and py.name.lower()=='pythonw.exe' and (py.parent/'python.exe').is_file():py=py.parent/'python.exe'  # MCP talks over the console streams
+  server=ENGINE/'mcp_server.py';q=lambda p:f'"{p}"'
+  desktop={'mcpServers':{'ghep-video':{'command':str(py),'args':[str(server)]}}}
+  cfg=(Path(os.environ.get('APPDATA',''))/'Claude'/'claude_desktop_config.json') if WINDOWS else Path.home()/'Library'/'Application Support'/'Claude'/'claude_desktop_config.json'
+  return dict(code=f'claude mcp add ghep-video -s user -- {q(py)} {q(server)}',desktop=json.dumps(desktop,ensure_ascii=False,indent=2),desktopFile=str(cfg),ready=server.is_file())
+
  def clear_error(self):
   self.job['error']=None;return self.state()
 
@@ -880,6 +889,7 @@ API={'state':lambda b:studio.state(),'set':lambda b:studio.set(b.get('values',{}
  'timelineState':lambda b:studio.timeline_state(),'timelineEdit':lambda b:studio.timeline_edit(b),'timelineReset':lambda b:studio.timeline_reset(),
  'mediaList':lambda b:dict(files=studio.media_list(studio.settings['talkBrollFolder' if b.get('which')=='broll' else 'mediaFolder'])),
  'adState':lambda b:studio.ad_state(),'adSave':lambda b:studio.ad_save(b.get('script')),'adSkeleton':lambda b:studio.ad_skeleton(),'adAddFiles':lambda b:studio.ad_add_files(b.get('paths') or []),'adRemove':lambda b:studio.ad_remove(b.get('name','')),'adRestore':lambda b:studio.ad_restore(),
+ 'mcpInfo':lambda b:studio.mcp_info(),
  'projects':lambda b:studio.projects(),'projectOpen':lambda b:studio.project_open(b.get('kind'),b.get('id','')),
  'projectRename':lambda b:studio.project_rename(b.get('kind'),b.get('id',''),b.get('name','')),'projectDelete':lambda b:studio.project_delete(b.get('kind'),b.get('id',''))}
 
@@ -955,7 +965,25 @@ class Handler(BaseHTTPRequestHandler):
 def serve():
  server=ThreadingHTTPServer(('127.0.0.1',int(os.environ.get('GHEPVIDEO_PORT','0'))),Handler)
  threading.Thread(target=server.serve_forever,daemon=True).start()
+ announce(server.server_address[1])
  return f'http://127.0.0.1:{server.server_address[1]}/?t={TOKEN}',server
+
+APP_FILE=DATA/'app-dang-mo.json'
+def announce(port):
+ """Where the running app listens, for the MCP server (mcp_server.py) that lets Claude drive it. Only this user can
+ read the file; it is removed when the app closes and a new token is made at every start."""
+ import atexit
+ try:
+  DATA.mkdir(parents=True,exist_ok=True);tmp=APP_FILE.with_suffix('.tmp')
+  fd=os.open(tmp,os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600)
+  with os.fdopen(fd,'w',encoding='utf-8') as f:json.dump(dict(port=port,token=TOKEN,pid=os.getpid(),version=updater.current_version()),f)
+  tmp.replace(APP_FILE)
+ except OSError:return
+ def gone():
+  try:
+   if json.loads(APP_FILE.read_text(encoding='utf-8')).get('pid')==os.getpid():APP_FILE.unlink()
+  except (OSError,ValueError):pass
+ atexit.register(gone)
 
 def main():
  utf8_stdio();url,server=serve()
