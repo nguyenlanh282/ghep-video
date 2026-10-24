@@ -174,7 +174,11 @@ def pip_install(python,progress):
  from platform_tools import WINDOWS, NOWIN
  req=ENGINE/('requirements-windows.txt' if WINDOWS else 'requirements-mac.txt')
  progress(85,'Đang cài thêm thư viện cho bản mới…')
- p=subprocess.run([python,'-m','pip','install','-q','-r',str(req)],capture_output=True,**NOWIN)
+ from platform_tools import DATA
+ uv=DATA/'bin'/('uv.exe' if WINDOWS else 'uv')
+ # uv when the installer left it (fast, works even without pip in the environment); pip otherwise.
+ cmd=[str(uv),'pip','install','--python',str(python),'-q','-r',str(req)] if uv.is_file() else [python,'-m','pip','install','-q','-r',str(req)]
+ p=subprocess.run(cmd,capture_output=True,**NOWIN)
  if p.returncode:raise RuntimeError('Cài thư viện chưa được: '+p.stderr.decode(errors='replace')[-400:])
 
 if __name__=='__main__':
