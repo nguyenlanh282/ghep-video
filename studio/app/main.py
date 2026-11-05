@@ -73,6 +73,7 @@ DEFAULTS=dict(mediaFolder=str(find_child(ROOT,'Video - ảnh')),audio=first_audi
  adKnowledgeFolder='',adMediaFolder=str(find_child(ROOT,'Video - ảnh')),adScript='',adHooks='0,1,2',adVoiceSource='minimax',adAudio='',adAspect='9:16',adEnergy='soi-noi',
  talkOutputFolder='',adOutputFolder='',adResolution='1080',  # each mode can save somewhere else ('' = the common output folder)
  talkFill=True)  # upright video in a 16:9 / 1:1 frame: fill it (crop top and bottom) or keep the whole picture on a blurred copy
+HYPERFRAMES='hyperframes@0.9'  # the HyperFrames CLI release line this export is written for
 AD_BIN='.da-xoa'  # photos/videos taken out of an ad are kept here (hidden), not deleted
 TALK_DENSITY={'it':.18,'vua':.3,'nhieu':.45}
 SECRET_KEYS={'pexelsKey','pixabayKey','minimaxKey'}
@@ -227,19 +228,24 @@ class Studio:
   # A computer without FFmpeg (or with one only the Terminal can see): fetch it first, then the user presses again.
   if task not in ('tools','ad-script') and platform_tools.missing_tools():task='tools'
   if not names and task in ('render','analyze','undo'):return self.fail('Hãy chọn thư mục có ảnh hoặc video.')
-  if task in ('talk-analyze','talk-render'):
+  if task=='talk-hyperframes' and not platform_tools.node_tool('npx'):return self.fail('Cần cài Node.js (miễn phí, nodejs.org) để dùng HyperFrames, rồi mở lại app.')
+  if task in ('talk-analyze','talk-render','talk-hyperframes'):
    if not self.talk_videos():return self.fail('Hãy chọn video thô.')
-   if task=='talk-render' and not self.talk_project():return self.fail('Hãy bấm “Phân tích video” trước.')
+   if task in ('talk-render','talk-hyperframes') and not self.talk_project():return self.fail('Hãy bấm “Phân tích video” trước.')
    job=dict(video=self.talk_videos()[0],videos=self.talk_videos(),grade=self.grade(),projectDir=str(self.talk_dir()),cacheFolder=str(self.cache()),brollFolder=s['talkBrollFolder'],broll=s['talkBroll'],
             brollDensity=TALK_DENSITY.get(s['talkDensity'],.3),stockEnabled=s['stockEnabled'],stockSource=s['stockSource'],cutRetakes=s['talkRetakes'],
             fixesText=s['fixesText'],outputFolder=self.out_folder('talk'),titleStyle=s['titleStyle'],titleSeconds=s['titleSeconds'],titleScale=s['titleScale'],titleEffect=s['titleEffect'],subScale=s['subScale'],subFont=s['subFont'],aiSpelling=s['aiSpelling'],subStyle=s['subStyle'],captionY=s['captionY'],
             aspects=[a for a in s['talkAspects'].split(',') if a],exportShorts=s['talkShorts'],talkFill=s['talkFill'],punchIn=s['talkPunchIn'],denoise=s['talkDenoise'],
             highlightKeywords=s['talkKeywords'],voiceVolume=s['voiceVolume'],normalizeVoice=s['normalizeVoice'],music=s['music'],musicVolume=s['musicVolume'],aiPython=sys.executable)
-   if task=='talk-render':
+   if task in ('talk-render','talk-hyperframes'):
     proj=self.talk_project() or {};pick=proj.get('title_choice') or (proj.get('titles') or [{}])[0]  # ⚡ exports before the editor saves a choice
     job.update(title=pick.get('dong1',''),subtitle=pick.get('dong2',''))
    job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
-   args=[str(ENGINE/'talk.py'),task[5:],str(job_file)];log='talk.log';cleanup=lambda:job_file.unlink(missing_ok=True)
+   if task=='talk-hyperframes':
+    job['aspect']=(job['aspects'] or ['9:16'])[0];job['hfFolder']=job['outputFolder']
+    job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
+    args=[str(ENGINE/'hyperframes_export.py'),str(job_file)];log='hyperframes.log';cleanup=lambda:job_file.unlink(missing_ok=True)
+   else:args=[str(ENGINE/'talk.py'),task[5:],str(job_file)];log='talk.log';cleanup=lambda:job_file.unlink(missing_ok=True)
   elif task in ('render','plan'):
    if not Path(s['audio']).is_file():return self.fail('Hãy chọn file ghi âm.')
    if not Path(s['outputFolder']).is_dir():return self.fail('Hãy chọn thư mục lưu video.')
@@ -314,6 +320,34 @@ class Studio:
   threading.Thread(target=self.watch,args=(self.proc,logf,cleanup),daemon=True).start()
   return self.state()
 
+ def hf_open(self,folder=None):
+  """Open a HyperFrames project in its editor (Studio preview in the browser, kept running in the background)."""
+  folder=folder or getattr(self,'hf_project',None)
+  if not folder or not Path(folder).is_dir():return dict(error='Chưa có dự án HyperFrames: bấm “Chỉnh tiếp trong HyperFrames” trước.')
+  npx=platform_tools.node_tool('npx')
+  if not npx:return dict(error='Cần cài Node.js (nodejs.org) để mở HyperFrames.')
+  env=dict(os.environ,PATH=os.pathsep.join([str(Path(npx).parent),os.environ.get('PATH','')]))
+  subprocess.Popen([npx,'-y',HYPERFRAMES,'preview','--background',str(folder)],cwd=str(folder),env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,**NOWIN)
+  return dict(ok=True,folder=str(folder))
+
+ def hf_render(self):
+  """Render the HyperFrames project (after editing it) to an MP4 next to it."""
+  folder=getattr(self,'hf_project',None)
+  if not folder or not Path(folder).is_dir():return dict(error='Chưa có dự án HyperFrames.')
+  npx=platform_tools.node_tool('npx')
+  if not npx:return dict(error='Cần cài Node.js (nodejs.org).')
+  out=Path(folder)/f'{Path(folder).name} - đã chỉnh.mp4'
+  env=dict(os.environ,PATH=os.pathsep.join([str(Path(npx).parent),os.environ.get('PATH','')]))
+  def go():
+   self.job=dict(running=True,task='hf-render',progress=.1,status='HyperFrames đang xuất video đã chỉnh…',error=None,result=None,cancelled=False,log='hyperframes.log')
+   with open(self.cache()/'hyperframes.log','ab') as logf:
+    r=subprocess.run([npx,'-y',HYPERFRAMES,'render','--quality','delivery','-o',str(out),str(folder)],cwd=str(folder),env=env,stdout=logf,stderr=logf,**NOWIN)
+   ok=r.returncode==0 and out.is_file()
+   self.job.update(running=False,progress=1,status=f'Đã xuất “{out.name}”.' if ok else 'Cần kiểm tra lại',error=None if ok else f"HyperFrames chưa xuất được{log_reason(self.cache()/'hyperframes.log')}",result=str(out) if ok else None)
+  if self.job['running']:return dict(error='Đang có tác vụ chạy.')
+  threading.Thread(target=go,daemon=True).start();time.sleep(.2)
+  return self.state()
+
  def refresh_tools(self):
   """After FFmpeg was fetched: the modules already loaded in this process learn where it is."""
   ff,fp=platform_tools.tool('ffmpeg'),platform_tools.tool('ffprobe')
@@ -345,6 +379,7 @@ class Studio:
      except Exception:name=''
      if name and not self.settings['adProduct'].strip():self.settings['adProduct']=ads_short(name)
      self.save()
+    if msg.get('hfProject') and Path(msg['hfProject']).is_dir():self.hf_project=msg['hfProject'];self.hf_open(msg['hfProject'])
     if isinstance(msg.get('adResults'),list):self.ad_results=[r for r in msg['adResults'] if isinstance(r,dict) and Path(str(r.get('path',''))).is_file()]
     if msg.get('audio') and Path(msg['audio']).is_file():self.settings['audio']=msg['audio'];self.save()  # the new voice-over becomes the recording
   code=proc.wait();logf.close();cleanup()
@@ -896,7 +931,7 @@ API={'state':lambda b:studio.state(),'set':lambda b:studio.set(b.get('values',{}
  'timelineState':lambda b:studio.timeline_state(),'timelineEdit':lambda b:studio.timeline_edit(b),'timelineReset':lambda b:studio.timeline_reset(),
  'mediaList':lambda b:dict(files=studio.media_list(studio.settings['talkBrollFolder' if b.get('which')=='broll' else 'mediaFolder'])),
  'adState':lambda b:studio.ad_state(),'adSave':lambda b:studio.ad_save(b.get('script')),'adSkeleton':lambda b:studio.ad_skeleton(),'adAddFiles':lambda b:studio.ad_add_files(b.get('paths') or []),'adRemove':lambda b:studio.ad_remove(b.get('name','')),'adRestore':lambda b:studio.ad_restore(),
- 'mcpInfo':lambda b:studio.mcp_info(),
+ 'mcpInfo':lambda b:studio.mcp_info(),'hfOpen':lambda b:studio.hf_open(),'hfRender':lambda b:studio.hf_render(),
  'projects':lambda b:studio.projects(),'projectOpen':lambda b:studio.project_open(b.get('kind'),b.get('id','')),
  'projectRename':lambda b:studio.project_rename(b.get('kind'),b.get('id',''),b.get('name','')),'projectDelete':lambda b:studio.project_delete(b.get('kind'),b.get('id',''))}
 

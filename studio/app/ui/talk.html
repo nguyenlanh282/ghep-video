@@ -141,6 +141,11 @@
     <label class="hint" id="skipRow"><input type="checkbox" id="skipCuts" checked> Bỏ qua chỗ cắt khi phát bản thô</label>
     <div class="row gap" id="resultRow" hidden>
       <button class="btn primary" id="openFolder">📁 Mở thư mục video đã xuất</button>
+      <button class="btn" id="hfBtn" title="Tạo dự án HyperFrames từ bản đã edit: sửa phụ đề, tiêu đề, thời gian trong trình chỉnh sửa rồi xuất lại">✏️ Chỉnh tiếp trong HyperFrames</button>
+      <button class="btn" id="hfRender" hidden>🎬 Xuất bản đã chỉnh</button>
+    </div>
+    <p class="hint" id="hfNote" hidden>Trình chỉnh sửa HyperFrames mở trong trình duyệt. Sửa chữ, thời gian, màu phụ đề và tiêu đề ở đó, rồi bấm Render trong HyperFrames hoặc “🎬 Xuất bản đã chỉnh” ở đây. Cần Node.js và mạng lần đầu.</p>
+    <div hidden>
     </div>
     <div class="donate" id="donate" hidden>
       <button class="dclose" type="button" data-dclose aria-label="Ẩn lời mời ủng hộ">✕</button>

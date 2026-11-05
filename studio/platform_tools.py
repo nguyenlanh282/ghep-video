@@ -28,6 +28,18 @@ def tool(name):
   if candidate and Path(candidate).is_file():return str(candidate)
  return name
 
+def node_tool(name):
+ """npx / node from Node.js, also where installers put it when an app is opened without the Terminal's PATH."""
+ exe=name+('.cmd' if WINDOWS and name=='npx' else '.exe' if WINDOWS else '')
+ places=[Path(os.environ.get('ProgramFiles','C:/Program Files'))/'nodejs'/exe,Path(os.environ.get('APPDATA',''))/'npm'/exe] if WINDOWS else \
+  [Path(d)/name for d in ('/opt/homebrew/bin','/usr/local/bin',Path.home()/'.volta'/'bin',Path.home()/'Library'/'Application Support'/'crawbot'/'nodejs'/'bin')]
+ if not WINDOWS:
+  nvm=sorted((Path.home()/'.nvm'/'versions'/'node').glob('*/bin/'+name))
+  places+=nvm[-1:]
+ for c in (shutil.which(name),*places):
+  if c and Path(c).is_file():return str(c)
+ return None
+
 def speech_model_cached():
  """The Mac speech model (MLX Whisper) is in the Hugging Face cache."""
  hub=Path(os.environ.get('HF_HOME') or Path.home()/'.cache'/'huggingface')/'hub'/'models--mlx-community--whisper-medium-mlx'/'snapshots'

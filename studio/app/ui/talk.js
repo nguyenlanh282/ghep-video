@@ -88,7 +88,7 @@ function renderState(st) {
   $('#progress').hidden = !job.running; $('#progress').value = job.progress;
   $('#status').textContent = job.status;
   $('#substatus').textContent = job.running ? `${Math.round(job.progress * 100)}% · Bạn có thể dừng bất cứ lúc nào` : 'Video thô → video hoàn thiện có phụ đề, tiêu đề, cảnh trám';
-  $('#actions').hidden = job.running; $('#cancelBtn').hidden = !job.running || !['talk-analyze', 'talk-render'].includes(job.task);
+  $('#actions').hidden = job.running; $('#cancelBtn').hidden = !job.running || !['talk-analyze', 'talk-render', 'talk-hyperframes'].includes(job.task);
   $('#error').hidden = !job.error; $('#errorText').textContent = job.error || '';
   $('#exportBtn').disabled = !P;
   if (prev && prev.running && !job.running) {
@@ -293,6 +293,8 @@ function wire() {
     const out = await api('start', {task: 'talk-analyze'}); if (out.job && out.job.running) poll(); else autoExport = false;
   });
   $('#cancelBtn').addEventListener('click', () => api('cancel'));
+  $('#hfBtn').addEventListener('click', async () => { const out = await api('start', {task: 'talk-hyperframes'}); if (out.job && out.job.running) { $('#hfNote').hidden = false; $('#hfRender').hidden = false; poll(); } });
+  $('#hfRender').addEventListener('click', async () => { const out = await api('hfRender'); if (out.error) alert(out.error); else poll(); });
   $('#vlist').addEventListener('click', e => { const b = e.target.closest('[data-vop]'); if (b) api('talkVideos', {op: b.dataset.vop, index: +b.dataset.i, dir: +b.dataset.dir || 1}); });
   $('#vSort').addEventListener('click', () => api('talkVideos', {op: 'sort'}));
   if (window.Grade) Grade.init($('#gradeBox'), api);
