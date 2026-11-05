@@ -352,6 +352,29 @@ def face_at(project, t):
     """Face of the joined video playing at source time t (each has its own framing)."""
     return next((c.get('face') for c in project.get('clips') or [] if c['start'] <= t < c['end']), None)
 
+def faces_at(src, times, tmp, cache):
+    """Face of the speaker at each source time (one small frame per cut piece), so every punch-in lands on the face
+    where it really is at that moment, not on the average position of the whole video. cache: {time: face} shared by
+    all the aspect ratios of one export."""
+    todo = sorted({round(t, 2) for t in times if round(t, 2) not in cache})
+    frames = {}
+    for t in todo:
+        f = tmp / f'piece-face-{t:.2f}.jpg'
+        subprocess.run([FFMPEG, '-v', 'error', '-y', '-ss', f'{t:.2f}', '-i', str(src), '-frames:v', '1', '-vf', 'scale=640:-2', '-q:v', '5', str(f)], capture_output=True, **NOWIN)
+        if f.exists(): frames[t] = f
+    found = {}
+    if frames:
+        try:
+            from platform_tools import detect_faces_many
+            found = detect_faces_many(list(frames.values()))
+        except Exception: found = {}
+    for t in todo:
+        faces = (found.get(str(frames[t])) or {}).get('faces') or [] if t in frames else []
+        if faces:
+            x, y, w, h = max(faces, key=lambda b: b[2] * b[3]); cache[t] = dict(cx=x + w / 2, cy=y + h / 2, h=h)
+        else: cache[t] = None
+    return {t: cache.get(round(t, 2)) for t in times}
+
 def frame_at(project, t):
     """Framing set by hand on the timeline for the raw video playing at source time t (one per joined video, or 'all')."""
     frames = project.get('frames') or {}
@@ -417,6 +440,9 @@ def render_variant(project, job, aspect, first, last, title, dest, tmp, progress
             new.append(dict(kind='broll', out=max(o, p['out']), len=min(e, o2) - max(o, p['out']), br=br, off=max(0, p['out'] - o)))
             if e > o2: new.append(dict(p, out=o2, len=e - o2, src=p['src'] + (o2 - p['out'])))
         pieces = new
+    # Where the face is in each speaker piece (middle of the piece); pieces without a face use the video's usual spot.
+    looks = [p['src'] + min(p['len'] / 2, 1.5) for p in pieces if p['kind'] == 'speaker' and not frame_at(project, p['src'])]
+    piece_face = faces_at(src, looks, tmp, project.setdefault('_piece_faces', {})) if looks else {}
     clips = []
     for n, p in enumerate(pieces):
         frames = round((p['out'] + p['len']) * FPS) - round(p['out'] * FPS)
@@ -432,7 +458,7 @@ def render_variant(project, job, aspect, first, last, title, dest, tmp, progress
                 fr = frame_at(project, p['src'])
                 # A hand-set frame wins over the face-based crop; the punch-in zoom still alternates on top of it.
                 if fr: x, y, cw, ch = R.manual_crop(W0, H0, dict(fr, zoom=float(fr.get('zoom', 1)) * p['zoom']), W, H)
-                else: x, y, cw, ch = speaker_crop(W0, H0, face_at(project, p['src']) or face, W, H, p['zoom'])
+                else: x, y, cw, ch = speaker_crop(W0, H0, piece_face.get(p['src'] + min(p['len'] / 2, 1.5)) or face_at(project, p['src']) or face, W, H, p['zoom'])
                 vf = f'crop={cw}:{ch}:{x}:{y},scale={W}:{H},setsar=1,fps={FPS},tpad=stop_mode=clone:stop_duration=5'
             cmd = [FFMPEG, '-v', 'error', '-y', '-ss', f'{p["src"]:.3f}', '-i', str(src), '-vf', vf]
         else:

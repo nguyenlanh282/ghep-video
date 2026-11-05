@@ -112,5 +112,24 @@ class TalkTests(unittest.TestCase):
         self.assertIsNone(talk.frame_at(p, 2)); self.assertEqual(talk.frame_at(p, 6), fr)
         self.assertEqual(talk.frame_at(dict(frames={'0': fr}), 3), fr)       # one video, no clip list
         self.assertEqual(talk.frame_at(dict(clips=p['clips'], frames={'all': fr}), 2), fr)
+    def test_punch_in_follows_the_face_of_each_piece(self):
+        import tempfile, platform_tools
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as tmp:
+            src = Path(tmp) / 'v.mp4'
+            r = talk.subprocess.run([talk.FFMPEG, '-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=s=320x568:d=4', str(src)], capture_output=True)
+            if r.returncode: self.skipTest('no ffmpeg')
+            seen = []
+            def fake(frames):   # face on the left early, on the right later
+                seen.extend(frames)
+                return {str(f): dict(faces=[[.1, .3, .2, .1]] if 'piece-face-0.50' in str(f) else [[.7, .3, .2, .1]]) for f in frames}
+            real = platform_tools.detect_faces_many; platform_tools.detect_faces_many = fake
+            try:
+                cache = {}; got = talk.faces_at(src, [.5, 3.0], Path(tmp), cache)
+                self.assertAlmostEqual(got[.5]['cx'], .2); self.assertAlmostEqual(got[3.0]['cx'], .8)
+                talk.faces_at(src, [.5, 3.0], Path(tmp), cache); self.assertEqual(len(seen), 2)   # reused for the other aspect ratios
+            finally: platform_tools.detect_faces_many = real
+        x1 = talk.speaker_crop(1080, 1920, got[.5], 1080, 1920, 1.12)[0]; x2 = talk.speaker_crop(1080, 1920, got[3.0], 1080, 1920, 1.12)[0]
+        self.assertLess(x1, x2)
 
 if __name__ == '__main__': unittest.main()

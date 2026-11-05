@@ -138,7 +138,10 @@ progress::-webkit-progress-bar{background:rgba(255,255,255,.1)}
 progress::-webkit-progress-value{background:var(--accent)}
 progress::-moz-progress-bar{background:var(--accent)}
 .error{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--warn);font-size:12px;user-select:text}
-main.busy{opacity:.55;pointer-events:none}
+/* While a task runs: the page still scrolls and the preview, the timeline view and the cancel button work; only the
+   controls that would change what is being made are paused. */
+main.busy>.panel:not(.preview):not(.tl-panel){opacity:.6}
+main.busy>.panel:not(.preview) :is(button,input,textarea,select,label,.filebox,.tl-handle){pointer-events:none}
 dialog{border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--text);padding:0;width:min(460px,calc(100vw - 32px))}
 dialog::backdrop{background:rgba(0,0,0,.55)}
 .dlg{display:flex;flex-direction:column;gap:12px;padding:20px}
