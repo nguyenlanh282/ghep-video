@@ -967,7 +967,7 @@ class Handler(BaseHTTPRequestHandler):
      chunk=f.read(min(1<<20,left))
      if not chunk:break
      self.wfile.write(chunk);left-=len(chunk)
-   except (BrokenPipeError,ConnectionResetError):pass
+   except OSError:pass  # the player cancelled (seek, closed preview, socket buffer full): nothing to do
 
 def serve():
  server=ThreadingHTTPServer(('127.0.0.1',int(os.environ.get('GHEPVIDEO_PORT','0'))),Handler)
