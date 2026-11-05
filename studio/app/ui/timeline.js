@@ -193,6 +193,19 @@ window.TL = (() => {
     const saveBroll = debounce(() => ctx.save({brollList: P().broll}), 400);
     const nearestWord = o => { let best = -1, bd = 1e9; P().words.forEach((w, i) => { if (w.cut) return; const d = Math.abs(outOf(w.start) - o); if (d < bd) { bd = d; best = i; } }); return best; };
 
+    // A filmstrip: one small picture every ~TILE px along the kept video, so the strip shows what plays where
+    // (one stretched picture for a whole long video was a blur).
+    const TILE = 60;
+    function filmstrip(c, a, b) {
+      const w = (b - a) * st.pps, n = Math.max(1, Math.min(60, Math.round(w / TILE))), tw = w / n, joined = P().clips && P().clips.length;
+      let out = '';
+      for (let k = 0; k < n; k++) {
+        const o = a + (k + .5) * tw / st.pps, t = Math.max(0, Math.min(c.end - .05, srcOf(o)) - (joined ? c.start : 0));
+        out += `<img class="tile" loading="lazy" src="${thumb(c.path, Math.round(t * 2) / 2)}" alt="" draggable="false" style="left:${(k * tw).toFixed(1)}px;width:${Math.ceil(tw) + 1}px">`;
+      }
+      return out;
+    }
+
     function draw(rebuild = true) {
       const p = P(); root.hidden = !p; if (!p) return;
       const dur = total(); st.scroll.hidden = false;
@@ -203,7 +216,7 @@ window.TL = (() => {
       st.hint.textContent = `Video sau khi cắt dài ${sec(dur)}. Hàng trên: cảnh trám (kéo để dời, kéo mép phải để đổi độ dài). Hàng dưới: video người nói. Bấm một ô để chỉnh khung hình, đoạn nguồn, đổi ảnh/video.`;
       main.innerHTML = clips().map((c, i) => { const a = outOf(c.start), b = outOf(c.end); if (b - a < .05) return '';
         return `<div class="tl-block ${sel && sel.kind === 'clip' && sel.i === i ? 'on' : ''} ${(p.frames || {})[i] ? 'edited' : ''}" data-clip="${i}" style="left:${a * st.pps}px;width:${(b - a) * st.pps}px" title="${esc(c.name)}">
-          <img src="${thumb(c.path, c.start + Math.min(2, (c.end - c.start) / 2) - (p.clips && p.clips.length ? c.start : 0))}" alt="" draggable="false"><b>${i + 1}</b><span>${esc(c.name)}</span></div>`; }).join('');
+          ${filmstrip(c, a, b)}<b>${i + 1}</b><span>${esc(c.name)}</span></div>`; }).join('');
       bt.innerHTML = (p.broll || []).map((br, i) => { const a = brStart(br);
         return `<div class="tl-block br ${sel && sel.kind === 'br' && sel.i === i ? 'on' : ''} ${br.on === false ? 'off' : ''}" data-br="${i}" style="left:${a * st.pps}px;width:${br.dur * st.pps}px" title="${esc(br.source + (br.text ? ': ' + br.text : ''))}">
           <img src="${thumb(br.path, br.d ? br.a + .2 : 0)}" alt="" draggable="false"><span>${br.d ? '▶ ' : ''}${esc((br.source || '').split(/[\\/]/).pop())}</span><i class="tl-handle" title="Kéo để đổi độ dài"></i></div>`; }).join('')
@@ -255,7 +268,13 @@ window.TL = (() => {
         sel = {kind: 'br', i: P().broll.findIndex(x => x.first === first && x.path === f.path)}; saveBroll(); draw();
       });
     });
-    main.addEventListener('click', e => { const b = e.target.closest('[data-clip]'); if (b) { sel = {kind: 'clip', i: +b.dataset.clip}; draw(); } });
+    main.addEventListener('click', e => {
+      const b = e.target.closest('[data-clip]'); if (!b) return;
+      // Clicking the strip also moves the playhead there, so the preview shows that moment.
+      cursor = clamp((e.clientX - st.inner.getBoundingClientRect().left) / st.pps, 0, total()); st.setHead(cursor);
+      const pl = ctx.player; pl.currentTime = ctx.view() === 'edited' ? cursor : srcOf(cursor);
+      sel = {kind: 'clip', i: +b.dataset.clip}; draw();
+    });
     bt.addEventListener('pointerdown', e => {
       const blk = e.target.closest('[data-br]'); if (!blk) return; const i = +blk.dataset.br, br = P().broll[i], h = e.target.closest('.tl-handle');
       e.preventDefault(); blk.setPointerCapture(e.pointerId); const x0 = e.clientX, a0 = brStart(br), d0 = br.dur; let moved = false, a = a0;

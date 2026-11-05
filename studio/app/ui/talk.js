@@ -235,7 +235,8 @@ function setView(v, play) {
   $('#viewHint').textContent = view === 'edited' ? 'Video đã edit, đúng như người xem sẽ thấy. Sửa bản chữ rồi bấm “Xuất video” để xem lại bản mới.'
     : exportsList.length ? 'Bản thô: bấm chữ trong bản chữ để nghe đúng đoạn đó.' : 'Chưa xuất video: đang phát bản thô. Bấm “Xuất video” hoặc “⚡ Edit & xuất ngay” để xem video đã edit.';
   const src = view === 'edited' ? exportsList[currentExport].url : videoUrl, p = $('#player');
-  if (src && p.dataset.src !== src) { p.src = src; p.dataset.src = src; }
+  // '#t=0.1' makes the player paint a first frame instead of a black box before Play.
+  if (src && p.dataset.src !== src) { p.src = src + (src.includes('#') ? '' : '#t=0.1'); p.dataset.src = src; }
   if (play) p.play().catch(() => {});
 }
 
