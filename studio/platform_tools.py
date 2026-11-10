@@ -201,6 +201,40 @@ def local_ai_available():
   return importlib.util.find_spec('mlx_vlm') is not None
  return ollama_exe() is not None
 
+def ai_logged_in(name):
+ """True / False when the CLI says whether the user's own subscription is signed in; None if it cannot tell."""
+ cli=cli_path(name)
+ if not cli:return False
+ args=[cli,'auth','status'] if name=='claude' else [cli,'login','status']
+ try:r=subprocess.run(args,capture_output=True,timeout=20,**NOWIN)
+ except (OSError,subprocess.TimeoutExpired):return None
+ out=(r.stdout+r.stderr).decode(errors='replace')
+ if name=='claude':
+  try:return bool(json.loads(out[out.find('{'):out.rfind('}')+1]).get('loggedIn'))
+  except ValueError:return r.returncode==0 and 'logged in' in out.lower() and 'not logged' not in out.lower()
+ return r.returncode==0 and 'not logged' not in out.lower()
+
+def install_ai(name,progress=lambda p,m:None):
+ """Install Claude Code or Codex with their official installers, for the user's own Claude / ChatGPT plan."""
+ if name=='claude':
+  progress(10,'Đang tải và cài Claude Code (bộ cài chính thức của Anthropic)…')
+  cmd=['powershell','-NoProfile','-ExecutionPolicy','Bypass','-Command','irm https://claude.ai/install.ps1 | iex'] if WINDOWS else ['bash','-c','curl -fsSL https://claude.ai/install.sh | bash']
+ elif name=='codex':
+  npm=None
+  for n in ('npm',):
+   c=shutil.which(n) or next((str(p) for p in ([Path(os.environ.get('ProgramFiles','C:/Program Files'))/'nodejs'/'npm.cmd'] if WINDOWS else [Path('/opt/homebrew/bin/npm'),Path('/usr/local/bin/npm')]) if p.is_file()),None)
+   npm=c
+  if not npm:raise RuntimeError('Cần cài Node.js trước (miễn phí, nodejs.org) rồi bấm lại “Cài Codex”.')
+  progress(10,'Đang cài Codex (bộ cài chính thức của OpenAI)…')
+  # On a Mac the global npm folder often needs admin rights: install for this user only (~/.local/bin/codex).
+  cmd=[npm,'install','-g','@openai/codex'] if WINDOWS else [npm,'install','-g','--prefix',str(Path.home()/'.local'),'@openai/codex']
+ else:raise ValueError('Không rõ AI cần cài.')
+ env=dict(os.environ,PATH=os.pathsep.join([str(Path(cmd[0]).parent) if Path(cmd[0]).is_absolute() else '',os.environ.get('PATH',''),'/opt/homebrew/bin','/usr/local/bin']))
+ r=subprocess.run(cmd,capture_output=True,env=env,**NOWIN)
+ if r.returncode or not cli_path(name):
+  raise RuntimeError(f'Cài {AI_NAMES[name]} chưa được: '+(r.stderr or r.stdout).decode(errors='replace')[-300:])
+ progress(100,f'Đã cài {AI_NAMES[name]}. Bấm “Đăng nhập” để dùng gói của bạn.')
+
 def ai_status():
  return {'local':local_ai_available(),'claude':cli_path('claude') is not None,'codex':cli_path('codex') is not None}
 

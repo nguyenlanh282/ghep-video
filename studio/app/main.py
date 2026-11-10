@@ -216,10 +216,33 @@ class Studio:
   if not getattr(self,'_ai',None) or now-self._ai[0]>10:self._ai=(now,platform_tools.ai_status())  # cheap, but state is polled
   status=self._ai[1];choice=self.settings['aiProvider'] if self.settings['aiProvider'] in ('claude','codex') else 'auto'
   used=choice if choice!='auto' else next((p for p in ('claude','codex') if status[p]),None)
-  return dict(status=status,used=used,ready=bool(used and status.get(used)))
+  # Signed in? Asked in the background (each check takes a second) and remembered for a minute.
+  login=self.__dict__.setdefault('_login',{})
+  for p in ('claude','codex'):
+   if status[p] and now-login.get(p,(0,None))[0]>60 and not login.get(p+'-busy'):
+    login[p+'-busy']=True
+    def check(p=p):
+     try:login[p]=(time.time(),platform_tools.ai_logged_in(p))
+     finally:login[p+'-busy']=False
+    threading.Thread(target=check,daemon=True).start()
+  logged={p:(login.get(p) or (0,None))[1] for p in ('claude','codex')}
+  return dict(status=status,used=used,ready=bool(used and status.get(used)),loggedIn=logged)
+
+ def ai_login(self,name):
+  """Open a terminal window that signs the CLI in with the user's own Claude / ChatGPT plan (browser login)."""
+  cli=platform_tools.cli_path(name)
+  if not cli:return dict(error='Chưa cài, bấm “Cài” trước.')
+  args=[cli,'auth','login'] if name=='claude' else [cli,'login']
+  if WINDOWS:subprocess.Popen(['cmd','/c','start','Đăng nhập '+name,'cmd','/k',*args])
+  elif MAC:
+   line=' '.join("'"+a.replace("'","'\\''")+"'" for a in args)
+   subprocess.Popen(['osascript','-e',f'tell application "Terminal" to do script "{line}"','-e','tell application "Terminal" to activate'])
+  else:subprocess.Popen(['x-terminal-emulator','-e',*args])
+  self.__dict__.setdefault('_login',{}).pop(name,None)  # check again soon
+  return dict(ok=True)
 
  def open_link(self,url):
-  if url in ('https://pixabay.com/api/docs/','https://www.pexels.com/api/','https://code.claude.com/docs/en/setup','https://developers.openai.com/codex/cli','https://zalo.me/g/gimz1uxcifvaydqar800'):webbrowser.open(url)
+  if url in ('https://pixabay.com/api/docs/','https://www.pexels.com/api/','https://code.claude.com/docs/en/setup','https://developers.openai.com/codex/cli','https://zalo.me/g/gimz1uxcifvaydqar800','https://nodejs.org/'):webbrowser.open(url)
   return {}
 
  # ---- background tasks ----
@@ -231,7 +254,7 @@ class Studio:
   if self.job['running']:return dict(error='Đang có tác vụ chạy.')
   s=self.settings;names=self.media_names()
   # A computer without FFmpeg (or with one only the Terminal can see): fetch it first, then the user presses again.
-  if task not in ('tools','ad-script') and platform_tools.missing_tools():task='tools'
+  if task not in ('tools','ad-script','ai-install-claude','ai-install-codex') and platform_tools.missing_tools():task='tools'
   if not names and task in ('render','analyze','undo'):return self.fail('Hãy chọn thư mục có ảnh hoặc video.')
   if task=='talk-hyperframes' and not platform_tools.node_tool('npx'):return self.fail('Cần cài Node.js (miễn phí, nodejs.org) để dùng HyperFrames, rồi mở lại app.')
   if task in ('talk-analyze','talk-render','talk-hyperframes'):
@@ -295,6 +318,8 @@ class Studio:
              minimaxSpeed=s['minimaxSpeed'],minimaxRegion=s['minimaxRegion'],outputFolder=self.out_folder('ad'),cacheFolder=str(self.cache()),preview=bool(preview),render=render)
    job_file=self.cache()/f'job-{uuid.uuid4().hex}.json';job_file.write_text(json.dumps(job,ensure_ascii=False),encoding='utf-8')
    args=[str(ENGINE/'ads.py'),task[3:],str(job_file)];log='ads.log';cleanup=lambda:job_file.unlink(missing_ok=True)
+  elif task in ('ai-install-claude','ai-install-codex'):
+   args=[str(ENGINE/'ai_install.py'),task.rsplit('-',1)[1]];log='ai-install.log';cleanup=lambda:setattr(self,'_ai',None)
   elif task=='tools':
    args=[str(ENGINE/'fix_tools.py')];log='tools.log';cleanup=self.refresh_tools
   elif task=='tts':
@@ -957,7 +982,7 @@ API={'state':lambda b:studio.state(),'set':lambda b:studio.set(b.get('values',{}
  'timelineState':lambda b:studio.timeline_state(),'timelineEdit':lambda b:studio.timeline_edit(b),'timelineReset':lambda b:studio.timeline_reset(),
  'mediaList':lambda b:dict(files=studio.media_list(studio.settings['talkBrollFolder' if b.get('which')=='broll' else 'mediaFolder'])),
  'adState':lambda b:studio.ad_state(),'adSave':lambda b:studio.ad_save(b.get('script')),'adSkeleton':lambda b:studio.ad_skeleton(),'adAddFiles':lambda b:studio.ad_add_files(b.get('paths') or []),'storyAddFiles':lambda b:studio.story_add_files(b.get('paths') or []),'adRemove':lambda b:studio.ad_remove(b.get('name','')),'adRestore':lambda b:studio.ad_restore(),
- 'mcpInfo':lambda b:studio.mcp_info(),'hfOpen':lambda b:studio.hf_open(),'hfRender':lambda b:studio.hf_render(),
+ 'mcpInfo':lambda b:studio.mcp_info(),'aiLogin':lambda b:studio.ai_login(b.get('name','')),'hfOpen':lambda b:studio.hf_open(),'hfRender':lambda b:studio.hf_render(),
  'projects':lambda b:studio.projects(),'projectOpen':lambda b:studio.project_open(b.get('kind'),b.get('id','')),
  'projectRename':lambda b:studio.project_rename(b.get('kind'),b.get('id',''),b.get('name','')),'projectDelete':lambda b:studio.project_delete(b.get('kind'),b.get('id',''))}
 

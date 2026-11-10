@@ -157,14 +157,27 @@ function paintAI(state) {
     hint = `Dùng gói ${pick === 'claude' ? 'Claude Pro/Max' : 'ChatGPT'} của bạn. Ảnh thu nhỏ của tư liệu sẽ được gửi lên ${who} để mô tả, và tính vào hạn mức gói.`;
     if (!st[pick]) hint = `Chưa cài ${AI_LABEL[pick]} trên máy này. ` + hint;
   }
-  for (const p of ['claude', 'codex']) if ((pick === p || !pick) && !st[p]) actions += `<button class="link" data-ai-act="guide-${p}">Cách cài ${p === 'claude' ? 'Claude Code' : 'Codex'}</button>`;
+  // Install and sign in from the app: the customer only needs their Claude Pro/Max or ChatGPT plan.
+  const logged = ai.loggedIn || {}, busy = state.job.running && state.job.task.startsWith('ai-install');
+  for (const p of ['claude', 'codex']) {
+    if (pick && pick !== p && st[pick]) continue;
+    const name = p === 'claude' ? 'Claude Code' : 'Codex', plan = p === 'claude' ? 'gói Claude Pro/Max' : 'gói ChatGPT';
+    if (!st[p]) actions += `<button class="btn small primary" data-ai-act="install-${p}" ${busy ? 'disabled' : ''}>⬇ Cài ${name}</button>`;
+    else if (logged[p] === false) actions += `<button class="btn small primary" data-ai-act="login-${p}">🔑 Đăng nhập ${p === 'claude' ? 'Claude' : 'ChatGPT'} (${plan})</button>`;
+    if (!st[p] || logged[p] === false) actions += `<button class="link" data-ai-act="guide-${p}">Hướng dẫn</button>`;
+  }
+  if (pick && st[pick] && logged[pick] === false) hint = `${AI_LABEL[pick]} đã cài nhưng chưa đăng nhập: bấm “Đăng nhập”, cửa sổ Terminal mở ra, đăng nhập bằng ${pick === 'claude' ? 'gói Claude Pro/Max' : 'gói ChatGPT'} trên trình duyệt, xong đóng cửa sổ đó.`;
+  if (!pick) hint = 'Chưa có AI xem ảnh. Bấm “Cài Claude Code” (dùng gói Claude Pro/Max) hoặc “Cài Codex” (dùng gói ChatGPT), rồi bấm “Đăng nhập”. Không cần tự gõ lệnh.';
   $('#aiHint').textContent = hint;
   if ($('#aiActions').dataset.html !== actions) { $('#aiActions').dataset.html = actions; $('#aiActions').innerHTML = actions; }
 }
 function wireAI() {
   $('#aiActions').addEventListener('click', e => {
     const act = e.target.closest('[data-ai-act]')?.dataset.aiAct; if (!act) return;
-    api('openLink', {url: AI_GUIDE[act.slice(6)]});
+    const [kind, p] = act.split('-');
+    if (kind === 'install') { if (confirm(`Cài ${p === 'claude' ? 'Claude Code' : 'Codex'} bằng bộ cài chính thức (cần mạng, vài phút)?`)) api('start', {task: 'ai-install-' + p}).then(poll); }
+    else if (kind === 'login') api('aiLogin', {name: p}).then(out => { if (out.error) alert(out.error); else alert('Cửa sổ Terminal đã mở: làm theo để đăng nhập trên trình duyệt, xong đóng cửa sổ đó. App tự nhận sau ít giây.'); });
+    else api('openLink', {url: AI_GUIDE[p]});
   });
 }
 
