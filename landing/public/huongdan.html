@@ -124,6 +124,7 @@ footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);fon
     <a href="#timeline">🎞 Timeline: chỉnh từng cảnh</a>
     <a href="#du-an">📂 Dự án: mở lại sửa tiếp</a>
     <b>KHÁC</b>
+    <a href="#hyperframes">✏️ Chỉnh tiếp trong HyperFrames</a>
     <a href="#ket-noi-ai">🔌 Kết nối Claude (MCP)</a>
     <a href="#ket-qua">File kết quả ở đâu</a>
     <a href="#loi">Lỗi thường gặp</a>
@@ -187,7 +188,7 @@ footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);fon
   <p class="lead">Chế độ <span class="ui">Ghép ảnh + lời đọc</span>: bạn có một thư mục ảnh/video và một giọng kể, app tự ghép thành video dọc 9:16 có phụ đề.</p>
   <figure class="side"><img src="/hd/idx-media.jpg" alt="Mục Tư liệu của bạn" loading="lazy"><figcaption>Mục 01 · Tư liệu của bạn</figcaption></figure>
   <ol class="steps">
-    <li>Bấm khung <span class="ui">Video &amp; hình ảnh</span>, chọn thư mục chứa ảnh và video (JPG, PNG, HEIC, MP4, MOV…).</li>
+    <li>Bấm khung <span class="ui">Video &amp; hình ảnh</span>, chọn <b>1 hoặc nhiều ảnh / video</b> (JPG, PNG, HEIC, MP4, MOV…; giữ ⌘ / Ctrl để chọn nhiều). App chép chúng vào thư mục “Tư liệu ghép ảnh”, file gốc giữ nguyên. Có sẵn cả một thư mục thì bấm <span class="ui">📁 Chọn cả thư mục</span>.</li>
     <li>Bấm <span class="ui">✨ Phân tích &amp; đặt tên</span>: AI xem từng file, mô tả nội dung, <b>đổi tên file</b> theo nội dung và chia video thành các đoạn cảnh. Lần sau chỉ phân tích file mới.</li>
     <li><span class="ui">Xem ghi chú</span>: mở file ghi chú mô tả từng tư liệu. <span class="ui">↩ Trả lại tên gốc</span>: đổi tên file về như cũ.</li>
     <li>Bật <b>Ghép cảnh khớp lời đọc</b> để app chọn cảnh hợp với từng câu nói. <b>Không cần bấm phân tích trước</b>: khi xuất, AI tự xem các ảnh/video chưa phân tích (file đã phân tích thì dùng luôn), hiểu mỗi cảnh nói về gì rồi mới ghép.</li>
@@ -203,7 +204,7 @@ footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);fon
   <h2><span class="n">🎤</span>Giọng đọc: file ghi âm</h2>
   <ol class="steps">
     <li>Ở ô chọn giọng, để <span class="ui">🎤 File ghi âm</span>.</li>
-    <li>Bấm khung <span class="ui">File ghi âm</span>, chọn file (M4A, MP3, WAV, AAC, FLAC…). Có thể thu bằng điện thoại rồi chép sang máy.</li>
+    <li>Bấm khung <span class="ui">File ghi âm</span>, chọn file (M4A, MP3, WAV, AAC, FLAC…) hoặc <b>video có tiếng</b> (MP4, MOV): app lấy tiếng trong video làm lời đọc.</li>
     <li><span class="ui">▶ Nghe giọng đọc</span>: nghe thử 30 giây đúng như khi xuất.</li>
   </ol>
   <table>
@@ -506,6 +507,17 @@ footer{border-top:1px solid var(--line);padding:24px 20px;color:var(--muted);fon
     <tr><td>Giọng MiniMax</td><td>Thư mục <b>“Giọng đọc MiniMax”</b>.</td></tr>
     <tr><td>Ảnh bìa</td><td>Ảnh <code>.jpg</code> 1080×1920, mở bằng nút <span class="ui">📁 Mở nơi lưu</span>.</td></tr>
   </table>
+</section>
+
+<section id="hyperframes">
+  <h2><span class="n">✏️</span>Chỉnh tiếp trong HyperFrames (Video chia sẻ)</h2>
+  <p class="lead">Sau khi edit tự động, sửa tiếp phụ đề và tiêu đề bằng trình chỉnh sửa HyperFrames: đổi chữ, thời gian, màu, vị trí, rồi xuất lại.</p>
+  <ol class="steps">
+    <li>Xuất video ở trang Video chia sẻ như thường.</li>
+    <li>Bấm <span class="ui">✏️ Chỉnh tiếp trong HyperFrames</span> (dưới khung xem trước). App dựng bản video đã edit chưa in chữ, chuyển phụ đề và tiêu đề thành các khối sửa được, rồi mở trình chỉnh sửa HyperFrames trong trình duyệt.</li>
+    <li>Sửa xong bấm Render trong HyperFrames, hoặc <span class="ui">🎬 Xuất bản đã chỉnh</span> trong app. Video mới nằm trong thư mục “… - HyperFrames …” cạnh video đã xuất.</li>
+  </ol>
+  <div class="tip">Cần <b>Node.js</b> (miễn phí, nodejs.org) và mạng ở lần đầu. Làm cho tỉ lệ đầu tiên đang chọn (vd 9:16).</div>
 </section>
 
 <section id="ket-noi-ai">
