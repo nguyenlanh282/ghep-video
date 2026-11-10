@@ -117,7 +117,8 @@ class TalkTests(unittest.TestCase):
         from pathlib import Path
         with tempfile.TemporaryDirectory() as tmp:
             src = Path(tmp) / 'v.mp4'
-            r = talk.subprocess.run([talk.FFMPEG, '-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=s=320x568:d=4', str(src)], capture_output=True)
+            try: r = talk.subprocess.run([talk.FFMPEG, '-v', 'error', '-y', '-f', 'lavfi', '-i', 'testsrc2=s=320x568:d=4', str(src)], capture_output=True)
+            except OSError: self.skipTest('no ffmpeg')
             if r.returncode: self.skipTest('no ffmpeg')
             seen = []
             def fake(frames):   # face on the left early, on the right later
