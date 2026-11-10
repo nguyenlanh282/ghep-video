@@ -41,6 +41,7 @@
   <section class="panel p-media" aria-labelledby="s1">
     <h2 id="s1"><span class="num">01</span>Tư liệu của bạn</h2>
     <button class="filebox" data-choose="media"><span class="ico">🖼</span><span class="fb-text"><b>Video &amp; hình ảnh</b><small data-path="mediaFolder">Chọn thư mục tư liệu</small></span><span class="fb-go">＋</span></button>
+    <div class="row gap wrap"><button class="btn small" data-choose="mediaFiles">＋ Chọn từng ảnh / video</button><span class="hint">Khung trên chọn <b>cả thư mục</b>; nút này chọn từng file (app chép vào thư mục “Tư liệu ghép ảnh”, file gốc giữ nguyên).</span></div>
     <p class="hint tight"><span id="mediaCount">0</span> ảnh/video trong thư mục</p>
 
     <div class="analysis">
@@ -101,7 +102,7 @@
     <hr>
     <div class="seg wide" data-seg="voiceSource"><button data-value="file">🎤 File ghi âm</button><button data-value="minimax">🗣 Tạo giọng MiniMax</button></div>
     <div id="voiceFile">
-      <button class="filebox" data-choose="audio"><span class="ico">〰</span><span class="fb-text"><b>File ghi âm</b><small data-path="audio">M4A, MP3, WAV…</small></span><span class="fb-go">＋</span></button>
+      <button class="filebox" data-choose="audio"><span class="ico">〰</span><span class="fb-text"><b>File ghi âm</b><small data-path="audio">M4A, MP3, WAV… hoặc video có tiếng</small></span><span class="fb-go">＋</span></button>
     </div>
     <div id="voiceTts" class="tts" hidden>
       <label for="ttsText" class="tlabel">Nội dung đọc <small id="ttsCount"></small></label>

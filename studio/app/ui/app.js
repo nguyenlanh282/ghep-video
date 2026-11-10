@@ -257,6 +257,7 @@ async function choose(kind) {
   const out = await api('choose', {kind});
   if (out && out.error) {
     // Browser mode has no native dialog: let the user paste a path instead.
+    if (kind === 'mediaFiles') { const paths = prompt('Dán đường dẫn ảnh/video (cách nhau bằng dấu ;):', ''); if (paths) api('storyAddFiles', {paths: paths.split(';').map(x => x.trim()).filter(Boolean)}); return; }
     const key = {media: 'mediaFolder', output: 'outputFolder', audio: 'audio', music: 'music'}[kind];
     const path = prompt('Dán đường dẫn đầy đủ:', S.settings[key] || '');
     if (path) set({[key]: path.trim()});

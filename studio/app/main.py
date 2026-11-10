@@ -174,6 +174,10 @@ class Studio:
    picked=self.window.create_file_dialog(webview.FileDialog.OPEN if getattr(webview,'FileDialog',None) else webview.OPEN_DIALOG,allow_multiple=True,
                                          file_types=('Ảnh và video (*.jpg;*.jpeg;*.png;*.webp;*.heic;*.mp4;*.mov;*.m4v;*.mkv;*.webm)','Tất cả (*.*)'))
    return self.ad_add_files(list(picked or []))
+  if kind=='mediaFiles':  # Ghép ảnh: pick photos / videos one by one instead of a whole folder (copied, originals untouched)
+   picked=self.window.create_file_dialog(webview.FileDialog.OPEN if getattr(webview,'FileDialog',None) else webview.OPEN_DIALOG,allow_multiple=True,
+                                         file_types=('Ảnh và video (*.jpg;*.jpeg;*.png;*.webp;*.heic;*.mp4;*.mov;*.m4v;*.mkv;*.webm)','Tất cả (*.*)'))
+   return self.story_add_files(list(picked or []))
   keys={'media':'mediaFolder','output':'outputFolder','audio':'audio','music':'music','talkVideo':'talkVideo','talkBroll':'talkBrollFolder','adMedia':'adMediaFolder','adKnowledge':'adKnowledgeFolder','adAudio':'adAudio','talkOutput':'talkOutputFolder','adOutput':'adOutputFolder'}
   if kind not in keys:return dict(error='Không rõ cần chọn gì.')
   folder=kind in ('media','output','talkBroll','adMedia','adKnowledge','talkOutput','adOutput')
@@ -181,7 +185,8 @@ class Studio:
   start=current if Path(current).is_dir() else str(Path(current).parent) if Path(current).parent.is_dir() else str(ROOT)
   dialog=getattr(webview,'FileDialog',None)
   kind_folder=dialog.FOLDER if dialog else webview.FOLDER_DIALOG;kind_open=dialog.OPEN if dialog else webview.OPEN_DIALOG
-  types=() if folder else ('Video (*.mp4;*.mov;*.m4v;*.mkv;*.webm)','Tất cả (*.*)') if kind=='talkVideo' else ('Âm thanh (*.m4a;*.mp3;*.wav;*.aac;*.flac;*.ogg)','Tất cả (*.*)')
+  # A narration can also be the sound of a video (a recording made with the phone camera).
+  types=() if folder else ('Video (*.mp4;*.mov;*.m4v;*.mkv;*.webm)','Tất cả (*.*)') if kind=='talkVideo' else ('Âm thanh hoặc video có tiếng (*.m4a;*.mp3;*.wav;*.aac;*.flac;*.ogg;*.mp4;*.mov;*.m4v)','Tất cả (*.*)')
   picked=self.window.create_file_dialog(kind_folder if folder else kind_open,directory=start,file_types=types,allow_multiple=kind=='talkVideo')
   if not picked:return self.state()
   if kind=='talkVideo':  # several raw videos, added after the ones already chosen, numbered in that order
@@ -489,6 +494,24 @@ class Studio:
    old=self.ad_script() or {}
    self.settings['adScript']=json.dumps(dict(ads.clean(script,self.settings['adType'],int(self.settings['adLength'] or 30)),nguon=old.get('nguon') or []),ensure_ascii=False)
   self.save();return self.ad_state()
+
+ def story_add_files(self,paths):
+  """Copy picked photos/videos into an app folder ('Tư liệu ghép ảnh' in the output folder) and use it as the media
+  folder. Copies, because the analysis renames media files by content."""
+  import shutil
+  paths=[Path(p) for p in paths if Path(p).is_file() and Path(p).suffix.lower() in MEDIA_EXT]
+  if not paths:return self.state()
+  base=Path(self.settings['outputFolder']) if Path(self.settings['outputFolder']).is_dir() else ROOT
+  own=base/'Tư liệu ghép ảnh'
+  cur=Path(self.settings['mediaFolder']) if self.settings['mediaFolder'] else None
+  folder=cur if cur and cur.is_dir() and cur.name.startswith('Tư liệu ghép ảnh') else own/time.strftime('%Y%m%d-%H%M')
+  folder.mkdir(parents=True,exist_ok=True)
+  for p in paths:
+   if p.parent.resolve()==folder.resolve():continue
+   dest=folder/p.name;n=2
+   while dest.exists():dest=folder/f'{p.stem} ({n}){p.suffix}';n+=1
+   shutil.copy2(p,dest)
+  return self.set({'mediaFolder':str(folder)})
 
  def ad_add_files(self,paths):
   """Copy picked photos/videos into the ad's media folder (a new 'Tư liệu quảng cáo' folder when none is chosen). Never overwrites."""
@@ -933,7 +956,7 @@ API={'state':lambda b:studio.state(),'set':lambda b:studio.set(b.get('values',{}
  'thumbSave':lambda b:studio.thumb_save(b.get('ids',[]),b.get('text',True)),'thumbReveal':lambda b:studio.reveal(studio.thumb_saved),
  'timelineState':lambda b:studio.timeline_state(),'timelineEdit':lambda b:studio.timeline_edit(b),'timelineReset':lambda b:studio.timeline_reset(),
  'mediaList':lambda b:dict(files=studio.media_list(studio.settings['talkBrollFolder' if b.get('which')=='broll' else 'mediaFolder'])),
- 'adState':lambda b:studio.ad_state(),'adSave':lambda b:studio.ad_save(b.get('script')),'adSkeleton':lambda b:studio.ad_skeleton(),'adAddFiles':lambda b:studio.ad_add_files(b.get('paths') or []),'adRemove':lambda b:studio.ad_remove(b.get('name','')),'adRestore':lambda b:studio.ad_restore(),
+ 'adState':lambda b:studio.ad_state(),'adSave':lambda b:studio.ad_save(b.get('script')),'adSkeleton':lambda b:studio.ad_skeleton(),'adAddFiles':lambda b:studio.ad_add_files(b.get('paths') or []),'storyAddFiles':lambda b:studio.story_add_files(b.get('paths') or []),'adRemove':lambda b:studio.ad_remove(b.get('name','')),'adRestore':lambda b:studio.ad_restore(),
  'mcpInfo':lambda b:studio.mcp_info(),'hfOpen':lambda b:studio.hf_open(),'hfRender':lambda b:studio.hf_render(),
  'projects':lambda b:studio.projects(),'projectOpen':lambda b:studio.project_open(b.get('kind'),b.get('id','')),
  'projectRename':lambda b:studio.project_rename(b.get('kind'),b.get('id',''),b.get('name','')),'projectDelete':lambda b:studio.project_delete(b.get('kind'),b.get('id',''))}
