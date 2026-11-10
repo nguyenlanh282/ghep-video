@@ -66,6 +66,10 @@ Biến 1 video thô quay người nói (chưa cắt, có ậm ừ, im lặng, n�
 
 Ghi chú: video quay dọc khi xuất 16:9 giữ trọn người nói ở giữa trên nền mờ. Không có Claude/ChatGPT vẫn cắt và làm phụ đề được, nhưng không có soát chính tả, tiêu đề gợi ý, cảnh trám, clip ngắn.
 
+## Mới ở bản 2.12.1
+
+- **AI xem ảnh** (trang Ghép ảnh): máy chưa có AI thì bấm **⬇ Cài Claude Code** (gói Claude Pro/Max) hoặc **⬇ Cài Codex** (gói ChatGPT; cần Node.js), rồi **🔑 Đăng nhập**: cửa sổ Terminal mở ra, đăng nhập trên trình duyệt, xong đóng cửa sổ. App tự nhận.
+
 ## Mới ở bản 2.12.0
 
 - **Ghép ảnh**: bấm khung **Video & hình ảnh** để chọn 1 hoặc nhiều ảnh/video (app chép vào “Tư liệu ghép ảnh”); **📁 Chọn cả thư mục** nếu có sẵn thư mục. **File ghi âm** chọn được cả video có tiếng.
