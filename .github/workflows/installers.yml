@@ -87,7 +87,7 @@ jobs:
 
   mac:
     needs: app-zip
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 30
     env:
       V: ${{ needs.app-zip.outputs.version }}
